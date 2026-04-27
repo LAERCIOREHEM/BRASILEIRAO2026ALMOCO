@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bolão Brasileirão 2026 — Almoço de Sexta</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --card: #1a2027;
+    --card-hover: #232a33;
+    --border: #2a3340;
+    --text: #e6e9ed;
+    --text-secondary: #8b95a3;
+    --text-tertiary: #5a6573;
+    --accent: #4ade80;
+    --accent-dim: #16432a;
+    --danger: #f87171;
+    --danger-dim: #4a1a1a;
+    --warning: #fbbf24;
+    --warning-dim: #4a3a0f;
+    --info: #60a5fa;
+    --info-dim: #1a3050;
+    --gold: #fbbf24;
+    --silver: #cbd5e1;
+    --bronze: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 16px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: var(--text-secondary); }
+  .nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  .nav button, .btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .nav button:hover, .btn:hover { background: var(--card-hover); }
+  .nav button.active { background: var(--info-dim); border-color: var(--info); color: var(--info); }
+  .btn-primary { background: var(--info-dim); border-color: var(--info); color: var(--info); }
+  .btn-danger { color: var(--danger); }
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .status-ok { color: var(--accent); }
+  .status-loading { color: var(--warning); }
+  .status-error { color: var(--danger); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 10px 14px; text-align: left; }
+  thead th {
+    background: rgba(255,255,255,0.02);
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-top: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:first-child { border-top: none; }
+  tbody tr.clickable { cursor: pointer; }
+  tbody tr.clickable:hover { background: var(--card-hover); }
+  .pos-medal {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 28px;
+    font-weight: 600;
+    font-size: 12px;
+    color: #000;
+  }
+  .pos-1 { background: var(--gold); }
+  .pos-2 { background: var(--silver); }
+  .pos-3 { background: var(--bronze); }
+  .pos-other { background: var(--card-hover); color: var(--text-secondary); border: 1px solid var(--border); }
+  .total {
+    font-weight: 600;
+    font-size: 16px;
+    text-align: right;
+  }
+  .zona-rebaixamento { background: rgba(248,113,113,0.05); }
+  .zona-libertadores { background: rgba(74,222,128,0.04); }
+  .detail-row { background: rgba(96,165,250,0.04); }
+  .detail-row td { padding: 0; }
+  .detail-content { padding: 12px 16px; }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 12px;
+    margin-top: 6px;
+  }
+  .detail-grid > div {
+    background: var(--card);
+    padding: 8px 10px;
+  }
+  .detail-grid .header {
+    background: rgba(255,255,255,0.02);
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .badge-success { background: var(--accent-dim); color: var(--accent); }
+  .badge-info { background: var(--info-dim); color: var(--info); }
+  .badge-danger { background: var(--danger-dim); color: var(--danger); }
+  .badge-warning { background: var(--warning-dim); color: var(--warning); }
+  .badge-coracao { background: rgba(244,114,182,0.15); color: #f472b6; }
+  .empty { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 14px; }
+  /* Modais */
+  .modal-backdrop {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; z-index: 100;
+  }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 { font-size: 18px; margin-bottom: 16px; font-weight: 600; }
+  .form-group { margin-bottom: 12px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  input, select {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--info);
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 100px;
+    gap: 8px;
+  }
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .legenda {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    flex-wrap: wrap;
+  }
+  .legenda-item { display: flex; align-items: center; gap: 6px; }
+  .legenda-dot { width: 10px; height: 10px; border-radius: 2px; }
+  @media (max-width: 720px) {
+    body { padding: 8px; }
+    h1 { font-size: 20px; }
+    th, td { padding: 8px 10px; font-size: 13px; }
+    .detail-grid { grid-template-columns: 1fr 1fr 1fr; }
+    .detail-grid .desktop-only { display: none; }
+  }
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--warning);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 6px;
+    vertical-align: -2px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Ranking compacto estilo planilha */
+  .ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: var(--card);
+  }
+  .ranking-table thead th {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 8px 6px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .ranking-table thead th.sticky-col,
+  .ranking-table tbody td.sticky-col {
+    position: sticky;
+    background: var(--card);
+    z-index: 2;
+  }
+  .ranking-table thead th.col-pos { width: 36px; text-align: center; left: 0; }
+  .ranking-table thead th.col-nome { text-align: left; padding-left: 10px; min-width: 130px; }
+  .ranking-table thead th.col-total {
+    background: rgba(74,222,128,0.08);
+    color: var(--accent);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  .ranking-table thead .group-header {
+    background: rgba(255,255,255,0.02);
+    color: var(--text-tertiary);
+    font-size: 9px;
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ranking-table thead .group-header.coracao { background: rgba(244,114,182,0.08); color: #f472b6; }
+  .ranking-table thead .group-header.cai { background: rgba(251,191,36,0.08); color: var(--warning); }
+  .ranking-table tbody td {
+    padding: 6px 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    text-align: center;
+    vertical-align: middle;
+  }
+  .ranking-table tbody td.col-nome {
+    text-align: left;
+    padding-left: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+  .ranking-table tbody td.col-total {
+    background: rgba(74,222,128,0.05);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 15px;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  .ranking-table tbody td.cell-coracao { background: rgba(244,114,182,0.04); }
+  .ranking-table tbody td.cell-cai { background: rgba(251,191,36,0.04); }
+  .cell-time {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.2;
+    margin-bottom: 1px;
+  }
+  .cell-pts {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .cell-pts.acerto { color: var(--accent); }
+  .cell-palp {
+    font-size: 9px;
+    color: var(--text-tertiary);
+    margin-top: 1px;
+    letter-spacing: 0.3px;
+  }
+  .cell-palp.acerto {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .cell-palp.acerto::before { content: "✓ "; }
+  .ranking-table .pos-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--card-hover);
+    color: var(--text-secondary);
+  }
+  .ranking-table .pos-num.gold { background: var(--gold); color: #000; }
+  .ranking-table .pos-num.silver { background: var(--silver); color: #000; }
+  .ranking-table .pos-num.bronze { background: var(--bronze); color: #000; }
+
+  /* Linhas com destaque (BOB e divisão pagantes) */
+  .ranking-table tbody tr.bob-row td { background: rgba(244,114,182,0.10) !important; }
+  .ranking-table tbody tr.bob-row td.col-nome { color: #f472b6; }
+  .ranking-table tbody tr.bob-row td.cell-coracao { background: rgba(244,114,182,0.18) !important; }
+  .ranking-table tbody tr.bob-row td.cell-cai { background: rgba(244,114,182,0.14) !important; }
+  .ranking-table tbody tr.bob-row td.col-total { background: rgba(244,114,182,0.18) !important; color: #f472b6 !important; }
+
+  .divisor-row td {
+    background: linear-gradient(90deg, var(--danger-dim) 0%, transparent 100%) !important;
+    padding: 8px 14px !important;
+    text-align: left !important;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--danger);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-top: 2px solid var(--danger);
+    border-bottom: 2px solid var(--danger) !important;
+  }
+
+  .secao-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 16px 0 8px;
+    padding: 0 4px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .secao-header h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .secao-header .legenda-cores {
+    display: flex;
+    gap: 14px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+  }
+  .secao-header .leg-item { display: flex; align-items: center; gap: 5px; }
+  .secao-header .leg-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  .ranking-wrapper {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: auto;
+    background: var(--card);
+    max-width: 100%;
+  }
+
+  @media (max-width: 720px) {
+    .ranking-table { font-size: 11px; }
+    .ranking-table thead th { font-size: 9px; padding: 6px 4px; }
+    .ranking-table tbody td { padding: 5px 4px; }
+    .ranking-table tbody td.col-nome { font-size: 11px; padding-left: 6px; max-width: 90px; }
+    .cell-time { font-size: 10px; }
+    .cell-pts { font-size: 12px; }
+    .cell-palp { font-size: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>Bolão Brasileirão 2026</h1>
+      <p class="subtitle">Almoço de Sexta</p>
+    </div>
+    <div class="nav">
+      <button onclick="setView('rank')" id="btn-rank" class="active">Ranking</button>
+      <button onclick="setView('tabela')" id="btn-tabela">Brasileirão</button>
+      <button onclick="adminAction()" id="btn-admin">Admin</button>
+    </div>
+  </header>
+
+  <div class="status-bar" id="status-bar">
+    <span id="status-text">Carregando...</span>
+    <span id="status-actions">
+      <button class="btn" onclick="refresh()" style="padding: 4px 10px; font-size: 12px;">Atualizar agora</button>
+    </span>
+  </div>
+
+  <div id="view-rank"></div>
+  <div id="view-tabela" style="display: none;"></div>
+  <div id="view-participantes" style="display: none;"></div>
+</div>
+
+<div id="modal-container"></div>
+
+<script>
+// ========================================================================
+// CONFIGURAÇÃO — você pode mudar a senha de admin aqui
+// ========================================================================
+const ADMIN_SENHA = "almocosexta2026";
+const CACHE_MIN = 30; // tempo de cache em minutos
+const PROXIES = [
+  "https://api.allorigins.win/raw?url=",
+  "https://corsproxy.io/?"
+];
+const URL_TERRA = "https://www.terra.com.br/esportes/futebol/brasileiro-serie-a/tabela/";
+
+// ========================================================================
+// PARTICIPANTES INICIAIS — vindos da planilha
+// ========================================================================
+const PARTICIPANTES_INICIAIS = [
+  {nome:"LAÉRCIO", coracao:{time:"Bahia",palpite:5}, times:[{time:"Palmeiras",palpite:1},{time:"Flamengo",palpite:2},{time:"Cruzeiro",palpite:3},{time:"Fluminense",palpite:4},{time:"Athletico-PR",palpite:12}], cai:"Remo"},
+  {nome:"VILELLA", coracao:{time:"Botafogo",palpite:6}, times:[{time:"Palmeiras",palpite:1},{time:"Flamengo",palpite:2},{time:"Cruzeiro",palpite:4},{time:"Fluminense",palpite:3},{time:"Athletico-PR",palpite:13}], cai:"Chapecoense"},
+  {nome:"BARRICHELLO (ARMÍNIO)", coracao:{time:"Corinthians",palpite:6}, times:[{time:"Palmeiras",palpite:1},{time:"Flamengo",palpite:2},{time:"Cruzeiro",palpite:7},{time:"Bahia",palpite:5},{time:"Athletico-PR",palpite:11}], cai:"Remo"},
+  {nome:"RODRIGO", coracao:{time:"Atlético-MG",palpite:3}, times:[{time:"Palmeiras",palpite:1},{time:"Flamengo",palpite:2},{time:"Cruzeiro",palpite:5},{time:"Fluminense",palpite:4},{time:"Athletico-PR",palpite:12}], cai:"Remo"},
+  {nome:"MAX", coracao:{time:"São Paulo",palpite:6}, times:[{time:"Palmeiras",palpite:1},{time:"Flamengo",palpite:2},{time:"Atlético-MG",palpite:6},{time:"Internacional",palpite:8},{time:"Athletico-PR",palpite:12}], cai:"Remo"},
+  {nome:"DÁRIO", coracao:{time:"Botafogo",palpite:4}, times:[{time:"Palmeiras",palpite:1},{time:"Flamengo",palpite:2},{time:"Bragantino",palpite:6},{time:"Internacional",palpite:8},{time:"Athletico-PR",palpite:14}], cai:"Chapecoense"},
+  {nome:"MARCOS EDUARDO", coracao:{time:"Fluminense",palpite:4}, times:[{time:"Palmeiras",palpite:1},{time:"Cruzeiro",palpite:2},{time:"Flamengo",palpite:3},{time:"Botafogo",palpite:5},{time:"Athletico-PR",palpite:11}], cai:"Chapecoense"},
+  {nome:"JARDIM", coracao:{time:"Atlético-MG",palpite:1}, times:[{time:"Palmeiras",palpite:4},{time:"Flamengo",palpite:2},{time:"Fluminense",palpite:5},{time:"Cruzeiro",palpite:3},{time:"Athletico-PR",palpite:15}], cai:"Remo"},
+  {nome:"BOB BONECA", coracao:{time:"Cruzeiro",palpite:2}, times:[{time:"Palmeiras",palpite:1},{time:"Flamengo",palpite:3},{time:"Mirassol",palpite:4},{time:"Fluminense",palpite:5},{time:"Athletico-PR",palpite:12}], cai:"Remo"},
+  {nome:"MARCO LOPES", coracao:{time:"Grêmio",palpite:6}, times:[{time:"Flamengo",palpite:1},{time:"Palmeiras",palpite:2},{time:"Cruzeiro",palpite:3},{time:"Fluminense",palpite:4},{time:"Athletico-PR",palpite:12}], cai:"Chapecoense"},
+  {nome:"RUBÃO", coracao:{time:"Coritiba",palpite:10}, times:[{time:"Flamengo",palpite:1},{time:"Palmeiras",palpite:2},{time:"Atlético-MG",palpite:5},{time:"Botafogo",palpite:7},{time:"Athletico-PR",palpite:12}], cai:"Chapecoense"},
+  {nome:"WELLINGTON PAPA", coracao:{time:"Flamengo",palpite:1}, times:[{time:"Cruzeiro",palpite:2},{time:"Palmeiras",palpite:3},{time:"São Paulo",palpite:4},{time:"Botafogo",palpite:5},{time:"Chapecoense",palpite:16}], cai:"Remo"},
+  {nome:"ZAQUEU", coracao:{time:"Flamengo",palpite:1}, times:[{time:"Palmeiras",palpite:2},{time:"Cruzeiro",palpite:3},{time:"Grêmio",palpite:4},{time:"São Paulo",palpite:5},{time:"Athletico-PR",palpite:12}], cai:"Remo"},
+  {nome:"MELILLO", coracao:{time:"Botafogo",palpite:1}, times:[{time:"Palmeiras",palpite:2},{time:"Flamengo",palpite:3},{time:"Corinthians",palpite:4},{time:"Fluminense",palpite:5},{time:"Athletico-PR",palpite:12}], cai:"Cruzeiro"},
+  {nome:"AUGUSTO", coracao:{time:"Botafogo",palpite:1}, times:[{time:"Palmeiras",palpite:2},{time:"Flamengo",palpite:3},{time:"Cruzeiro",palpite:4},{time:"Corinthians",palpite:5},{time:"Coritiba",palpite:13}], cai:"Remo"},
+  {nome:"WELLINGTON B.", coracao:{time:"Vasco da Gama",palpite:14}, times:[{time:"Cruzeiro",palpite:1},{time:"Flamengo",palpite:2},{time:"Palmeiras",palpite:3},{time:"Mirassol",palpite:4},{time:"Remo",palpite:15}], cai:"Vitória"}
+];
+
+const TIMES_LISTA = ["Athletico-PR","Atlético-MG","Bahia","Botafogo","Bragantino","Chapecoense","Corinthians","Coritiba","Cruzeiro","Flamengo","Fluminense","Grêmio","Internacional","Mirassol","Palmeiras","Remo","Santos","São Paulo","Vasco da Gama","Vitória"];
+
+// ========================================================================
+// ESTADO
+// ========================================================================
+let state = {
+  tabela: [],          // [{ pos, time, pontos, jogos, vitorias, empates, derrotas, gp, gc, sg, aproveitamento }]
+  participantes: [],
+  ultimaAtualizacao: null,
+  ehAdmin: false,
+  view: 'rank',
+  expandido: null,
+  editIdx: null
+};
+
+// ========================================================================
+// PERSISTÊNCIA — localStorage
+// ========================================================================
+function salvarParticipantes() {
+  localStorage.setItem('bolao_participantes', JSON.stringify(state.participantes));
+}
+function carregarParticipantes() {
+  const s = localStorage.getItem('bolao_participantes');
+  if (s) {
+    try { state.participantes = JSON.parse(s); return true; } catch(e) {}
+  }
+  return false;
+}
+function salvarCache(tabela) {
+  localStorage.setItem('bolao_cache_tabela', JSON.stringify({
+    tabela: tabela,
+    timestamp: Date.now()
+  }));
+}
+function carregarCache() {
+  const s = localStorage.getItem('bolao_cache_tabela');
+  if (!s) return null;
+  try {
+    const obj = JSON.parse(s);
+    const idadeMin = (Date.now() - obj.timestamp) / 60000;
+    return { tabela: obj.tabela, idadeMin: idadeMin };
+  } catch(e) { return null; }
+}
+
+// ========================================================================
+// FETCH DA TABELA — com fallback de proxies
+// ========================================================================
+async function buscarTabelaTerra() {
+  let ultimoErro = null;
+  for (const proxy of PROXIES) {
+    try {
+      const url = proxy + encodeURIComponent(URL_TERRA);
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const html = await resp.text();
+      const tabela = parseTabelaHTML(html);
+      if (tabela.length === 20) return tabela;
+      throw new Error("Tabela com " + tabela.length + " linhas, esperado 20");
+    } catch(e) {
+      ultimoErro = e;
+      continue;
+    }
+  }
+  throw ultimoErro || new Error("Todos os proxies falharam");
+}
+
+function parseTabelaHTML(html) {
+  // Pega a tabela principal — o HTML do Terra tem várias tabelas, queremos a que tem cabeçalho com "Pontos"
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const tabelas = doc.querySelectorAll('table');
+  let tabelaCerta = null;
+  for (const t of tabelas) {
+    const headers = t.querySelectorAll('th');
+    const headerText = Array.from(headers).map(h => h.textContent.trim()).join('|');
+    if (headerText.includes('Times') || headerText.includes('Pontos') || t.querySelectorAll('tbody tr').length >= 20) {
+      tabelaCerta = t;
+      break;
+    }
+  }
+  if (!tabelaCerta) {
+    // Fallback: pegar a tabela com mais linhas
+    let max = 0;
+    for (const t of tabelas) {
+      const rows = t.querySelectorAll('tbody tr').length;
+      if (rows > max) { max = rows; tabelaCerta = t; }
+    }
+  }
+  if (!tabelaCerta) return [];
+  const linhas = tabelaCerta.querySelectorAll('tbody tr');
+  const resultado = [];
+  for (const linha of linhas) {
+    const cels = linha.querySelectorAll('td');
+    if (cels.length < 12) continue;
+    // Estrutura: pos | time-img | time-link | tendencia | P | J | V | E | D | GP | GC | SG | %
+    const pos = parseInt(cels[0].textContent.trim());
+    if (isNaN(pos)) continue;
+    const timeNome = cels[2].textContent.replace(/>>/g,'').trim();
+    const ultimoIdx = cels.length - 1;
+    const aproveitamento = parseInt(cels[ultimoIdx].textContent.trim()) || 0;
+    const sg = parseInt(cels[ultimoIdx-1].textContent.trim()) || 0;
+    const gc = parseInt(cels[ultimoIdx-2].textContent.trim()) || 0;
+    const gp = parseInt(cels[ultimoIdx-3].textContent.trim()) || 0;
+    const d = parseInt(cels[ultimoIdx-4].textContent.trim()) || 0;
+    const e = parseInt(cels[ultimoIdx-5].textContent.trim()) || 0;
+    const v = parseInt(cels[ultimoIdx-6].textContent.trim()) || 0;
+    const j = parseInt(cels[ultimoIdx-7].textContent.trim()) || 0;
+    const p = parseInt(cels[ultimoIdx-8].textContent.trim()) || 0;
+    resultado.push({ pos, time: timeNome, pontos: p, jogos: j, vitorias: v, empates: e, derrotas: d, gp, gc, sg, aproveitamento });
+  }
+  return resultado;
+}
+
+// ========================================================================
+// CARREGAMENTO PRINCIPAL
+// ========================================================================
+async function inicializar() {
+  // 1. Participantes: do localStorage ou padrão
+  if (!carregarParticipantes()) {
+    state.participantes = JSON.parse(JSON.stringify(PARTICIPANTES_INICIAIS));
+    salvarParticipantes();
+  }
+  // 2. Tabela: cache válido ou fetch
+  const cache = carregarCache();
+  if (cache && cache.idadeMin < CACHE_MIN) {
+    state.tabela = cache.tabela;
+    state.ultimaAtualizacao = new Date(Date.now() - cache.idadeMin * 60000);
+    setStatus('ok', `Atualizado há ${Math.round(cache.idadeMin)} min · próxima busca em ${Math.round(CACHE_MIN - cache.idadeMin)} min`);
+    render();
+  } else {
+    if (cache) {
+      state.tabela = cache.tabela;
+      state.ultimaAtualizacao = new Date(Date.now() - cache.idadeMin * 60000);
+      render();
+    }
+    await refresh();
+  }
+}
+
+async function refresh() {
+  setStatus('loading', 'Buscando dados do Terra...');
+  try {
+    const tabela = await buscarTabelaTerra();
+    state.tabela = tabela;
+    state.ultimaAtualizacao = new Date();
+    salvarCache(tabela);
+    setStatus('ok', `Atualizado agora · ${formatarHora(state.ultimaAtualizacao)}`);
+    render();
+  } catch(e) {
+    console.error(e);
+    if (state.tabela.length > 0) {
+      setStatus('error', `Falha ao atualizar (usando dados em cache de ${formatarHora(state.ultimaAtualizacao)}). Erro: ${e.message}`);
+    } else {
+      setStatus('error', `Falha ao buscar tabela. Tente novamente em alguns instantes. Erro: ${e.message}`);
+    }
+  }
+}
+
+function setStatus(tipo, msg) {
+  const el = document.getElementById('status-text');
+  el.className = 'status-' + tipo;
+  if (tipo === 'loading') {
+    el.innerHTML = '<span class="spinner"></span>' + msg;
+  } else if (tipo === 'ok') {
+    el.innerHTML = '✓ ' + msg;
+  } else {
+    el.innerHTML = '⚠ ' + msg;
+  }
+}
+
+function formatarHora(d) {
+  if (!d) return '—';
+  return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+
+// ========================================================================
+// CÁLCULOS
+// ========================================================================
+function dadosTime(nome) {
+  return state.tabela.find(t => t.time === nome) || { pos: 0, pontos: 0 };
+}
+
+function calcular(participante) {
+  const detalhes = [];
+  let total = 0;
+
+  // Time coração
+  const tc = dadosTime(participante.coracao.time);
+  const bonusCoracao = (tc.pos === participante.coracao.palpite) ? 12 : 0;
+  total += tc.pontos + bonusCoracao;
+  detalhes.push({
+    tipo: 'coracao', label: '❤️ Coração',
+    time: participante.coracao.time, palpite: participante.coracao.palpite,
+    posAtual: tc.pos, pontos: tc.pontos, bonus: bonusCoracao
+  });
+
+  // 5 outros times
+  for (const t of participante.times) {
+    const td = dadosTime(t.time);
+    const bonus = (td.pos === t.palpite) ? 9 : 0;
+    total += td.pontos + bonus;
+    detalhes.push({
+      tipo: 'normal', label: 'Time',
+      time: t.time, palpite: t.palpite,
+      posAtual: td.pos, pontos: td.pontos, bonus: bonus
+    });
+  }
+
+  // Time que cai
+  const cai = dadosTime(participante.cai);
+  const bonusCai = (cai.pos >= 17 && cai.pos <= 20) ? 6 : 0;
+  total += bonusCai;
+  detalhes.push({
+    tipo: 'rebaixamento', label: '⬇️ Cai',
+    time: participante.cai, palpite: '17º+',
+    posAtual: cai.pos, pontos: 0, bonus: bonusCai
+  });
+
+  return { total, detalhes };
+}
+
+// ========================================================================
+// RENDERIZAÇÃO
+// ========================================================================
+function render() {
+  const v = state.view;
+  document.getElementById('view-rank').style.display = v === 'rank' ? 'block' : 'none';
+  document.getElementById('view-tabela').style.display = v === 'tabela' ? 'block' : 'none';
+  document.getElementById('view-participantes').style.display = v === 'participantes' ? 'block' : 'none';
+  ['rank','tabela','admin'].forEach(k => {
+    const b = document.getElementById('btn-' + k);
+    if (b) b.classList.toggle('active', v === k);
+  });
+  if (v === 'rank') renderRank();
+  else if (v === 'tabela') renderTabela();
+  else if (v === 'participantes') renderParticipantes();
+  // Botão de admin
+  const btnAdmin = document.getElementById('btn-admin');
+  btnAdmin.textContent = state.ehAdmin ? 'Sair do admin' : 'Admin';
+}
+
+function setView(v) { state.view = v; render(); }
+
+function renderRank() {
+  if (state.tabela.length === 0) {
+    document.getElementById('view-rank').innerHTML = '<div class="card empty">Carregando tabela do Brasileirão...</div>';
+    return;
+  }
+  const ranking = state.participantes
+    .map((p,i) => ({ ...p, idx:i, ...calcular(p) }))
+    .sort((a,b) => b.total - a.total);
+
+  // Limite entre não-pagantes (top 8) e pagantes (bottom 8)
+  // Se tiver menos de 16, ajusta proporcionalmente
+  const total = ranking.length;
+  const corteNaoPagantes = Math.floor(total / 2);
+
+  // Cabeçalho: posição | nome | total | coração | time1..5 | cai
+  let html = '<div class="secao-header">';
+  html += '<h2>Classificação geral</h2>';
+  html += '<div class="legenda-cores">';
+  html += '<div class="leg-item"><div class="leg-dot" style="background:rgba(244,114,182,0.5);"></div>Time coração (+12)</div>';
+  html += '<div class="leg-item"><div class="leg-dot" style="background:rgba(251,191,36,0.5);"></div>Time que cai (+6)</div>';
+  html += '<div class="leg-item"><div class="leg-dot" style="background:rgba(74,222,128,0.5);"></div>Acertou posição</div>';
+  html += '</div></div>';
+
+  html += '<div class="ranking-wrapper"><table class="ranking-table">';
+
+  // Header com 2 linhas
+  html += '<thead>';
+  html += '<tr>';
+  html += '<th class="col-pos" rowspan="2">#</th>';
+  html += '<th class="col-nome" rowspan="2">Participante</th>';
+  html += '<th class="col-total" rowspan="2">Total</th>';
+  html += '<th colspan="1" class="group-header coracao">❤️ Coração</th>';
+  html += '<th colspan="5" class="group-header">Times escolhidos (+9 se acertar posição)</th>';
+  html += '<th colspan="1" class="group-header cai">⬇️ Cai</th>';
+  html += '</tr>';
+  html += '<tr>';
+  html += '<th>Time</th>';
+  for (let k = 1; k <= 5; k++) html += `<th>Time ${k}</th>`;
+  html += '<th>Time</th>';
+  html += '</tr>';
+  html += '</thead><tbody>';
+
+  // Linhas
+  ranking.forEach((r, i) => {
+    const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const isBob = r.nome.toUpperCase().includes('BOB');
+
+    // Linha divisora entre não-pagantes e pagantes
+    if (i === corteNaoPagantes) {
+      html += `<tr class="divisor-row"><td colspan="9">⚠️ Daqui pra baixo: pagantes do almoço de fim de ano</td></tr>`;
+    }
+
+    const rowClass = isBob ? 'bob-row' : '';
+    html += `<tr class="${rowClass}">`;
+    html += `<td><span class="pos-num ${posClass}">${i+1}</span></td>`;
+    html += `<td class="col-nome">${r.nome}</td>`;
+    html += `<td class="col-total">${r.total}</td>`;
+
+    // Detalhes na ordem: coração, 5 times, cai
+    r.detalhes.forEach((d, idxD) => {
+      let cellClass = '';
+      let cellHtml = '';
+      const acertou = d.bonus > 0;
+
+      if (d.tipo === 'coracao') {
+        cellClass = 'cell-coracao';
+        cellHtml = `<div class="cell-time">${d.time}</div>
+          <div class="cell-pts ${acertou ? 'acerto' : ''}">${d.pontos}${acertou ? ' +12' : ''}</div>
+          <div class="cell-palp ${acertou ? 'acerto' : ''}">palp ${d.palpite}º · atual ${d.posAtual || '—'}º</div>`;
+      } else if (d.tipo === 'rebaixamento') {
+        cellClass = 'cell-cai';
+        cellHtml = `<div class="cell-time">${d.time}</div>
+          <div class="cell-pts ${acertou ? 'acerto' : ''}">${acertou ? '+6' : '0'}</div>
+          <div class="cell-palp ${acertou ? 'acerto' : ''}">atual ${d.posAtual || '—'}º</div>`;
+      } else {
+        cellHtml = `<div class="cell-time">${d.time}</div>
+          <div class="cell-pts ${acertou ? 'acerto' : ''}">${d.pontos}${acertou ? ' +9' : ''}</div>
+          <div class="cell-palp ${acertou ? 'acerto' : ''}">palp ${d.palpite}º · atual ${d.posAtual || '—'}º</div>`;
+      }
+
+      html += `<td class="${cellClass}">${cellHtml}</td>`;
+    });
+
+    html += `</tr>`;
+  });
+
+  html += '</tbody></table></div>';
+
+  // Como funciona o jogo + regras
+  html += `<div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-top: 16px; font-size: 12px; color: var(--text-secondary);">
+    <strong style="color: var(--text); display: block; margin-bottom: 8px;">Como pontua</strong>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px; line-height: 1.6;">
+      <div>Cada célula mostra: <strong>nome do time</strong>, <strong>pontos do time</strong> + bônus (se acertou) e <strong>palpite vs posição atual</strong></div>
+      <div>❤️ <strong>Coração:</strong> +12 se acertar a posição exata</div>
+      <div>⚪ <strong>Demais 5 times:</strong> +9 se acertar a posição exata</div>
+      <div>⬇️ <strong>Time que cai:</strong> +6 se estiver entre 17º e 20º</div>
+    </div>
+    <div style="margin-top:10px; padding-top:8px; border-top: 1px solid var(--border); color: var(--danger);">
+      🍽️ <strong>Os ${total - corteNaoPagantes} últimos colocados pagam a conta do almoço de fim de ano.</strong>
+    </div>
+  </div>`;
+
+  document.getElementById('view-rank').innerHTML = html;
+}
+
+function toggleExpand(idx) {
+  // mantida por compatibilidade
+  state.expandido = state.expandido === idx ? null : idx;
+  renderRank();
+}
+
+function renderTabela() {
+  if (state.tabela.length === 0) {
+    document.getElementById('view-tabela').innerHTML = '<div class="card empty">Carregando...</div>';
+    return;
+  }
+  let html = '<div class="card"><table><thead><tr><th style="width:40px;">Pos</th><th>Time</th><th style="text-align:center;">P</th><th style="text-align:center;">J</th><th style="text-align:center;">V</th><th style="text-align:center;">E</th><th style="text-align:center;">D</th><th style="text-align:center;">SG</th><th style="text-align:center;">%</th></tr></thead><tbody>';
+  state.tabela.forEach(t => {
+    let cls = '';
+    if (t.pos >= 17) cls = 'zona-rebaixamento';
+    else if (t.pos <= 4) cls = 'zona-libertadores';
+    html += `<tr class="${cls}"><td><strong>${t.pos}</strong></td><td>${t.time}</td><td style="text-align:center; font-weight:600;">${t.pontos}</td><td style="text-align:center;">${t.jogos}</td><td style="text-align:center;">${t.vitorias}</td><td style="text-align:center;">${t.empates}</td><td style="text-align:center;">${t.derrotas}</td><td style="text-align:center;">${t.sg > 0 ? '+' : ''}${t.sg}</td><td style="text-align:center;">${t.aproveitamento}%</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  html += '<div class="legenda"><div class="legenda-item"><div class="legenda-dot" style="background:rgba(74,222,128,0.4);"></div>Libertadores (G4)</div><div class="legenda-item"><div class="legenda-dot" style="background:rgba(248,113,113,0.4);"></div>Rebaixamento (Z4)</div></div>';
+  document.getElementById('view-tabela').innerHTML = html;
+}
+
+function renderParticipantes() {
+  let html = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;"><h2 style="font-size:16px; font-weight:600;">Gerenciar participantes</h2><button class="btn btn-primary" onclick="novoParticipante()">+ Adicionar</button></div>';
+  html += '<div class="card"><table><thead><tr><th>Nome</th><th>Time Coração</th><th>Time que cai</th><th style="text-align:right;">Total</th><th style="width:140px;"></th></tr></thead><tbody>';
+  state.participantes.forEach((p, i) => {
+    const { total } = calcular(p);
+    html += `<tr>
+      <td><strong>${p.nome}</strong></td>
+      <td>${p.coracao.time} (${p.coracao.palpite}º)</td>
+      <td>${p.cai}</td>
+      <td class="total">${total}</td>
+      <td>
+        <button class="btn" onclick="editarParticipante(${i})" style="padding:4px 10px; font-size:12px;">Editar</button>
+        <button class="btn btn-danger" onclick="removerParticipante(${i})" style="padding:4px 10px; font-size:12px;">×</button>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('view-participantes').innerHTML = html;
+}
+
+// ========================================================================
+// ADMIN E EDIÇÃO
+// ========================================================================
+function adminAction() {
+  if (state.ehAdmin) {
+    state.ehAdmin = false;
+    state.view = 'rank';
+    render();
+    return;
+  }
+  const senha = prompt('Senha de admin:');
+  if (senha === null) return;
+  if (senha === ADMIN_SENHA) {
+    state.ehAdmin = true;
+    state.view = 'participantes';
+    render();
+  } else {
+    alert('Senha incorreta');
+  }
+}
+
+function novoParticipante() {
+  state.editIdx = -1;
+  abrirEditor({
+    nome: "",
+    coracao: { time: TIMES_LISTA[0], palpite: 1 },
+    times: [
+      { time: TIMES_LISTA[1], palpite: 2 },
+      { time: TIMES_LISTA[2], palpite: 3 },
+      { time: TIMES_LISTA[3], palpite: 4 },
+      { time: TIMES_LISTA[4], palpite: 5 },
+      { time: TIMES_LISTA[5], palpite: 6 }
+    ],
+    cai: TIMES_LISTA[19]
+  });
+}
+
+function editarParticipante(idx) {
+  state.editIdx = idx;
+  abrirEditor(JSON.parse(JSON.stringify(state.participantes[idx])));
+}
+
+function removerParticipante(idx) {
+  const p = state.participantes[idx];
+  if (!confirm(`Remover ${p.nome}?`)) return;
+  state.participantes.splice(idx, 1);
+  salvarParticipantes();
+  render();
+}
+
+function abrirEditor(p) {
+  const opcoesTime = TIMES_LISTA.map(t => `<option value="${t}">${t}</option>`).join('');
+  const opcoesPos = Array.from({length:20}, (_,i) => `<option value="${i+1}">${i+1}º</option>`).join('');
+
+  let html = `<div class="modal-backdrop" onclick="if(event.target===this)fecharEditor()">
+    <div class="modal">
+      <h2>${state.editIdx === -1 ? 'Novo participante' : 'Editar participante'}</h2>
+      <div class="form-group">
+        <label>Nome</label>
+        <input id="ed-nome" type="text" value="${p.nome.replace(/"/g,'&quot;')}" placeholder="Nome do participante">
+      </div>
+      <div class="form-group">
+        <label>❤️ Time Coração (acertar exato = +12 pts)</label>
+        <div class="form-row">
+          <select id="ed-cor-time">${opcoesTime}</select>
+          <select id="ed-cor-palp">${opcoesPos}</select>
+        </div>
+      </div>`;
+  for (let k = 0; k < 5; k++) {
+    html += `<div class="form-group">
+      <label>Time ${k+1} (acertar exato = +9 pts)</label>
+      <div class="form-row">
+        <select id="ed-t${k}-time">${opcoesTime}</select>
+        <select id="ed-t${k}-palp">${opcoesPos}</select>
+      </div>
+    </div>`;
+  }
+  html += `<div class="form-group">
+        <label>⬇️ Time que vai cair (cair entre 17º e 20º = +6 pts)</label>
+        <select id="ed-cai">${opcoesTime}</select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="fecharEditor()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEditor()">Salvar</button>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('modal-container').innerHTML = html;
+  document.getElementById('ed-cor-time').value = p.coracao.time;
+  document.getElementById('ed-cor-palp').value = p.coracao.palpite;
+  for (let k = 0; k < 5; k++) {
+    document.getElementById(`ed-t${k}-time`).value = p.times[k].time;
+    document.getElementById(`ed-t${k}-palp`).value = p.times[k].palpite;
+  }
+  document.getElementById('ed-cai').value = p.cai;
+}
+
+function salvarEditor() {
+  const p = {
+    nome: document.getElementById('ed-nome').value.trim() || 'Sem nome',
+    coracao: {
+      time: document.getElementById('ed-cor-time').value,
+      palpite: parseInt(document.getElementById('ed-cor-palp').value)
+    },
+    times: [],
+    cai: document.getElementById('ed-cai').value
+  };
+  for (let k = 0; k < 5; k++) {
+    p.times.push({
+      time: document.getElementById(`ed-t${k}-time`).value,
+      palpite: parseInt(document.getElementById(`ed-t${k}-palp`).value)
+    });
+  }
+  if (state.editIdx === -1) state.participantes.push(p);
+  else state.participantes[state.editIdx] = p;
+  salvarParticipantes();
+  state.editIdx = null;
+  document.getElementById('modal-container').innerHTML = '';
+  render();
+}
+
+function fecharEditor() {
+  state.editIdx = null;
+  document.getElementById('modal-container').innerHTML = '';
+}
+
+// ========================================================================
+// INICIALIZAÇÃO
+// ========================================================================
+inicializar();
+</script>
+</body>
+</html>
