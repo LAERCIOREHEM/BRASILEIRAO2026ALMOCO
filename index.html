@@ -447,8 +447,13 @@
 const ADMIN_SENHA = "almocosexta2026";
 const CACHE_MIN = 30; // tempo de cache em minutos
 const PROXIES = [
-  "https://api.allorigins.win/raw?url=",
-  "https://corsproxy.io/?"
+  // Cada proxy tem: url (com a URL alvo no final) e tipo (raw=HTML direto, json=HTML dentro de JSON)
+  { url: "https://api.codetabs.com/v1/proxy?quest=", tipo: "raw" },
+  { url: "https://corsproxy.io/?url=", tipo: "raw" },
+  { url: "https://api.allorigins.win/raw?url=", tipo: "raw" },
+  { url: "https://api.allorigins.win/get?url=", tipo: "json" },
+  { url: "https://proxy.cors.sh/", tipo: "raw" },
+  { url: "https://thingproxy.freeboard.io/fetch/", tipo: "raw" }
 ];
 const URL_TERRA = "https://www.terra.com.br/esportes/futebol/brasileiro-serie-a/tabela/";
 
@@ -519,25 +524,46 @@ function carregarCache() {
 }
 
 // ========================================================================
-// FETCH DA TABELA — com fallback de proxies
+// FETCH DA TABELA — com fallback de proxies (6 alternativas + timeout)
 // ========================================================================
 async function buscarTabelaTerra() {
-  let ultimoErro = null;
+  const erros = [];
   for (const proxy of PROXIES) {
     try {
-      const url = proxy + encodeURIComponent(URL_TERRA);
-      const resp = await fetch(url);
+      // Timeout de 8 segundos por proxy — se travar, tenta o próximo
+      const ctrl = new AbortController();
+      const timeoutId = setTimeout(() => ctrl.abort(), 8000);
+
+      const url = proxy.url + encodeURIComponent(URL_TERRA);
+      const resp = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timeoutId);
+
       if (!resp.ok) throw new Error("HTTP " + resp.status);
-      const html = await resp.text();
+
+      // Extrai HTML conforme o tipo do proxy
+      let html;
+      if (proxy.tipo === "json") {
+        const data = await resp.json();
+        html = data.contents || data.body || "";
+      } else {
+        html = await resp.text();
+      }
+
+      if (!html || html.length < 1000) throw new Error("Resposta vazia ou muito curta");
+
       const tabela = parseTabelaHTML(html);
-      if (tabela.length === 20) return tabela;
+      if (tabela.length === 20) {
+        console.log("Sucesso via proxy:", proxy.url);
+        return tabela;
+      }
       throw new Error("Tabela com " + tabela.length + " linhas, esperado 20");
     } catch(e) {
-      ultimoErro = e;
+      const nome = proxy.url.split('/')[2] || proxy.url;
+      erros.push(`${nome}: ${e.message}`);
       continue;
     }
   }
-  throw ultimoErro || new Error("Todos os proxies falharam");
+  throw new Error("Todos os proxies falharam. Detalhes: " + erros.join(' | '));
 }
 
 function parseTabelaHTML(html) {
