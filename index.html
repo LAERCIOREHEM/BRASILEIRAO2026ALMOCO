@@ -445,10 +445,16 @@
 // CONFIGURAÇÃO — você pode mudar a senha de admin aqui
 // ========================================================================
 const ADMIN_SENHA = "almocosexta2026";
-const CACHE_MIN = 30; // tempo de cache em minutos
-const PROXIES = []; // não usamos mais — buscamos do tabela.json local
 
-const URL_TABELA_LOCAL = "tabela.json"; // arquivo gerado pelo GitHub Actions a cada hora
+// O index.html não gera a tabela; ele apenas lê o tabela.json publicado pelo GitHub Actions.
+// A verificação automática abaixo faz o navegador buscar o tabela.json nos minutos 07 e 37
+// de cada hora, além de buscar imediatamente quando a página abre.
+const URL_TABELA_LOCAL = "tabela.json";
+const MINUTOS_ATUALIZACAO = [7, 37];
+const SEGUNDO_ATUALIZACAO = 10; // dentro do minuto 07/37, dá alguns segundos para o workflow concluir
+
+let timerAtualizacao = null;
+let refreshEmAndamento = false;
 
 // ========================================================================
 // PARTICIPANTES INICIAIS — vindos da planilha
@@ -520,9 +526,16 @@ function carregarCache() {
 // FETCH DA TABELA — lê o tabela.json gerado pelo GitHub Actions
 // ========================================================================
 async function buscarTabelaTerra() {
-  // Anti-cache: adiciona timestamp pra forçar requisição nova
-  const url = URL_TABELA_LOCAL + "?t=" + Date.now();
-  const resp = await fetch(url);
+  // Anti-cache forte: evita o navegador/CDN reutilizar tabela.json antigo.
+  const url = `${URL_TABELA_LOCAL}?nocache=${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const resp = await fetch(url, {
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    }
+  });
+
   if (!resp.ok) {
     throw new Error("Não consegui ler o tabela.json (HTTP " + resp.status + "). Verifique se o arquivo existe no repositório.");
   }
@@ -533,12 +546,57 @@ async function buscarTabelaTerra() {
   if (data.tabela.length !== 20) {
     throw new Error("Tabela com " + data.tabela.length + " times, esperado 20");
   }
-  // Guarda quando foi atualizada (pra mostrar na status bar)
-  if (data.atualizado_em) {
-    state._atualizadoEmServidor = data.atualizado_em;
-    state._fonteServidor = data.fonte || "—";
-  }
+
+  // Guarda quando o SERVIDOR atualizou a tabela. Esta é a hora verdadeira do GitHub Actions.
+  state._atualizadoEmServidor = data.atualizado_em || null;
+  state._fonteServidor = data.fonte || "—";
   return data.tabela;
+}
+
+function proximaAtualizacaoProgramada(base = new Date()) {
+  const agora = new Date(base);
+  const candidatos = [];
+
+  // Gera candidatos para a hora atual e a próxima hora.
+  for (let acrescimoHora = 0; acrescimoHora <= 1; acrescimoHora++) {
+    for (const minuto of MINUTOS_ATUALIZACAO) {
+      const d = new Date(agora);
+      d.setHours(agora.getHours() + acrescimoHora, minuto, SEGUNDO_ATUALIZACAO, 0);
+      if (d > agora) candidatos.push(d);
+    }
+  }
+
+  candidatos.sort((a, b) => a - b);
+  return candidatos[0];
+}
+
+function formatarSomenteHora(d) {
+  if (!d) return '—';
+  return d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+}
+
+function mensagemStatusAtualizacao() {
+  const prox = proximaAtualizacaoProgramada();
+  const proxTxt = prox ? ` · próxima verificação automática: ${formatarSomenteHora(prox)}` : '';
+
+  if (state._atualizadoEmServidor) {
+    const dt = new Date(state._atualizadoEmServidor);
+    return `Tabela atualizada em ${formatarHora(dt)} (fonte: ${state._fonteServidor || '—'})${proxTxt}`;
+  }
+  return `Atualizado agora · ${formatarHora(state.ultimaAtualizacao)}${proxTxt}`;
+}
+
+function agendarProximaAtualizacao() {
+  if (timerAtualizacao) clearTimeout(timerAtualizacao);
+
+  const proxima = proximaAtualizacaoProgramada();
+  if (!proxima) return;
+
+  const atraso = Math.max(1000, proxima.getTime() - Date.now());
+  timerAtualizacao = setTimeout(async () => {
+    await refresh(true);
+    agendarProximaAtualizacao();
+  }, atraso);
 }
 
 // ========================================================================
@@ -550,59 +608,49 @@ async function inicializar() {
     state.participantes = JSON.parse(JSON.stringify(PARTICIPANTES_INICIAIS));
     salvarParticipantes();
   }
-  // 2. Tabela: usa cache localStorage só pra mostrar algo enquanto baixa o tabela.json fresh
-  // (o tabela.json local é a fonte de verdade — atualizado pelo GitHub Actions)
+
+  // 2. Fonte de verdade: sempre buscar o tabela.json do servidor ao abrir a página.
+  // O cache local só é usado como plano B se a busca falhar.
   const cache = carregarCache();
   if (cache) {
-    state.tabela = cache.tabela;
-    state.ultimaAtualizacao = new Date(Date.now() - cache.idadeMin * 60000);
-    render();
+    state._cacheBackup = cache;
   }
-  await refresh(); // SEMPRE busca o tabela.json do servidor — é instantâneo (mesmo domínio)
+
+  await refresh();
+  agendarProximaAtualizacao();
 }
 
-async function refresh() {
-  setStatus('loading', 'Carregando tabela...');
+async function refresh(silencioso = false) {
+  if (refreshEmAndamento) return;
+  refreshEmAndamento = true;
+
+  if (!silencioso) setStatus('loading', 'Carregando tabela...');
   try {
     const tabela = await buscarTabelaTerra();
     state.tabela = tabela;
     state.ultimaAtualizacao = new Date();
     salvarCache(tabela);
-    // Mensagem mostra quando o servidor atualizou pela última vez (não quando o usuário abriu)
-    let msg;
-    if (state._atualizadoEmServidor) {
-      const dt = new Date(state._atualizadoEmServidor);
-      msg = `Tabela atualizada em ${formatarHora(dt)} (fonte: ${state._fonteServidor || '—'})`;
-    } else {
-      msg = `Atualizado agora · ${formatarHora(state.ultimaAtualizacao)}`;
-    }
-    setStatus('ok', msg);
+    setStatus('ok', mensagemStatusAtualizacao());
     render();
   } catch(e) {
     console.error(e);
+
+    // Só aqui usamos o cache local, para não mostrar dado antigo como se fosse atual.
+    const cache = state._cacheBackup || carregarCache();
+    if (state.tabela.length === 0 && cache && Array.isArray(cache.tabela)) {
+      state.tabela = cache.tabela;
+      state.ultimaAtualizacao = new Date(Date.now() - cache.idadeMin * 60000);
+      render();
+    }
+
     if (state.tabela.length > 0) {
-      setStatus('error', `Falha ao recarregar (usando dados em cache de ${formatarHora(state.ultimaAtualizacao)}). Erro: ${e.message}`);
+      setStatus('error', `Falha ao recarregar o tabela.json; usando cache local de ${formatarHora(state.ultimaAtualizacao)}. Erro: ${e.message}`);
     } else {
       setStatus('error', `Falha ao carregar tabela.json. ${e.message}`);
     }
+  } finally {
+    refreshEmAndamento = false;
   }
-}
-
-function setStatus(tipo, msg) {
-  const el = document.getElementById('status-text');
-  el.className = 'status-' + tipo;
-  if (tipo === 'loading') {
-    el.innerHTML = '<span class="spinner"></span>' + msg;
-  } else if (tipo === 'ok') {
-    el.innerHTML = '✓ ' + msg;
-  } else {
-    el.innerHTML = '⚠ ' + msg;
-  }
-}
-
-function formatarHora(d) {
-  if (!d) return '—';
-  return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
 }
 
 // ========================================================================
