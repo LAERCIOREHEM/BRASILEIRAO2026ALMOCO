@@ -1,49 +1,76 @@
 name: Atualizar tabela do Brasileirão
 
 on:
-  # Roda automaticamente: 2 vezes por hora, nos minutos :07 e :37
-  # (evita o pico de :00, :15, :30, :45 que tem muito atraso no GitHub Actions)
-  # Se um ciclo falhar/atrasar, o próximo cobre.
+  # Roda automaticamente duas vezes por hora, nos minutos :07 e :37.
+  # Observação: o GitHub agenda nesses minutos, mas pode iniciar com alguns minutos de atraso.
   schedule:
     - cron: '7,37 * * * *'
 
-  # Permite rodar manualmente pelo botão "Run workflow" no GitHub
+  # Permite rodar manualmente pelo botão "Run workflow"
   workflow_dispatch:
 
-  # Roda também quando o script atualizar.py mudar (segurança extra)
+  # Roda também quando o script ou o próprio workflow forem alterados
   push:
     paths:
       - 'atualizar.py'
       - '.github/workflows/atualizar-tabela.yml'
 
-# Permissões: precisa escrever no próprio repositório (commitar tabela.json)
 permissions:
   contents: write
 
+concurrency:
+  group: atualizar-tabela-brasileirao
+  cancel-in-progress: true
+
 jobs:
   atualizar:
+    name: Buscar tabela e publicar tabela.json
     runs-on: ubuntu-latest
+
     steps:
       - name: Baixar repositório
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
+      - name: Mostrar horário da execução
+        run: |
+          echo "Horário UTC:"
+          date -u '+%d/%m/%Y %H:%M:%S UTC'
+          echo "Horário Brasília:"
+          TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M:%S BRT'
+
       - name: Buscar tabela e gerar tabela.json
         run: python atualizar.py
+
+      - name: Conferir se tabela.json foi gerado
+        run: |
+          if [ ! -f tabela.json ]; then
+            echo "ERRO: tabela.json não foi gerado pelo atualizar.py"
+            exit 1
+          fi
+
+          echo "tabela.json gerado com sucesso."
+          echo "Primeiras linhas:"
+          head -n 20 tabela.json
 
       - name: Commitar tabela.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add tabela.json
+
           if git diff --staged --quiet; then
-            echo "Sem mudanças na tabela — nada a commitar (raro: timestamp não mudou)."
+            echo "Sem mudanças em tabela.json — nada a commitar."
           else
             git commit -m "Atualizar tabela.json - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
             git push
-            echo "✓ Commit realizado com sucesso"
+            echo "Commit realizado com sucesso."
           fi
