@@ -446,16 +446,9 @@
 // ========================================================================
 const ADMIN_SENHA = "almocosexta2026";
 const CACHE_MIN = 30; // tempo de cache em minutos
-const PROXIES = [
-  // Cada proxy tem: url (com a URL alvo no final) e tipo (raw=HTML direto, json=HTML dentro de JSON)
-  { url: "https://api.codetabs.com/v1/proxy?quest=", tipo: "raw" },
-  { url: "https://corsproxy.io/?url=", tipo: "raw" },
-  { url: "https://api.allorigins.win/raw?url=", tipo: "raw" },
-  { url: "https://api.allorigins.win/get?url=", tipo: "json" },
-  { url: "https://proxy.cors.sh/", tipo: "raw" },
-  { url: "https://thingproxy.freeboard.io/fetch/", tipo: "raw" }
-];
-const URL_TERRA = "https://www.terra.com.br/esportes/futebol/brasileiro-serie-a/tabela/";
+const PROXIES = []; // não usamos mais — buscamos do tabela.json local
+
+const URL_TABELA_LOCAL = "tabela.json"; // arquivo gerado pelo GitHub Actions a cada hora
 
 // ========================================================================
 // PARTICIPANTES INICIAIS — vindos da planilha
@@ -524,93 +517,28 @@ function carregarCache() {
 }
 
 // ========================================================================
-// FETCH DA TABELA — com fallback de proxies (6 alternativas + timeout)
+// FETCH DA TABELA — lê o tabela.json gerado pelo GitHub Actions
 // ========================================================================
 async function buscarTabelaTerra() {
-  const erros = [];
-  for (const proxy of PROXIES) {
-    try {
-      // Timeout de 8 segundos por proxy — se travar, tenta o próximo
-      const ctrl = new AbortController();
-      const timeoutId = setTimeout(() => ctrl.abort(), 8000);
-
-      const url = proxy.url + encodeURIComponent(URL_TERRA);
-      const resp = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(timeoutId);
-
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
-
-      // Extrai HTML conforme o tipo do proxy
-      let html;
-      if (proxy.tipo === "json") {
-        const data = await resp.json();
-        html = data.contents || data.body || "";
-      } else {
-        html = await resp.text();
-      }
-
-      if (!html || html.length < 1000) throw new Error("Resposta vazia ou muito curta");
-
-      const tabela = parseTabelaHTML(html);
-      if (tabela.length === 20) {
-        console.log("Sucesso via proxy:", proxy.url);
-        return tabela;
-      }
-      throw new Error("Tabela com " + tabela.length + " linhas, esperado 20");
-    } catch(e) {
-      const nome = proxy.url.split('/')[2] || proxy.url;
-      erros.push(`${nome}: ${e.message}`);
-      continue;
-    }
+  // Anti-cache: adiciona timestamp pra forçar requisição nova
+  const url = URL_TABELA_LOCAL + "?t=" + Date.now();
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error("Não consegui ler o tabela.json (HTTP " + resp.status + "). Verifique se o arquivo existe no repositório.");
   }
-  throw new Error("Todos os proxies falharam. Detalhes: " + erros.join(' | '));
-}
-
-function parseTabelaHTML(html) {
-  // Pega a tabela principal — o HTML do Terra tem várias tabelas, queremos a que tem cabeçalho com "Pontos"
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  const tabelas = doc.querySelectorAll('table');
-  let tabelaCerta = null;
-  for (const t of tabelas) {
-    const headers = t.querySelectorAll('th');
-    const headerText = Array.from(headers).map(h => h.textContent.trim()).join('|');
-    if (headerText.includes('Times') || headerText.includes('Pontos') || t.querySelectorAll('tbody tr').length >= 20) {
-      tabelaCerta = t;
-      break;
-    }
+  const data = await resp.json();
+  if (!data || !Array.isArray(data.tabela)) {
+    throw new Error("Formato inválido de tabela.json");
   }
-  if (!tabelaCerta) {
-    // Fallback: pegar a tabela com mais linhas
-    let max = 0;
-    for (const t of tabelas) {
-      const rows = t.querySelectorAll('tbody tr').length;
-      if (rows > max) { max = rows; tabelaCerta = t; }
-    }
+  if (data.tabela.length !== 20) {
+    throw new Error("Tabela com " + data.tabela.length + " times, esperado 20");
   }
-  if (!tabelaCerta) return [];
-  const linhas = tabelaCerta.querySelectorAll('tbody tr');
-  const resultado = [];
-  for (const linha of linhas) {
-    const cels = linha.querySelectorAll('td');
-    if (cels.length < 12) continue;
-    // Estrutura: pos | time-img | time-link | tendencia | P | J | V | E | D | GP | GC | SG | %
-    const pos = parseInt(cels[0].textContent.trim());
-    if (isNaN(pos)) continue;
-    const timeNome = cels[2].textContent.replace(/>>/g,'').trim();
-    const ultimoIdx = cels.length - 1;
-    const aproveitamento = parseInt(cels[ultimoIdx].textContent.trim()) || 0;
-    const sg = parseInt(cels[ultimoIdx-1].textContent.trim()) || 0;
-    const gc = parseInt(cels[ultimoIdx-2].textContent.trim()) || 0;
-    const gp = parseInt(cels[ultimoIdx-3].textContent.trim()) || 0;
-    const d = parseInt(cels[ultimoIdx-4].textContent.trim()) || 0;
-    const e = parseInt(cels[ultimoIdx-5].textContent.trim()) || 0;
-    const v = parseInt(cels[ultimoIdx-6].textContent.trim()) || 0;
-    const j = parseInt(cels[ultimoIdx-7].textContent.trim()) || 0;
-    const p = parseInt(cels[ultimoIdx-8].textContent.trim()) || 0;
-    resultado.push({ pos, time: timeNome, pontos: p, jogos: j, vitorias: v, empates: e, derrotas: d, gp, gc, sg, aproveitamento });
+  // Guarda quando foi atualizada (pra mostrar na status bar)
+  if (data.atualizado_em) {
+    state._atualizadoEmServidor = data.atualizado_em;
+    state._fonteServidor = data.fonte || "—";
   }
-  return resultado;
+  return data.tabela;
 }
 
 // ========================================================================
@@ -640,20 +568,28 @@ async function inicializar() {
 }
 
 async function refresh() {
-  setStatus('loading', 'Buscando dados do Terra...');
+  setStatus('loading', 'Carregando tabela...');
   try {
     const tabela = await buscarTabelaTerra();
     state.tabela = tabela;
     state.ultimaAtualizacao = new Date();
     salvarCache(tabela);
-    setStatus('ok', `Atualizado agora · ${formatarHora(state.ultimaAtualizacao)}`);
+    // Mensagem mostra quando o servidor atualizou pela última vez (não quando o usuário abriu)
+    let msg;
+    if (state._atualizadoEmServidor) {
+      const dt = new Date(state._atualizadoEmServidor);
+      msg = `Tabela atualizada em ${formatarHora(dt)} (fonte: ${state._fonteServidor || '—'})`;
+    } else {
+      msg = `Atualizado agora · ${formatarHora(state.ultimaAtualizacao)}`;
+    }
+    setStatus('ok', msg);
     render();
   } catch(e) {
     console.error(e);
     if (state.tabela.length > 0) {
-      setStatus('error', `Falha ao atualizar (usando dados em cache de ${formatarHora(state.ultimaAtualizacao)}). Erro: ${e.message}`);
+      setStatus('error', `Falha ao recarregar (usando dados em cache de ${formatarHora(state.ultimaAtualizacao)}). Erro: ${e.message}`);
     } else {
-      setStatus('error', `Falha ao buscar tabela. Tente novamente em alguns instantes. Erro: ${e.message}`);
+      setStatus('error', `Falha ao carregar tabela.json. ${e.message}`);
     }
   }
 }
