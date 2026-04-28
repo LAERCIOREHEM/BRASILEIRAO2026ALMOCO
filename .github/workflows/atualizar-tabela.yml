@@ -1,0 +1,40 @@
+name: Atualizar tabela do Brasileirão
+
+on:
+  # Roda automaticamente: a cada hora cheia
+  schedule:
+    - cron: '0 * * * *'
+
+  # Permite rodar manualmente pelo botão "Run workflow" no GitHub
+  workflow_dispatch:
+
+# Permissões: precisa escrever no próprio repositório (commitar tabela.json)
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Buscar tabela e gerar tabela.json
+        run: python atualizar.py
+
+      - name: Commitar tabela.json se mudou
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tabela.json
+          if git diff --staged --quiet; then
+            echo "Sem mudanças na tabela — nada a commitar."
+          else
+            git commit -m "Atualizar tabela.json - $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
