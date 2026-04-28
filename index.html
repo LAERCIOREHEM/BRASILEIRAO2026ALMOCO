@@ -550,21 +550,15 @@ async function inicializar() {
     state.participantes = JSON.parse(JSON.stringify(PARTICIPANTES_INICIAIS));
     salvarParticipantes();
   }
-  // 2. Tabela: cache válido ou fetch
+  // 2. Tabela: usa cache localStorage só pra mostrar algo enquanto baixa o tabela.json fresh
+  // (o tabela.json local é a fonte de verdade — atualizado pelo GitHub Actions)
   const cache = carregarCache();
-  if (cache && cache.idadeMin < CACHE_MIN) {
+  if (cache) {
     state.tabela = cache.tabela;
     state.ultimaAtualizacao = new Date(Date.now() - cache.idadeMin * 60000);
-    setStatus('ok', `Atualizado há ${Math.round(cache.idadeMin)} min · próxima busca em ${Math.round(CACHE_MIN - cache.idadeMin)} min`);
     render();
-  } else {
-    if (cache) {
-      state.tabela = cache.tabela;
-      state.ultimaAtualizacao = new Date(Date.now() - cache.idadeMin * 60000);
-      render();
-    }
-    await refresh();
   }
+  await refresh(); // SEMPRE busca o tabela.json do servidor — é instantâneo (mesmo domínio)
 }
 
 async function refresh() {
