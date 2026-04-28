@@ -1,241 +1,463 @@
 #!/usr/bin/env python3
 """
 Script que busca a tabela do Brasileirão e salva em tabela.json.
-Roda no servidor do GitHub Actions, sem CORS, sem proxy.
-Tenta múltiplas fontes em ordem de preferência.
+
+Roda no GitHub Actions, sem CORS e sem proxy.
+Fluxo:
+1. Tenta buscar a tabela no Terra.
+2. Se falhar, tenta buscar no GloboEsporte.
+3. Normaliza os nomes dos clubes.
+4. Gera tabela.json com horário de Brasília e metadados de atualização.
+
+Observação importante:
+O horário salvo em "atualizado_em" é o horário real em que o GitHub Actions
+executou este script. O cron agenda para :07 e :37, mas o GitHub pode atrasar
+alguns minutos a execução.
 """
+
 import json
 import sys
-from datetime import datetime, timezone, timedelta
+import re
 import urllib.request
 import urllib.error
-import re
+from datetime import datetime, timezone, timedelta
 from html.parser import HTMLParser
 
 
-# Headers para parecer um navegador normal (alguns sites bloqueiam Python sem isso)
+# ============================================================================
+# CONFIGURAÇÕES GERAIS
+# ============================================================================
+
+FUSO_BRASILIA = timezone(timedelta(hours=-3))
+URL_TERRA = "https://www.terra.com.br/esportes/futebol/brasileiro-serie-a/tabela/"
+
+
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
 }
 
 
-def fetch(url, timeout=15):
-    """Baixa o conteúdo de uma URL com headers de navegador."""
-    req = urllib.request.Request(url, headers=HEADERS)
+# ============================================================================
+# UTILITÁRIOS DE DATA/HORA
+# ============================================================================
+
+def agora_brasilia():
+    return datetime.now(FUSO_BRASILIA)
+
+
+def calcular_proxima_prevista(dt=None):
+    """
+    Calcula a próxima atualização prevista nos minutos :07 ou :37.
+    Isso é apenas informativo para o site.
+    """
+    if dt is None:
+        dt = agora_brasilia()
+
+    minuto = dt.minute
+
+    if minuto < 7:
+        proxima = dt.replace(minute=7, second=0, microsecond=0)
+    elif minuto < 37:
+        proxima = dt.replace(minute=37, second=0, microsecond=0)
+    else:
+        proxima = dt.replace(hour=dt.hour + 1, minute=7, second=0, microsecond=0)
+
+    return proxima
+
+
+# ============================================================================
+# FETCH COM ANTI-CACHE
+# ============================================================================
+
+def fetch(url, timeout=20):
+    """
+    Baixa o conteúdo de uma URL com headers de navegador e parâmetro anti-cache.
+    """
+    separador = "&" if "?" in url else "?"
+    url_anticache = f"{url}{separador}_={int(datetime.now().timestamp())}"
+
+    req = urllib.request.Request(url_anticache, headers=HEADERS)
+
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read().decode("utf-8", errors="replace")
+        charset = resp.headers.get_content_charset() or "utf-8"
+        return resp.read().decode(charset, errors="replace")
 
 
 # ============================================================================
-# FONTE 1: Terra (mesmo formato da macro original)
+# FONTE 1: TERRA
 # ============================================================================
+
 class TerraParser(HTMLParser):
-    """Parser do HTML do Terra para extrair a tabela do Brasileirão."""
+    """
+    Parser simples para extrair tabelas HTML do Terra.
+    """
+
     def __init__(self):
         super().__init__()
+        self.in_table = False
         self.in_tbody = False
+        self.in_tr = False
         self.in_td = False
+
+        self.current_table = []
         self.current_row = []
         self.current_cell = ""
         self.tables = []
-        self.current_table = []
-        self.in_table = False
 
     def handle_starttag(self, tag, attrs):
         if tag == "table":
             self.in_table = True
             self.current_table = []
+
         elif tag == "tbody" and self.in_table:
             self.in_tbody = True
+
         elif tag == "tr" and self.in_tbody:
+            self.in_tr = True
             self.current_row = []
-        elif tag == "td" and self.in_tbody:
+
+        elif tag == "td" and self.in_tr:
             self.in_td = True
             self.current_cell = ""
 
     def handle_endtag(self, tag):
         if tag == "td" and self.in_td:
             self.in_td = False
-            self.current_row.append(self.current_cell.strip())
-        elif tag == "tr" and self.in_tbody and self.current_row:
-            self.current_table.append(self.current_row)
+            cell = limpar_texto(self.current_cell)
+            self.current_row.append(cell)
+
+        elif tag == "tr" and self.in_tr:
+            self.in_tr = False
+            if self.current_row:
+                self.current_table.append(self.current_row)
             self.current_row = []
-        elif tag == "tbody":
+
+        elif tag == "tbody" and self.in_tbody:
             self.in_tbody = False
-        elif tag == "table":
+
+        elif tag == "table" and self.in_table:
+            self.in_table = False
             if self.current_table:
                 self.tables.append(self.current_table)
-            self.in_table = False
+            self.current_table = []
 
     def handle_data(self, data):
         if self.in_td:
             self.current_cell += data
 
 
+def limpar_texto(txt):
+    """
+    Remove excesso de espaços, quebras, símbolos soltos e lixo visual.
+    """
+    if txt is None:
+        return ""
+
+    txt = re.sub(r"\s+", " ", txt)
+    txt = txt.replace("»", "").replace("«", "").replace(">", "")
+    return txt.strip()
+
+
+def extrair_inteiros(linha):
+    """
+    Extrai inteiros de uma linha da tabela.
+    """
+    nums = []
+
+    for item in linha:
+        item_limpo = limpar_texto(item)
+
+        # Captura apenas células que sejam números inteiros puros, inclusive negativos.
+        if re.fullmatch(r"-?\d+", item_limpo):
+            nums.append(int(item_limpo))
+
+    return nums
+
+
+def extrair_nome_time(linha):
+    """
+    Tenta identificar o nome do time na linha do Terra.
+
+    A estrutura mais comum é:
+    posição | escudo | nome | tendência | P | J | V | E | D | GP | GC | SG | %
+
+    Porém, como o Terra pode mudar pequenos detalhes, esta função tenta achar
+    o primeiro texto plausível que não seja número nem símbolo visual.
+    """
+    candidatos = []
+
+    for item in linha:
+        item = limpar_texto(item)
+
+        if not item:
+            continue
+
+        if re.fullmatch(r"-?\d+", item):
+            continue
+
+        if item in {"-", "+", "=", "▲", "▼"}:
+            continue
+
+        # Evita textos muito curtos que sejam apenas tendência ou lixo.
+        if len(item) < 3:
+            continue
+
+        candidatos.append(item)
+
+    if not candidatos:
+        return ""
+
+    # Em geral o nome do time é o primeiro texto plausível.
+    return candidatos[0]
+
+
 def buscar_terra():
-    """Busca a tabela no Terra. Retorna lista de dicts ou None se falhar."""
-    url = "https://www.terra.com.br/esportes/futebol/brasileiro-serie-a/tabela/"
-    html = fetch(url)
+    """
+    Busca a tabela no Terra.
+    Retorna lista de dicts.
+    """
+    html = fetch(URL_TERRA)
+
     parser = TerraParser()
     parser.feed(html)
 
-    # Procura a tabela com 20 linhas (a tabela de classificação)
+    if not parser.tables:
+        raise Exception("Nenhuma tabela HTML encontrada no Terra")
+
+    # Preferir tabela com exatamente 20 linhas.
     tabela_certa = None
-    for t in parser.tables:
-        if len(t) == 20:
-            tabela_certa = t
+
+    for tabela in parser.tables:
+        if len(tabela) == 20:
+            tabela_certa = tabela
             break
 
-    if not tabela_certa:
-        # Pega a maior tabela disponível
-        tabela_certa = max(parser.tables, key=len, default=None)
-        if not tabela_certa or len(tabela_certa) < 20:
-            raise Exception(f"Tabela do Terra com formato inesperado ({len(tabela_certa) if tabela_certa else 0} linhas)")
+    # Se não achou exatamente 20, pega a maior tabela com pelo menos 20 linhas.
+    if tabela_certa is None:
+        tabelas_validas = [t for t in parser.tables if len(t) >= 20]
+        if not tabelas_validas:
+            raise Exception(
+                f"Formato inesperado no Terra. Tabelas encontradas: "
+                f"{[len(t) for t in parser.tables]}"
+            )
+        tabela_certa = max(tabelas_validas, key=len)[:20]
 
     resultado = []
+
     for linha in tabela_certa:
-        # Estrutura típica: pos | (img) | nome | tendência | P | J | V | E | D | GP | GC | SG | %
-        if len(linha) < 12:
+        if len(linha) < 10:
             continue
+
         try:
-            pos = int(linha[0])
-        except (ValueError, IndexError):
+            pos = int(limpar_texto(linha[0]))
+        except Exception:
             continue
 
-        # Nome do time: limpa lixo como ">>" e espaços
-        nome = re.sub(r"[>«»]+", "", linha[2]).strip()
+        nome = extrair_nome_time(linha)
         if not nome:
-            nome = re.sub(r"[>«»]+", "", linha[1]).strip()
-
-        # Os últimos 9 valores numéricos são: P, J, V, E, D, GP, GC, SG, %
-        nums = []
-        for c in linha:
-            try:
-                nums.append(int(c))
-            except (ValueError, TypeError):
-                pass
-
-        if len(nums) < 9:
             continue
 
-        # Ordem dos números (do final pra trás): %, SG, GC, GP, D, E, V, J, P
-        # Pegando da posição -9 em diante:
+        nums = extrair_inteiros(linha)
+
+        # Esperado, no mínimo:
+        # pos, P, J, V, E, D, GP, GC, SG, %
+        # Alguns layouts podem repetir ou ocultar valores.
+        if len(nums) < 10:
+            raise Exception(
+                f"Linha com poucos números no Terra: {linha} | nums={nums}"
+            )
+
+        # A primeira posição costuma ser a colocação.
+        # Os últimos 9 números devem ser:
+        # P, J, V, E, D, GP, GC, SG, %
         relevantes = nums[-9:]
-        p, j, v, e, d, gp, gc, sg, perc = relevantes
+        pontos, jogos, vitorias, empates, derrotas, gp, gc, sg, aproveitamento = relevantes
 
         resultado.append({
             "pos": pos,
-            "time": nome,
-            "pontos": p,
-            "jogos": j,
-            "vitorias": v,
-            "empates": e,
-            "derrotas": d,
+            "time": normalizar_nome(nome),
+            "pontos": pontos,
+            "jogos": jogos,
+            "vitorias": vitorias,
+            "empates": empates,
+            "derrotas": derrotas,
             "gp": gp,
             "gc": gc,
             "sg": sg,
-            "aproveitamento": perc,
+            "aproveitamento": aproveitamento,
         })
 
-    if len(resultado) != 20:
-        raise Exception(f"Esperava 20 times, obtive {len(resultado)}")
+    validar_tabela(resultado, "Terra")
 
-    # Ordena por posição
     resultado.sort(key=lambda x: x["pos"])
     return resultado
 
 
 # ============================================================================
-# FONTE 2: API do GloboEsporte (oficial, JSON, mas formato pode mudar)
+# FONTE 2: GLOBOESPORTE
 # ============================================================================
+
 def buscar_globoesporte():
-    """Busca a tabela na API oficial do GloboEsporte. Pode falhar se mudarem o formato."""
-    ano_atual = datetime.now().year
-    url = f"https://api.globoesporte.globo.com/tabela/d1a37fa4-e948-43a6-ba53-ab24ab3a45b1/fase/fase-unica-campeonato-brasileiro-{ano_atual}/classificacao/"
+    """
+    Backup via API do GloboEsporte.
+
+    Atenção:
+    Essa URL pode mudar conforme o campeonato/temporada.
+    Mantida apenas como backup.
+    """
+    ano = agora_brasilia().year
+
+    url = (
+        "https://api.globoesporte.globo.com/tabela/"
+        "d1a37fa4-e948-43a6-ba53-ab24ab3a45b1/"
+        f"fase/fase-unica-campeonato-brasileiro-{ano}/classificacao/"
+    )
+
     raw = fetch(url)
     data = json.loads(raw)
 
-    if not isinstance(data, list) or len(data) != 20:
-        raise Exception(f"Formato inesperado da API GloboEsporte ({type(data).__name__}, len={len(data) if hasattr(data, '__len__') else '?'})")
+    if not isinstance(data, list):
+        raise Exception(f"Formato inesperado da API GE: {type(data).__name__}")
 
     resultado = []
+
     for item in data:
-        # Estrutura típica do GE
-        clube = item.get("equipe", {}) or item.get("clube", {})
+        clube = item.get("equipe") or item.get("clube") or {}
         nome = clube.get("nome_popular") or clube.get("nome") or ""
+
+        pos = item.get("ordem") or item.get("posicao")
+
         resultado.append({
-            "pos": item.get("ordem") or item.get("posicao", 0),
-            "time": nome,
-            "pontos": item.get("pontos", 0),
-            "jogos": item.get("jogos", 0),
-            "vitorias": item.get("vitorias", 0),
-            "empates": item.get("empates", 0),
-            "derrotas": item.get("derrotas", 0),
-            "gp": item.get("gols_pro", 0),
-            "gc": item.get("gols_contra", 0),
-            "sg": item.get("saldo_gols", 0),
-            "aproveitamento": int(item.get("aproveitamento", 0) or 0),
+            "pos": int(pos or 0),
+            "time": normalizar_nome(nome),
+            "pontos": int(item.get("pontos") or 0),
+            "jogos": int(item.get("jogos") or 0),
+            "vitorias": int(item.get("vitorias") or 0),
+            "empates": int(item.get("empates") or 0),
+            "derrotas": int(item.get("derrotas") or 0),
+            "gp": int(item.get("gols_pro") or 0),
+            "gc": int(item.get("gols_contra") or 0),
+            "sg": int(item.get("saldo_gols") or 0),
+            "aproveitamento": int(float(item.get("aproveitamento") or 0)),
         })
+
+    validar_tabela(resultado, "GloboEsporte")
 
     resultado.sort(key=lambda x: x["pos"])
     return resultado
 
 
 # ============================================================================
-# FONTE 3: ESPN Brasil (backup adicional)
+# NORMALIZAÇÃO DE NOMES
 # ============================================================================
-def buscar_espn():
-    """Busca via ESPN Brasil. Backup adicional."""
-    url = "https://www.espn.com.br/futebol/classificacao/_/liga/bra.1"
-    html = fetch(url)
-    # Procurar JSON embutido com a tabela
-    match = re.search(r'window\["__espnfitt__"\]\s*=\s*({.+?});</script>', html, re.DOTALL)
-    if not match:
-        raise Exception("Não encontrou dados embutidos na ESPN")
-    data = json.loads(match.group(1))
-    # Navegar até a tabela (estrutura interna varia, isto é uma tentativa)
-    raise Exception("Parser da ESPN não implementado completamente")
 
-
-# ============================================================================
-# Normalização de nomes — para casar com os times escolhidos no bolão
-# ============================================================================
 NORMALIZACAO_NOMES = {
     "Atlético Mineiro": "Atlético-MG",
     "Atletico Mineiro": "Atlético-MG",
+    "Atlético-MG": "Atlético-MG",
     "Atletico-MG": "Atlético-MG",
+    "CAM": "Atlético-MG",
+
     "Athletico Paranaense": "Athletico-PR",
-    "Athletico-PR": "Athletico-PR",
     "Atlético Paranaense": "Athletico-PR",
+    "Athletico-PR": "Athletico-PR",
+    "CAP": "Athletico-PR",
+
     "Red Bull Bragantino": "Bragantino",
     "RB Bragantino": "Bragantino",
+    "Bragantino": "Bragantino",
+
     "Vasco": "Vasco da Gama",
+    "Vasco da Gama": "Vasco da Gama",
+
     "São Paulo": "São Paulo",
     "Sao Paulo": "São Paulo",
+
     "Grêmio": "Grêmio",
     "Gremio": "Grêmio",
+
     "Vitória": "Vitória",
     "Vitoria": "Vitória",
-    "Goiás": "Goiás",
+
     "Ceará": "Ceará",
-    "Fortaleza": "Fortaleza",
+    "Ceara": "Ceará",
+
+    "Goiás": "Goiás",
+    "Goias": "Goiás",
+
     "Cuiabá": "Cuiabá",
-    "Juventude": "Juventude",
+    "Cuiaba": "Cuiabá",
+
+    "Sport Recife": "Sport",
+    "Sport": "Sport",
 }
 
 
 def normalizar_nome(nome):
-    """Normaliza nomes de times para um formato consistente."""
-    nome = nome.strip()
+    nome = limpar_texto(nome)
     return NORMALIZACAO_NOMES.get(nome, nome)
+
+
+# ============================================================================
+# VALIDAÇÃO
+# ============================================================================
+
+def validar_tabela(tabela, fonte):
+    """
+    Valida se a tabela extraída parece consistente.
+    """
+    if not isinstance(tabela, list):
+        raise Exception(f"{fonte}: tabela não é lista")
+
+    if len(tabela) != 20:
+        raise Exception(f"{fonte}: esperava 20 times, obtive {len(tabela)}")
+
+    posicoes = sorted([int(t["pos"]) for t in tabela])
+
+    if posicoes != list(range(1, 21)):
+        raise Exception(f"{fonte}: posições inválidas: {posicoes}")
+
+    nomes = [t["time"] for t in tabela]
+
+    if len(set(nomes)) != 20:
+        raise Exception(f"{fonte}: há times duplicados ou nomes vazios: {nomes}")
+
+    for t in tabela:
+        campos_obrigatorios = [
+            "pos", "time", "pontos", "jogos", "vitorias", "empates",
+            "derrotas", "gp", "gc", "sg", "aproveitamento"
+        ]
+
+        for campo in campos_obrigatorios:
+            if campo not in t:
+                raise Exception(f"{fonte}: campo ausente '{campo}' em {t}")
+
+        if not t["time"]:
+            raise Exception(f"{fonte}: time vazio em {t}")
 
 
 # ============================================================================
 # MAIN
 # ============================================================================
+
 def main():
+    inicio = agora_brasilia()
+
+    print("=" * 70)
+    print("Atualização da tabela do Brasileirão")
+    print("=" * 70)
+    print(f"Início em Brasília: {inicio.strftime('%d/%m/%Y %H:%M:%S BRT')}")
+    print(f"Início ISO: {inicio.isoformat()}")
+    print()
+
     fontes = [
         ("Terra", buscar_terra),
         ("GloboEsporte", buscar_globoesporte),
@@ -245,46 +467,64 @@ def main():
     tabela = None
     fonte_usada = None
 
-    for nome_fonte, fn in fontes:
+    for nome_fonte, funcao in fontes:
         try:
-            print(f"Tentando {nome_fonte}...")
-            tabela = fn()
+            print(f"Tentando fonte: {nome_fonte}")
+            tabela = funcao()
             fonte_usada = nome_fonte
-            print(f"✓ Sucesso via {nome_fonte}: {len(tabela)} times")
+            print(f"Sucesso via {nome_fonte}: {len(tabela)} times")
+            print()
             break
-        except Exception as e:
-            erro_str = f"{nome_fonte}: {type(e).__name__}: {e}"
-            print(f"✗ {erro_str}")
-            erros.append(erro_str)
 
-    if not tabela:
-        print("\nERRO: Todas as fontes falharam!")
-        print("\n".join(erros))
+        except Exception as e:
+            erro = f"{nome_fonte}: {type(e).__name__}: {e}"
+            print(f"Falha em {erro}")
+            print()
+            erros.append(erro)
+
+    if tabela is None:
+        print("ERRO: todas as fontes falharam.")
+        print()
+        for erro in erros:
+            print(f"- {erro}")
         sys.exit(1)
 
-    # Normaliza nomes de times
-    for t in tabela:
-        t["time"] = normalizar_nome(t["time"])
+    fim = agora_brasilia()
+    proxima = calcular_proxima_prevista(fim)
 
-    # Monta o JSON final
-    fuso_brasilia = timezone(timedelta(hours=-3))
     output = {
-        "atualizado_em": datetime.now(fuso_brasilia).isoformat(),
+        "atualizado_em": fim.isoformat(),
+        "atualizado_em_br": fim.strftime("%d/%m/%Y %H:%M BRT"),
+        "executado_em": fim.isoformat(),
+        "proxima_atualizacao_prevista": proxima.isoformat(),
+        "proxima_atualizacao_prevista_br": proxima.strftime("%d/%m/%Y %H:%M BRT"),
         "fonte": fonte_usada,
+        "total_times": len(tabela),
         "tabela": tabela,
     }
 
-    # Salva no arquivo tabela.json
     with open("tabela.json", "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
 
-    print(f"\n✓ Arquivo tabela.json salvo com sucesso!")
-    print(f"  Atualizado em: {output['atualizado_em']}")
-    print(f"  Fonte: {fonte_usada}")
-    print(f"  Times: {len(tabela)}")
-    print(f"\n  Top 5:")
+    print("=" * 70)
+    print("tabela.json salvo com sucesso")
+    print("=" * 70)
+    print(f"Atualizado em: {output['atualizado_em_br']}")
+    print(f"Próxima prevista: {output['proxima_atualizacao_prevista_br']}")
+    print(f"Fonte usada: {fonte_usada}")
+    print(f"Times: {len(tabela)}")
+    print()
+
+    print("Top 5:")
     for t in tabela[:5]:
-        print(f"    {t['pos']}º {t['time']} - {t['pontos']} pts ({t['jogos']} jogos)")
+        print(
+            f"{t['pos']:>2}º {t['time']:<18} "
+            f"{t['pontos']:>2} pts | J: {t['jogos']:>2} | "
+            f"V: {t['vitorias']:>2} | SG: {t['sg']:>3}"
+        )
+
+    print()
+    print("Concluído.")
 
 
 if __name__ == "__main__":
