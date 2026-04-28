@@ -1,13 +1,20 @@
 name: Atualizar tabela do Brasileirão
 
 on:
-  # Roda automaticamente: a cada hora, no minuto :17
-  # (evita o pico de :00 que tem muito atraso no GitHub Actions)
+  # Roda automaticamente: 2 vezes por hora, nos minutos :07 e :37
+  # (evita o pico de :00, :15, :30, :45 que tem muito atraso no GitHub Actions)
+  # Se um ciclo falhar/atrasar, o próximo cobre.
   schedule:
-    - cron: '17 * * * *'
+    - cron: '7,37 * * * *'
 
   # Permite rodar manualmente pelo botão "Run workflow" no GitHub
   workflow_dispatch:
+
+  # Roda também quando o script atualizar.py mudar (segurança extra)
+  push:
+    paths:
+      - 'atualizar.py'
+      - '.github/workflows/atualizar-tabela.yml'
 
 # Permissões: precisa escrever no próprio repositório (commitar tabela.json)
 permissions:
@@ -40,4 +47,3 @@ jobs:
             git push
             echo "✓ Commit realizado com sucesso"
           fi
-
