@@ -1,10 +1,12 @@
 name: Atualizar tabela do Brasileirão
 
 on:
-  # Roda automaticamente duas vezes por hora, nos minutos :07 e :37.
-  # Observação: o GitHub agenda nesses minutos, mas pode iniciar com alguns minutos de atraso.
+  # Roda automaticamente 4 vezes por hora, nos minutos :02, :17, :32 e :47.
+  # Aumentar a frequência (em vez de só 2x/h) compensa o cron do GitHub Actions
+  # que costuma atrasar 5-30 min ou pular ciclos em horário de pico.
+  # Cabe no limite gratuito: ~96 execuções/dia × 30s × 30 dias ≈ 1.440 min/mês (limite: 2.000).
   schedule:
-    - cron: '7,37 * * * *'
+    - cron: '2,17,32,47 * * * *'
 
   # Permite rodar manualmente pelo botão "Run workflow"
   workflow_dispatch:
