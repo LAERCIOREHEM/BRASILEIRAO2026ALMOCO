@@ -48,9 +48,9 @@
       label: "Premiere",
       aliases: ["premiere"],
       links: [
-        { label: "Globoplay", url: "https://globoplay.globo.com/categorias/premiere/" },
+        { label: "Premiere", url: "https://globoplay.globo.com/categorias/premiere/" },
         { label: "Claro tv+", url: "https://www.clarotvmais.com.br/ao-vivo" },
-        { label: "Prime Video", url: "https://www.primevideo.com/-/pt/channel/65837b7c-1c81-4f8a-80f5-d1bba5cde8f1" }
+        { label: "Prime Video", url: "https://www.primevideo.com" }
       ]
     },
     sportv: {
@@ -72,7 +72,7 @@
       label: "Prime Video",
       aliases: ["prime video", "amazon prime", "amazon prime video"],
       links: [
-        { label: "Prime Video", url: "https://www.primevideo.com/-/pt/store" }
+        { label: "Prime Video", url: "https://www.primevideo.com" }
       ]
     },
     globo: {
@@ -389,6 +389,119 @@
     }
   }
 
+  // ===== Modal de embed YouTube (mesmo layout dos melhores momentos) =====
+  // Toca a transmissão dentro do próprio site. Fallback: se o canal bloquear
+  // a incorporação, o rodapé oferece link direto "Abrir no YouTube ↗".
+  function extrairVideoIdYoutube(valor) {
+    const direto = String(valor || "").trim();
+    if (/^[A-Za-z0-9_-]{11}$/.test(direto)) return direto;
+    try {
+      const u = new URL(direto, window.location.href);
+      const host = u.hostname.toLowerCase().replace(/^www\./, "");
+      let id = "";
+      if (host === "youtu.be") id = u.pathname.split("/").filter(Boolean)[0] || "";
+      else if (host.endsWith("youtube.com")) {
+        id = u.searchParams.get("v") || "";
+        if (!id && /^\/(?:embed|shorts|live)\//.test(u.pathname)) id = u.pathname.split("/")[2] || "";
+      }
+      return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  let mmModalOverflowAnterior = "";
+  let mmModalResizeHandler = null;
+
+  function ajustarModalTransmissaoDesktop() {
+    const modal = document.getElementById("mm-modal-player");
+    if (!modal || !window.matchMedia("(min-width: 641px)").matches) return;
+    const card = modal.querySelector(".mm-modal-card");
+    const header = modal.querySelector(".mm-modal-header");
+    const footer = modal.querySelector(".mm-modal-footer");
+    if (!card || !header || !footer) return;
+    const margemModal = 36;
+    card.style.width = Math.min(960, Math.max(0, window.innerWidth - margemModal)) + "px";
+    for (let tentativa = 0; tentativa < 3; tentativa += 1) {
+      const alturaFixa = header.getBoundingClientRect().height + footer.getBoundingClientRect().height + 2;
+      const alturaDisponivelVideo = Math.max(0, window.innerHeight - margemModal - alturaFixa);
+      const larguraPelaAltura = (alturaDisponivelVideo * 16 / 9) + 2;
+      card.style.width = Math.floor(Math.min(960, window.innerWidth - margemModal, larguraPelaAltura)) + "px";
+    }
+  }
+
+  function fecharModalTransmissao() {
+    const modal = document.getElementById("mm-modal-player");
+    if (!modal) return;
+    const iframe = modal.querySelector("iframe");
+    if (iframe) iframe.src = "about:blank";
+    modal.remove();
+    if (mmModalResizeHandler) window.removeEventListener("resize", mmModalResizeHandler);
+    mmModalResizeHandler = null;
+    document.body.style.overflow = mmModalOverflowAnterior;
+    document.removeEventListener("keydown", teclaModalTransmissao);
+  }
+
+  function teclaModalTransmissao(evento) {
+    if (evento.key === "Escape") fecharModalTransmissao();
+  }
+
+  function abrirModalTransmissao(videoIdOuUrl, titulo, urlOriginal, fonte) {
+    const id = extrairVideoIdYoutube(videoIdOuUrl || urlOriginal);
+    if (!id) {
+      if (urlOriginal) window.open(urlOriginal, "_blank", "noopener,noreferrer");
+      return;
+    }
+    fecharModalTransmissao();
+    const urlYoutube = urlOriginal || "https://www.youtube.com/watch?v=" + encodeURIComponent(id);
+    const modal = document.createElement("div");
+    modal.id = "mm-modal-player";
+    modal.className = "mm-modal-backdrop";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-label", titulo || "Transmissão ao vivo");
+    modal.innerHTML =
+      '<section class="mm-modal-card">' +
+        '<header class="mm-modal-header">' +
+          '<strong>' + esc(titulo || "Transmissão ao vivo") + '</strong>' +
+          '<button type="button" class="mm-modal-close" aria-label="Fechar vídeo">×</button>' +
+        '</header>' +
+        '<div class="mm-modal-frame">' +
+          '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(id) + '?autoplay=1&rel=0&playsinline=1" ' +
+            'title="' + esc(titulo || "Transmissão ao vivo") + '" loading="eager" ' +
+            'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" ' +
+            'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>' +
+        '</div>' +
+        '<footer class="mm-modal-footer">' +
+          '<span>' + esc(fonte || "Transmissão publicada no YouTube") + '. Caso o canal bloqueie a incorporação, use o link oficial.</span>' +
+          '<a href="' + esc(urlYoutube) + '" target="_blank" rel="noopener noreferrer">Abrir no YouTube ↗</a>' +
+        '</footer>' +
+      '</section>';
+    modal.addEventListener("click", function (evento) {
+      if (evento.target === modal || evento.target.classList.contains("mm-modal-close")) {
+        fecharModalTransmissao();
+      }
+    });
+    document.body.appendChild(modal);
+    mmModalOverflowAnterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    ajustarModalTransmissaoDesktop();
+    mmModalResizeHandler = ajustarModalTransmissaoDesktop;
+    window.addEventListener("resize", mmModalResizeHandler);
+    document.addEventListener("keydown", teclaModalTransmissao);
+    modal.querySelector(".mm-modal-close")?.focus();
+  }
+  // Exposta no window para ser chamada via onclick dos botões de transmissão.
+  window.__brAovivoAbrirTransmissao = function (btn) {
+    if (!btn) return;
+    abrirModalTransmissao(
+      btn.getAttribute("data-video-id") || "",
+      btn.getAttribute("data-titulo") || "",
+      btn.getAttribute("data-url") || "",
+      btn.getAttribute("data-fonte") || ""
+    );
+  };
+
   function safeOfficialUrl(value) {
     try {
       const url = new URL(String(value || ""), window.location.href);
@@ -562,7 +675,19 @@
       const note = finished
         ? "Transmissão oficial encerrada no YouTube"
         : (liveNow ? "Transmissão oficial ao vivo no YouTube" : (preLive ? "A bola rola em breve — transmissão oficial no YouTube" : "Transmissão oficial programada no YouTube"));
-      youtube = '<div class="live-stream-area"><a class="live-stream-button ' + (liveStyle ? "is-live" : "") + '" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + esc(label) + '</a><div class="live-stream-note">' + esc(note) + '</div></div>';
+      const homeName = (game.home && game.home.nome) || "";
+      const awayName = (game.away && game.away.nome) || "";
+      const tituloModal = (finished ? "Reprise: " : "Transmissão: ") + homeName + " x " + awayName;
+      const fonteModal = "Transmissão oficial " + sourceName;
+      const btnAttrs =
+        ' data-url="' + esc(url) + '"' +
+        ' data-video-id="' + esc(principal.video_id || "") + '"' +
+        ' data-titulo="' + esc(tituloModal) + '"' +
+        ' data-fonte="' + esc(fonteModal) + '"';
+      // Botão abre o vídeo dentro do próprio site (modal com iframe embed).
+      // Se o canal bloquear a incorporação, o rodapé do modal oferece link
+      // direto para o YouTube — mesmo comportamento dos melhores momentos.
+      youtube = '<div class="live-stream-area"><button type="button" class="live-stream-button ' + (liveStyle ? "is-live" : "") + '" onclick="window.__brAovivoAbrirTransmissao(this)"' + btnAttrs + '>' + esc(label) + '</button><div class="live-stream-note">' + esc(note) + '</div></div>';
     }
     return youtube + renderClosedTransmission(game);
   }

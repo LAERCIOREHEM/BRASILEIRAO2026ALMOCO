@@ -1094,3 +1094,109 @@
   .live-lineup-player { grid-template-columns: 29px minmax(0, 1fr); }
   .live-lineup-number { width: 29px; height: 29px; }
 }
+
+/* ===== Modal de embed YouTube para transmissões ao vivo ===== */
+/* Layout idêntico ao modal de melhores momentos do index.html */
+.mm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 5, 10, .86);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.mm-modal-card {
+  width: min(960px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 18px;
+  background: #07131b;
+  box-shadow: 0 28px 80px rgba(0,0,0,.58);
+}
+.mm-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 14px 11px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+.mm-modal-header strong {
+  min-width: 0;
+  color: #f8fafc;
+  font-size: 14px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mm-modal-close {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  font: 900 22px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.mm-modal-close:hover,
+.mm-modal-close:focus-visible {
+  background: rgba(248,113,113,.18);
+  border-color: rgba(248,113,113,.55);
+  outline: none;
+}
+.mm-modal-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+.mm-modal-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.mm-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px 14px;
+  color: var(--text-secondary, #b8c4d0);
+  font-size: 11px;
+}
+.mm-modal-footer a {
+  flex: 0 0 auto;
+  color: #ffe78b;
+  font-weight: 850;
+  text-decoration: none;
+}
+.mm-modal-footer a:hover { text-decoration: underline; }
+@media (min-width: 641px) {
+  .mm-modal-card { overflow: hidden; }
+}
+@media (max-width: 640px) {
+  .mm-modal-backdrop { padding: 8px; }
+  .mm-modal-card { max-height: calc(100vh - 16px); border-radius: 14px; }
+  .mm-modal-header { padding: 10px 10px 9px 12px; }
+  .mm-modal-header strong { font-size: 12px; }
+  .mm-modal-close { width: 36px; height: 36px; }
+  .mm-modal-footer { align-items: flex-start; flex-direction: column; padding: 10px 12px 12px; }
+}
+
+/* Botão de transmissão precisa parecer link mas ser <button> */
+button.live-stream-button {
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  text-align: inherit;
+  width: 100%;
+}
