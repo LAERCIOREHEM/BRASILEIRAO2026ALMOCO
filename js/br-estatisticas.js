@@ -319,7 +319,6 @@
       const average = Number.isFinite(games) && games > 0 ? `${number(value / games, 2)} por jogo` : "Jogos não informados";
       return `<article class="stats-player-row">
         <div class="stats-rank">${integer(player.posicao || index + 1)}</div>
-        <div class="stats-avatar">${escapeHtml(initials(player.nome))}</div>
         <div class="stats-player-main">
           <div class="stats-player-name">${escapeHtml(player.nome)}</div>
           <div class="stats-player-club">${shield(player, "stats-mini-shield")}<span>${escapeHtml(player.time)}</span></div>

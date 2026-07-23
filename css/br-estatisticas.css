@@ -1576,6 +1576,18 @@ body > .container > section.hero > img {
     padding-bottom: 5px;
     scroll-snap-type: x proximity;
     scrollbar-width: thin;
+    max-width: 100%;
+  }
+  /* Bloqueia o overflow horizontal no pai para que a rolagem lateral
+     do carrossel de cards fique CONFINADA ao próprio strip. Sem isso,
+     grid items com min-width:auto empurram o layout inteiro para fora
+     da viewport no celular. */
+  .ranking-history-content,
+  .ranking-history-content .club-performance-history,
+  .ranking-history-content .club-forecast-history {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
   }
   .club-evolution-card { scroll-snap-align: start; }
   .ranking-history-details > summary {
