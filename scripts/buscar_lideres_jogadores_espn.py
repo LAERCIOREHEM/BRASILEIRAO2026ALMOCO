@@ -673,6 +673,11 @@ def merge_local_as_primary(
     for pos, item in enumerate(dedup, 1):
         item["posicao"] = pos
         games = int(item.get("jogos") or 0)
+        participation_games = int(item.get("jogos_com_participacao") or 0)
+        if games <= 0 and participation_games > 0:
+            item["jogos"] = participation_games
+            games = participation_games
+            item["origem_jogos"] = "mínimo validado pelos eventos das partidas (fallback)"
         if games > 0:
             item["media_por_jogo"] = round(int(item.get(field) or 0) / games, 3)
         else:
@@ -729,6 +734,11 @@ def merge_official_and_local(
     for pos, item in enumerate(dedup, 1):
         item["posicao"] = pos
         games = int(item.get("jogos") or 0)
+        participation_games = int(item.get("jogos_com_participacao") or 0)
+        if games <= 0 and participation_games > 0:
+            item["jogos"] = participation_games
+            games = participation_games
+            item["origem_jogos"] = "mínimo validado pelos eventos das partidas (fallback)"
         if games > 0:
             item["media_por_jogo"] = round(int(item.get(field) or 0) / games, 3)
         else:

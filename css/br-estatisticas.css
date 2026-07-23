@@ -781,8 +781,8 @@ body > .container > section.hero > img {
 }
 .stats-rank { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 13px; color: #edffc0; border: 1px solid rgba(163,230,53,.28); background: rgba(163,230,53,.10); font-size: 19px; font-weight: 950; }
 .stats-avatar { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 15px; border: 1px solid rgba(163,230,53,.24); color: #dfff8c; background: linear-gradient(145deg, rgba(163,230,53,.15), rgba(255,255,255,.025)); font-weight: 950; letter-spacing: .04em; }
-.stats-player-main { min-width: 0; }
-.stats-player-name { color: #fff; font-size: 20px; font-weight: 950; overflow-wrap: anywhere; }
+.stats-player-main { min-width: 0; overflow: hidden; }
+.stats-player-name { color: #fff; font-size: 20px; font-weight: 950; word-break: break-word; overflow-wrap: break-word; white-space: normal; }
 .stats-player-club { display: flex; align-items: center; gap: 7px; margin-top: 4px; color: var(--muted); }
 .stats-player-meta { margin-top: 6px; color: var(--muted-2); font-size: 12px; }
 .stats-player-value { min-width: 74px; text-align: right; }
@@ -959,10 +959,10 @@ body > .container > section.hero > img {
   .stats-summary-secondary { font-size: 11px; }
   .stats-tabs { gap: 8px; padding: 10px; }
   .stats-tab { min-height: 84px; padding: 10px 6px; font-size: 15px; }
-  .stats-player-row { grid-template-columns: 42px 48px minmax(0,1fr) 57px; gap: 8px; padding: 11px 9px; }
-  .stats-rank { width: 40px; height: 40px; font-size: 16px; }
-  .stats-avatar { width: 46px; height: 46px; font-size: 13px; }
-  .stats-player-name { font-size: 17px; }
+  .stats-player-row { grid-template-columns: 36px 42px minmax(0,1fr) 52px; gap: 8px; padding: 11px 9px; }
+  .stats-rank { width: 34px; height: 34px; font-size: 14px; border-radius: 10px; }
+  .stats-avatar { width: 40px; height: 40px; font-size: 12px; }
+  .stats-player-name { font-size: 15px; }
   .stats-player-meta { font-size: 10px; }
   .stats-player-value { min-width: 52px; }
   .stats-player-value strong { font-size: 24px; }
