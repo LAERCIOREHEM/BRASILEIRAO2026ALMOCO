@@ -1070,8 +1070,11 @@
       if (g.period === 1) return 25;
       return 0;
     }
-    // No intervalo a ESPN pode mandar 45; trata como 45 cheio.
-    return Math.min(base + acr, 95);
+    // Enquanto o jogo está em curso NUNCA zeramos o tempo restante — mesmo
+    // aos 90+7 o árbitro pode dar mais acréscimo. Limitamos em 89.5 para
+    // preservar sempre >= 0.5 min de janela probabilística. Só quando a
+    // partida vira "post" o placar decide de forma determinística.
+    return Math.min(base + acr, 89.5);
   }
 
   function taxasAoVivo(g) {
@@ -1098,7 +1101,11 @@
 
   function probabilidadeDinamica(g) {
     const s = gameState(g);
-    if (s.key !== "live") return null;
+    // Enquanto NÃO for pós-jogo, tratamos como partida em andamento e
+    // aplicamos piso probabilístico. Se a partida for "post", o placar
+    // atual decide.
+    const emJogo = s.key === "live";
+    if (s.key !== "live" && s.key !== "post") return null;
     const taxas = taxasAoVivo(g);
     if (!taxas) return null;
 
@@ -1106,9 +1113,18 @@
     const golsAway = Number(g.away && g.away.score);
     if (!isFinite(golsHome) || !isFinite(golsAway)) return null;
 
+    // Se o árbitro já apitou o fim, mostra o desfecho determinístico.
+    if (!emJogo) {
+      if (golsHome > golsAway) return { home: 100, empate: 0, away: 0, minuto: 90, restanteMin: 0 };
+      if (golsHome < golsAway) return { home: 0, empate: 0, away: 100, minuto: 90, restanteMin: 0 };
+      return { home: 0, empate: 100, away: 0, minuto: 90, restanteMin: 0 };
+    }
+
     const DURACAO = 90;
     const minuto = minutoAtual(g);
-    const restanteMin = Math.max(0, DURACAO - minuto);
+    // Enquanto in-game, o restante nunca é zero (minutoAtual já limita em 89.5).
+    // Mantém no mínimo 0.5 min de janela probabilística até o apito.
+    const restanteMin = Math.max(0.5, DURACAO - minuto);
     const fracao = restanteMin / DURACAO;
 
     // Ajuste por expulsão: um time com um jogador a menos perde força
@@ -1122,13 +1138,6 @@
     // Taxa esperada de gols no tempo restante.
     const lambdaHome = taxas.home * fracao * fatorHome;
     const lambdaAway = taxas.away * fracao * fatorAway;
-
-    // Se o jogo essencialmente acabou (restante ~0), o placar atual decide.
-    if (restanteMin <= 0 || (lambdaHome < 1e-4 && lambdaAway < 1e-4)) {
-      if (golsHome > golsAway) return { home: 100, empate: 0, away: 0, minuto, restanteMin };
-      if (golsHome < golsAway) return { home: 0, empate: 0, away: 100, minuto, restanteMin };
-      return { home: 0, empate: 100, away: 0, minuto, restanteMin };
-    }
 
     const MAXG = 8;
     const distH = distribuicaoGolsRestantes(lambdaHome, MAXG);
@@ -1146,13 +1155,28 @@
       }
     }
     const total = pHome + pEmpate + pAway || 1;
-    return {
-      home: (pHome / total) * 100,
-      empate: (pEmpate / total) * 100,
-      away: (pAway / total) * 100,
-      minuto,
-      restanteMin
-    };
+    let home = (pHome / total) * 100;
+    let empate = (pEmpate / total) * 100;
+    let away = (pAway / total) * 100;
+
+    // Piso "estatisticamente possível" enquanto o jogo não terminou.
+    // Em futebol nada é impossível até o apito final: sempre há uma cauda
+    // probabilística por menor que seja. 0,01% = 1 em 10 mil.
+    const PISO = 0.01;
+    const antes = [home, empate, away];
+    const pisos = antes.map(v => Math.max(v, PISO));
+    // Renormaliza mantendo soma = 100 e preservando as razões entre os
+    // valores que ficaram acima do piso. Se todos precisaram do piso
+    // (impossível na prática), distribui igualmente.
+    const somaPisada = pisos.reduce((s, v) => s + v, 0);
+    if (somaPisada > 0) {
+      const escala = 100 / somaPisada;
+      home = pisos[0] * escala;
+      empate = pisos[1] * escala;
+      away = pisos[2] * escala;
+    }
+
+    return { home, empate, away, minuto, restanteMin };
   }
 
   function percentuaisEmDecimos(values) {
@@ -1170,8 +1194,13 @@
   function renderProbabilidadeDinamica(g) {
     const pd = probabilidadeDinamica(g);
     if (!pd) return "";
-    const rounded = percentuaisEmDecimos([pd.home, pd.empate, pd.away]);
-    const fmt = (v) => v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%";
+    // Formatação inteligente: nas caudas (>=99 ou <=1) mostra 2 casas para
+    // não perder informação (99,86% em vez de "100%"; 0,08% em vez de "0%").
+    // No meio, 1 casa já basta e fica visualmente limpo.
+    const fmt = (v) => {
+      const casas = (v >= 99 || v <= 1) ? 2 : 1;
+      return v.toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas }) + "%";
+    };
     const homeNome = esc((g.home && g.home.nome) || "Mandante");
     const awayNome = esc((g.away && g.away.nome) || "Visitante");
     return '<div class="live-winprob" aria-label="Probabilidade dinâmica do resultado da partida">' +
@@ -1182,9 +1211,9 @@
         '<span class="live-winprob-seg away" style="width:' + pd.away.toFixed(3) + '%"></span>' +
       '</div>' +
       '<div class="live-winprob-legend">' +
-        '<span><strong>' + fmt(rounded[0]) + '</strong> ' + homeNome + '</span>' +
-        '<span><strong>' + fmt(rounded[1]) + '</strong> Empate</span>' +
-        '<span><strong>' + fmt(rounded[2]) + '</strong> ' + awayNome + '</span>' +
+        '<span><strong>' + fmt(pd.home) + '</strong> ' + homeNome + '</span>' +
+        '<span><strong>' + fmt(pd.empate) + '</strong> Empate</span>' +
+        '<span><strong>' + fmt(pd.away) + '</strong> ' + awayNome + '</span>' +
       '</div>' +
       '<div class="live-winprob-note">Estimativa estatística do nosso modelo · não é aposta</div>' +
     '</div>';
