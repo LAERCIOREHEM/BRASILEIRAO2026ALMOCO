@@ -603,6 +603,83 @@ def aggregate_from_details(stat: str) -> tuple[list[dict[str, Any]], dict[str, A
     return ranking, audit
 
 
+def merge_local_as_primary(
+    local: list[dict[str, Any]], official: list[dict[str, Any]], stat: str
+) -> list[dict[str, Any]]:
+    """Reconstrução dos eventos das partidas é a FONTE PRIMÁRIA dos contadores.
+
+    O ranking oficial da ESPN entra apenas como enriquecedor de metadados
+    (athlete_id, team_id, escudo e jogos disputados). Assim, se a ESPN vier
+    com dados congelados/desatualizados (comportamento observado a partir de
+    julho/2026), a lista publicada continua correta porque reflete todos os
+    gols e assistências validados jogo a jogo.
+
+    Compatível com a saída anterior — mesmas chaves (posicao, nome, time,
+    escudo, jogos, gols/assistencias, media_por_jogo) esperadas pelo frontend.
+    """
+    field = "gols" if stat == "gols" else "assistencias"
+    used_official: set[int] = set()
+    merged: list[dict[str, Any]] = []
+
+    for local_row in local:
+        team = para_canonico(local_row.get("time")) or str(local_row.get("time") or "")
+        row = dict(local_row)
+        row["time"] = team
+        row["escudo"] = row.get("escudo") or (ESCUDOS_TIMES.get(team) or {}).get("escudo", "")
+
+        # Procura correspondente na lista oficial (mesmo time + nome compatível)
+        # para enriquecer metadados; NÃO usa o valor do contador da oficial.
+        candidates = [
+            (idx, off) for idx, off in enumerate(official)
+            if idx not in used_official
+            and norm(para_canonico(off.get("time")) or off.get("time")) == norm(team)
+            and _name_compatible(off.get("nome"), row.get("nome"))
+        ]
+        if candidates:
+            idx, off = candidates[0]
+            used_official.add(idx)
+            # Enriquecimento seletivo: só sobrescreve campos vazios do local.
+            if off.get("athlete_id"):
+                row["athlete_id"] = off.get("athlete_id")
+            if off.get("team_id"):
+                row["team_id"] = off.get("team_id")
+            if not row.get("escudo") and off.get("escudo"):
+                row["escudo"] = off.get("escudo")
+            # jogos disputados: oficial costuma ter esse total; só usa se >0.
+            off_jogos = int(off.get("jogos") or 0)
+            if off_jogos > 0:
+                row["jogos"] = off_jogos
+            row["origem_complementar"] = "eventos das partidas · metadados enriquecidos pela ESPN"
+        else:
+            row["origem_complementar"] = "eventos das partidas"
+
+        merged.append(row)
+
+    # Deduplicação defensiva por (nome_normalizado, time_normalizado)
+    dedup: list[dict[str, Any]] = []
+    for row in sorted(merged, key=lambda x: (-int(x.get(field) or 0), norm(x.get("nome")), norm(x.get("time")))):
+        duplicate = next(
+            (x for x in dedup
+             if norm(x.get("time")) == norm(row.get("time"))
+             and _name_compatible(x.get("nome"), row.get("nome"))),
+            None,
+        )
+        if duplicate is None:
+            dedup.append(row)
+        elif int(row.get(field) or 0) > int(duplicate.get(field) or 0):
+            duplicate.update(row)
+
+    dedup.sort(key=lambda x: (-int(x.get(field) or 0), norm(x.get("nome")), norm(x.get("time"))))
+    for pos, item in enumerate(dedup, 1):
+        item["posicao"] = pos
+        games = int(item.get("jogos") or 0)
+        if games > 0:
+            item["media_por_jogo"] = round(int(item.get(field) or 0) / games, 3)
+        else:
+            item.pop("media_por_jogo", None)
+    return dedup
+
+
 def merge_official_and_local(
     official: list[dict[str, Any]], local: list[dict[str, Any]], stat: str
 ) -> list[dict[str, Any]]:
@@ -758,8 +835,10 @@ def main() -> None:
 
     local_goals, local_audit_goals = aggregate_from_details("gols")
     local_assists, local_audit_assists = aggregate_from_details("assistencias")
-    goals = merge_official_and_local(official_goals, local_goals, "gols")
-    assists = merge_official_and_local(official_assists, local_assists, "assistencias")
+    # A lista LOCAL (reconstruída dos eventos das partidas) é a fonte primária
+    # dos contadores. A ESPN entra apenas como enriquecedor de metadados.
+    goals = merge_local_as_primary(local_goals, official_goals, "gols")
+    assists = merge_local_as_primary(local_assists, official_assists, "assistencias")
 
     final_errors = (
         validate_ranking(goals, "gols") + validate_ranking(assists, "assistencias")
@@ -804,8 +883,8 @@ def main() -> None:
 
     payload = {
         "atualizado_em": iso_agora_brt(), "temporada": TEMPORADA,
-        "fonte": "ESPN · ranking oficial + eventos validados das partidas",
-        "metodologia": "Preserva os líderes oficiais da ESPN e completa a lista com todos os jogadores identificados nos gols e assistências validados jogo a jogo.",
+        "fonte": "Eventos das partidas (ESPN summary) · metadados enriquecidos pelo ranking oficial da ESPN",
+        "metodologia": "Reconstrói artilharia e assistências contando cada gol e assistência validados jogo a jogo (fonte primária). O ranking oficial da ESPN é consultado apenas para enriquecer identificadores, escudo e jogos disputados; nunca sobrescreve o contador reconstruído.",
         "status": "valido", "preservado_de_execucao_anterior": used_previous,
         "fonte_aceita": {"artilharia": source_goals, "assistencias": source_assists},
         "completude": completeness,
