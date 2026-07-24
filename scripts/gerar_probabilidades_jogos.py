@@ -25,6 +25,7 @@ from gerar_probabilidades_brasileirao import (
     BRT,
     CALENDAR_PATH,
     CONFIG_PATH,
+    CurrentDataNotSynchronized,
     EVENTS_PATH,
     Fixture,
     HIST_DIR,
@@ -286,6 +287,37 @@ def build_audit(document: dict[str, Any], expected_rows: Sequence[dict[str, Any]
     }
 
 
+def validate_previous_publication() -> tuple[bool, str]:
+    """Confere se os dois artefatos pré-jogo anteriores podem ser preservados.
+
+    O fallback é deliberadamente restrito à dessincronia transitória entre os
+    feeds. Qualquer outro erro continua interrompendo a execução.
+    """
+    if not OUTPUT_PATH.exists() or not AUDIT_PATH.exists():
+        return False, "arquivos anteriores ausentes"
+    try:
+        document = load_json(OUTPUT_PATH)
+        audit = load_json(AUDIT_PATH)
+        checks = validate_document(document)
+        if audit.get("status") != "ok" or audit.get("tipo") != "auditoria_probabilidades_pre_jogo":
+            return False, "auditoria anterior inválida"
+        if audit.get("hash_entrada") != document.get("hash_entrada"):
+            return False, "hash de entrada divergente entre documento e auditoria"
+        if audit.get("hash_saida") != canonical_hash(document):
+            return False, "hash de saída da auditoria não corresponde ao documento"
+        if audit.get("gerado_em") != document.get("gerado_em"):
+            return False, "instantes de geração divergentes"
+        if audit.get("versao_modelo") != document.get("versao_modelo"):
+            return False, "versões do modelo divergentes"
+        audited_checks = audit.get("validacoes") or {}
+        for field, value in checks.items():
+            if audited_checks.get(field) != value:
+                return False, f"validação anterior divergente em {field}"
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        return False, f"artefatos anteriores não passaram na validação: {type(exc).__name__}: {exc}"
+    return True, "documento e auditoria anteriores íntegros e coerentes"
+
+
 def enrich_fixture_event_ids(
     fixtures: Sequence[Fixture], events: dict[str, Any]
 ) -> list[Fixture]:
@@ -477,7 +509,17 @@ def main() -> int:
     if args.self_test:
         self_test()
         return 0
-    document, audit = generate()
+    try:
+        document, audit = generate()
+    except CurrentDataNotSynchronized as exc:
+        previous_valid, diagnosis = validate_previous_publication()
+        if not previous_valid:
+            raise
+        print(
+            "::warning title=Probabilidades pré-jogo aguardando sincronização da ESPN::"
+            f"{exc}. {diagnosis}; os arquivos anteriores foram preservados sem alteração."
+        )
+        return 0
     write_json(OUTPUT_PATH, document)
     write_json(AUDIT_PATH, audit)
     print(

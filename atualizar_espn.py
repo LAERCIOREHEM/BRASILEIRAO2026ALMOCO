@@ -15,9 +15,10 @@ Regras de segurança:
      gravados continuam nos 20 nomes canônicos do site.
   2. Se a tabela vier incompleta, duplicada ou com time não mapeado, o script
      falha antes de gravar tabela.json. O arquivo anterior fica preservado.
-  3. Jogos/resultados só são gravados quando a ESPN entregar pelo menos um
-     evento mapeável. Se a API estiver indisponível, o workflow falha sem
-     publicar JSON vazio.
+  3. Tabela e resultados só são gravados quando standings e scoreboard
+     descrevem exatamente o mesmo estado esportivo. Em indisponibilidade ou
+     dessincronia transitória, a coleta repete e preserva o último snapshot
+     íntegro sem publicar arquivos parciais.
   4. Nenhum arquivo de copa2026/ é lido ou alterado.
 
 Só usa biblioteca padrão, para rodar direto no GitHub Actions.
@@ -48,6 +49,8 @@ URLS_STANDINGS = [
 URL_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard"
 ARQ_AJUSTES_CALENDARIO = Path("dados-br/ajustes-calendario.json")
 ARQ_RESULTADOS_MANUAIS = Path("dados-br/resultados-manuais.json")
+MAX_TENTATIVAS_SINCRONIA = max(1, int(os.environ.get("ESPN_MAX_TENTATIVAS_SINCRONIA", "3")))
+ESPERA_SINCRONIA_SEGUNDOS = max(0, int(os.environ.get("ESPN_ESPERA_SINCRONIA_SEGUNDOS", "45")))
 
 HEADERS = {
     "User-Agent": (
@@ -1081,7 +1084,13 @@ def evento_realmente_finalizado(e: dict[str, Any], agora: datetime) -> bool:
         return False
     status = str(e.get("status") or "").strip().lower()
     estado = str(e.get("estado") or "").strip().lower()
-    if estado == "pre" or status in {"0'", "0", "0:00"}:
+    if estado == "pre":
+        return False
+    # Alguns jogos encerrados em 0 x 0 chegam com state="post", placar final,
+    # mas completed=false e displayClock="0'". O relógio zerado só é suspeito
+    # enquanto a fonte ainda não declarou o estado pós-jogo. A data mínima de
+    # 90 minutos acima continua impedindo que um 0 x 0 futuro vire resultado.
+    if estado != "post" and status in {"0'", "0", "0:00"}:
         return False
     return bool(e.get("concluido") is True or estado == "post" or dt < agora - timedelta(hours=2))
 
@@ -1158,6 +1167,7 @@ def gerar_jogos_resultados_eventos(eventos_brutos: list[dict[str, Any]],
                 "visitante": e["visitante_nome"],
                 "estadio": e.get("estadio", ""),
                 "transmissao": e.get("transmissao", ""),
+                "status": e.get("status", ""),
                 "estado": e.get("estado", ""),
                 "concluido": bool(e.get("concluido") is True),
                 "placar_mandante": e.get("placar_mandante"),
@@ -1182,6 +1192,211 @@ def gerar_jogos_resultados_eventos(eventos_brutos: list[dict[str, Any]],
         raise RuntimeError("resultados.json inválido: resultado finalizado sem placar.")
 
     return jogos_json, resultados_json, eventos_json
+
+
+def diagnosticar_sincronia_tabela_resultados(
+    tabela_payload: dict[str, Any], resultados_payload: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Reconstrói a classificação pelos resultados e compara com o standings.
+
+    A ESPN atualiza os endpoints de classificação e scoreboard de forma
+    independente. Durante alguns minutos, um deles pode incorporar uma partida
+    antes do outro. O snapshot só pode ser publicado quando os dois descrevem
+    exatamente o mesmo estado esportivo.
+    """
+    tabela = tabela_payload.get("tabela") or []
+    resultados = resultados_payload.get("resultados") or []
+    oficiais = {str(item.get("time") or ""): item for item in tabela}
+    if set(oficiais) != set(CANONICOS):
+        return [{"clube": "*", "campo": "clubes", "reconstruido": len(oficiais), "oficial": len(CANONICOS)}]
+
+    acumulado = {
+        clube: {"jogos": 0, "pontos": 0, "vitorias": 0, "empates": 0,
+                "derrotas": 0, "gp": 0, "gc": 0}
+        for clube in CANONICOS
+    }
+    anomalias: list[dict[str, Any]] = []
+    ids: set[str] = set()
+    for item in resultados:
+        event_id = str(item.get("event_id") or "").strip()
+        if event_id:
+            if event_id in ids:
+                anomalias.append({
+                    "clube": "*",
+                    "campo": "event_id_duplicado",
+                    "reconstruido": event_id,
+                    "oficial": "único",
+                })
+                continue
+            ids.add(event_id)
+        mandante_bruto = item.get("mandante")
+        visitante_bruto = item.get("visitante")
+        mandante_nome = mandante_bruto.get("nome") if isinstance(mandante_bruto, dict) else mandante_bruto
+        visitante_nome = visitante_bruto.get("nome") if isinstance(visitante_bruto, dict) else visitante_bruto
+        mandante = para_canonico(mandante_nome, item.get("mandante_nome"))
+        visitante = para_canonico(visitante_nome, item.get("visitante_nome"))
+        try:
+            gols_mandante = int(item.get("placar_mandante"))
+            gols_visitante = int(item.get("placar_visitante"))
+        except (TypeError, ValueError):
+            anomalias.append({
+                "clube": mandante or visitante or "*",
+                "campo": "placar",
+                "reconstruido": "inválido",
+                "oficial": "inteiro",
+            })
+            continue
+        if mandante not in acumulado or visitante not in acumulado or mandante == visitante:
+            anomalias.append({
+                "clube": mandante or visitante or "*",
+                "campo": "confronto",
+                "reconstruido": f"{mandante} x {visitante}",
+                "oficial": "clubes canônicos distintos",
+            })
+            continue
+
+        casa = acumulado[mandante]
+        fora = acumulado[visitante]
+        casa["jogos"] += 1
+        fora["jogos"] += 1
+        casa["gp"] += gols_mandante
+        casa["gc"] += gols_visitante
+        fora["gp"] += gols_visitante
+        fora["gc"] += gols_mandante
+        if gols_mandante > gols_visitante:
+            casa["pontos"] += 3
+            casa["vitorias"] += 1
+            fora["derrotas"] += 1
+        elif gols_mandante < gols_visitante:
+            fora["pontos"] += 3
+            fora["vitorias"] += 1
+            casa["derrotas"] += 1
+        else:
+            casa["pontos"] += 1
+            fora["pontos"] += 1
+            casa["empates"] += 1
+            fora["empates"] += 1
+
+    discrepancias = list(anomalias)
+    for clube in CANONICOS:
+        oficial = oficiais[clube]
+        for campo in ("jogos", "pontos", "vitorias", "empates", "derrotas", "gp", "gc"):
+            reconstruido = int(acumulado[clube][campo])
+            valor_oficial = int(oficial.get(campo) or 0)
+            if reconstruido != valor_oficial:
+                discrepancias.append({
+                    "clube": clube,
+                    "campo": campo,
+                    "reconstruido": reconstruido,
+                    "oficial": valor_oficial,
+                })
+    return discrepancias
+
+
+def resumir_discrepancias(discrepancias: list[dict[str, Any]], limite: int = 8) -> str:
+    amostra = "; ".join(
+        f"{item['clube']} {item['campo']}={item['reconstruido']}/{item['oficial']}"
+        for item in discrepancias[:limite]
+    )
+    restantes = len(discrepancias) - limite
+    return amostra + (f"; e mais {restantes}" if restantes > 0 else "")
+
+
+def snapshot_local_sincronizado() -> tuple[bool, str]:
+    caminhos = {
+        "tabela": Path("tabela.json"),
+        "jogos": Path("jogos.json"),
+        "resultados": Path("resultados.json"),
+        "eventos": Path("espn_eventos.json"),
+    }
+    faltantes = [str(path) for path in caminhos.values() if not path.exists()]
+    if faltantes:
+        return False, "arquivos anteriores ausentes: " + ", ".join(faltantes)
+    try:
+        payloads = {
+            nome: json.loads(path.read_text(encoding="utf-8"))
+            for nome, path in caminhos.items()
+        }
+        tabela = payloads["tabela"]
+        jogos = payloads["jogos"]
+        resultados = payloads["resultados"]
+        eventos = payloads["eventos"]
+
+        for nome, payload in payloads.items():
+            if not isinstance(payload, dict):
+                raise RuntimeError(f"{caminhos[nome]} não contém objeto JSON")
+            if payload.get("fonte") != "ESPN":
+                raise RuntimeError(f"{caminhos[nome]} não declara fonte ESPN")
+
+        validar_contra_ranking(tabela)
+        colecoes = {
+            "jogos": jogos.get("jogos"),
+            "resultados": resultados.get("resultados"),
+            "eventos": eventos.get("eventos"),
+        }
+        for nome, itens in colecoes.items():
+            if not isinstance(itens, list):
+                raise RuntimeError(f"{caminhos[nome]} não contém lista válida")
+            ids = [str(item.get("event_id") or "").strip() for item in itens]
+            if any(not event_id for event_id in ids):
+                raise RuntimeError(f"{caminhos[nome]} contém event_id ausente")
+            if len(ids) != len(set(ids)):
+                raise RuntimeError(f"{caminhos[nome]} contém event_id duplicado")
+
+        if int(jogos.get("total_jogos") or 0) != len(colecoes["jogos"]):
+            raise RuntimeError("jogos.json possui total_jogos divergente")
+        if int(resultados.get("total_resultados") or 0) != len(colecoes["resultados"]):
+            raise RuntimeError("resultados.json possui total_resultados divergente")
+        if int(eventos.get("total") or 0) != len(colecoes["eventos"]):
+            raise RuntimeError("espn_eventos.json possui total divergente")
+
+        ids_eventos = {str(item.get("event_id")) for item in colecoes["eventos"]}
+        ids_jogos = {str(item.get("event_id")) for item in colecoes["jogos"]}
+        ids_resultados = {str(item.get("event_id")) for item in colecoes["resultados"]}
+        if not ids_jogos.issubset(ids_eventos):
+            raise RuntimeError("jogos.json contém partidas ausentes de espn_eventos.json")
+        if not ids_resultados.issubset(ids_eventos):
+            raise RuntimeError("resultados.json contém partidas ausentes de espn_eventos.json")
+        if ids_jogos & ids_resultados:
+            raise RuntimeError("uma mesma partida aparece em jogos.json e resultados.json")
+
+        discrepancias = diagnosticar_sincronia_tabela_resultados(tabela, resultados)
+    except Exception as exc:  # noqa: BLE001
+        return False, f"snapshot anterior inválido: {type(exc).__name__}: {exc}"
+    if discrepancias:
+        return False, "snapshot anterior fora de sincronia: " + resumir_discrepancias(discrepancias)
+    return True, "snapshot anterior íntegro nos quatro artefatos ESPN"
+
+
+def escrever_outputs_github(*, sincronizado: bool, motivo: str, tentativas: int) -> None:
+    caminho = os.environ.get("GITHUB_OUTPUT")
+    if not caminho:
+        return
+    texto = " ".join(str(motivo).splitlines())
+    with open(caminho, "a", encoding="utf-8") as output:
+        output.write(f"sincronizado={str(sincronizado).lower()}\n")
+        output.write(f"tentativas={tentativas}\n")
+        output.write(f"motivo={texto}\n")
+
+
+def erro_transitorio_de_fonte(exc: Exception) -> bool:
+    texto = str(exc).lower()
+    sinais = (
+        "falha ao buscar json",
+        "indisponível",
+        "não retornou eventos",
+        "temporariamente",
+        "timed out",
+        "timeout",
+        "temporary failure",
+        "http error 429",
+        "http error 500",
+        "http error 502",
+        "http error 503",
+        "http error 504",
+        "connection reset",
+    )
+    return any(sinal in texto for sinal in sinais)
 
 
 def validar_contra_ranking(tabela_payload: dict[str, Any]) -> None:
@@ -1248,33 +1463,115 @@ def selftest_execucao_6() -> None:
         else:
             raise AssertionError("divergência entre ESPN e manual não foi bloqueada")
     ARQ_RESULTADOS_MANUAIS = original
-    print("Selftest Execução 6 OK")
+
+    # Regressão do empate Botafogo 0 x 0 Vitória: a ESPN publicou state=post
+    # e placar final, mas manteve completed=false/displayClock="0'".
+    agora_teste = datetime(2026, 7, 23, 21, 22, tzinfo=FUSO_BRASILIA)
+    empate_post = {
+        "data_dt": datetime(2026, 7, 23, 19, 30, tzinfo=FUSO_BRASILIA),
+        "placar_mandante": 0,
+        "placar_visitante": 0,
+        "estado": "post",
+        "concluido": False,
+        "status": "0'",
+    }
+    assert evento_realmente_finalizado(empate_post, agora_teste)
+    empate_pre = dict(empate_post, estado="pre")
+    assert not evento_realmente_finalizado(empate_pre, agora_teste)
+
+    tabela_teste = {
+        "tabela": [
+            {"time": clube, "jogos": 0, "pontos": 0, "vitorias": 0, "empates": 0,
+             "derrotas": 0, "gp": 0, "gc": 0}
+            for clube in CANONICOS
+        ]
+    }
+    resultados_teste = {
+        "resultados": [{
+            "event_id": "sync-1",
+            "mandante": {"nome": "Botafogo"},
+            "visitante": {"nome": "Vitória"},
+            "placar_mandante": 0,
+            "placar_visitante": 0,
+        }]
+    }
+    por_time = {item["time"]: item for item in tabela_teste["tabela"]}
+    for clube in ("Botafogo", "Vitória"):
+        por_time[clube].update({"jogos": 1, "pontos": 1, "empates": 1})
+    assert diagnosticar_sincronia_tabela_resultados(tabela_teste, resultados_teste) == []
+    por_time["Botafogo"]["jogos"] = 2
+    divergencias = diagnosticar_sincronia_tabela_resultados(tabela_teste, resultados_teste)
+    assert any(item["clube"] == "Botafogo" and item["campo"] == "jogos" for item in divergencias)
+    print("Selftest Execução 6 e sincronização cruzada OK")
 
 
 def main() -> None:
-    try:
-        tabela = gerar_tabela()
-        validar_contra_ranking(tabela)
-        eventos_brutos = buscar_eventos_scoreboard()
-        anteriores, snapshot_anterior_em = carregar_snapshot_eventos_anterior()
-        jogos, resultados, eventos = gerar_jogos_resultados_eventos(
-            eventos_brutos, anteriores, snapshot_anterior_em
+    anteriores, snapshot_anterior_em = carregar_snapshot_eventos_anterior()
+    ultima_falha = ""
+
+    for tentativa in range(1, MAX_TENTATIVAS_SINCRONIA + 1):
+        print(f"== COLETA SINCRONIZADA {tentativa}/{MAX_TENTATIVAS_SINCRONIA} ==")
+        try:
+            tabela = gerar_tabela()
+            validar_contra_ranking(tabela)
+            eventos_brutos = buscar_eventos_scoreboard()
+            jogos, resultados, eventos = gerar_jogos_resultados_eventos(
+                eventos_brutos, anteriores, snapshot_anterior_em
+            )
+            discrepancias = diagnosticar_sincronia_tabela_resultados(tabela, resultados)
+            if not discrepancias:
+                gravar_json_atomico("tabela.json", tabela)
+                gravar_json_atomico("jogos.json", jogos)
+                gravar_json_atomico("resultados.json", resultados)
+                gravar_json_atomico("espn_eventos.json", eventos)
+
+                escrever_outputs_github(
+                    sincronizado=True,
+                    motivo="standings e scoreboard descrevem o mesmo estado esportivo",
+                    tentativas=tentativa,
+                )
+                print("== ARQUIVOS GERADOS ==")
+                print(f"  tabela.json        {len(tabela['tabela'])} times, fonte ESPN")
+                print(f"  jogos.json         {len(jogos['jogos'])} próximos jogos, fonte ESPN")
+                print(f"  resultados.json    {len(resultados['resultados'])} resultados, fonte ESPN")
+                print(f"  espn_eventos.json  {len(eventos['eventos'])} eventos ESPN")
+                print("Concluído com snapshot ESPN sincronizado.")
+                return
+
+            ultima_falha = (
+                "standings e scoreboard fora de sincronia: "
+                + resumir_discrepancias(discrepancias)
+            )
+            print(f"::warning::{ultima_falha}")
+        except Exception as exc:  # noqa: BLE001
+            if not erro_transitorio_de_fonte(exc):
+                print(f"ERRO FATAL: {type(exc).__name__}: {exc}")
+                escrever_outputs_github(sincronizado=False, motivo=str(exc), tentativas=tentativa)
+                sys.exit(1)
+            ultima_falha = f"fonte ESPN temporariamente indisponível: {type(exc).__name__}: {exc}"
+            print(f"::warning::{ultima_falha}")
+
+        if tentativa < MAX_TENTATIVAS_SINCRONIA:
+            espera = ESPERA_SINCRONIA_SEGUNDOS * tentativa
+            print(f"Aguardando {espera}s antes de repetir standings + scoreboard...")
+            time.sleep(espera)
+
+    anterior_ok, diagnostico_anterior = snapshot_local_sincronizado()
+    if anterior_ok:
+        motivo = f"{ultima_falha}. {diagnostico_anterior}; nenhum arquivo foi sobrescrito"
+        escrever_outputs_github(
+            sincronizado=False, motivo=motivo, tentativas=MAX_TENTATIVAS_SINCRONIA
         )
-    except Exception as e:  # noqa: BLE001
-        print(f"ERRO FATAL: {e}")
-        sys.exit(1)
+        print(f"::warning::{motivo}")
+        print("Coleta encerrada com sucesso operacional: último snapshot íntegro preservado.")
+        return
 
-    gravar_json_atomico("tabela.json", tabela)
-    gravar_json_atomico("jogos.json", jogos)
-    gravar_json_atomico("resultados.json", resultados)
-    gravar_json_atomico("espn_eventos.json", eventos)
-
-    print("== ARQUIVOS GERADOS ==")
-    print(f"  tabela.json        {len(tabela['tabela'])} times, fonte ESPN")
-    print(f"  jogos.json         {len(jogos['jogos'])} próximos jogos, fonte ESPN")
-    print(f"  resultados.json    {len(resultados['resultados'])} resultados, fonte ESPN")
-    print(f"  espn_eventos.json  {len(eventos['eventos'])} eventos ESPN")
-    print("Concluído com segurança.")
+    motivo = f"{ultima_falha}. Não foi possível preservar dados: {diagnostico_anterior}"
+    escrever_outputs_github(
+        sincronizado=False, motivo=motivo, tentativas=MAX_TENTATIVAS_SINCRONIA
+    )
+    print(f"ERRO FATAL: {motivo}")
+    sys.exit(1)
 
 
 if __name__ == "__main__":
