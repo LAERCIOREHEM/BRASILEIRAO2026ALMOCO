@@ -1,0 +1,87 @@
+name: Monitorar Atualizar Brasileirao
+
+on:
+  workflow_run:
+    workflows:
+      - 'Atualizar Brasileirao (ESPN)'
+    types: [completed]
+
+permissions:
+  contents: write
+
+# O monitor só escreve o status depois que o workflow principal terminou.
+concurrency:
+  group: repo-write-main
+  cancel-in-progress: false
+
+jobs:
+  alertar:
+    name: Alertar falha ou cancelamento
+    if: github.event.workflow_run.conclusion != 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Baixar o main mais recente
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Gerar status crítico e enviar e-mail
+        env:
+          BR_STATUS: erro
+          BR_MOTIVO: O workflow Atualizar Brasileirão terminou com conclusão '${{ github.event.workflow_run.conclusion }}'. O último snapshot íntegro permanece publicado.
+          BR_FALLBACKS: '[]'
+          BR_TENTATIVAS: '0'
+          BR_SINCRONIZADO: 'false'
+          BR_WORKFLOW: Atualizar Brasileirao (ESPN)
+          BR_SITE: Brasileirão 2026 Almoço
+          BR_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          BR_SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+        run: python scripts/gerenciar_status_brasileirao.py --from-env --notify
+
+      - name: Publicar somente o status de erro
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          STATUS_FILE="dados-br/status-atualizacao.json"
+          TMP_DIR="$(mktemp -d)"
+          mkdir -p "$TMP_DIR/dados-br"
+          cp -a "$STATUS_FILE" "$TMP_DIR/$STATUS_FILE"
+
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            mkdir -p dados-br
+            cp -a "$TMP_DIR/$STATUS_FILE" "$STATUS_FILE"
+
+            if [[ -z "$(git status --porcelain -- "$STATUS_FILE")" ]]; then
+              echo "O mesmo status já foi publicado por outro mecanismo."
+              exit 0
+            fi
+
+            git add -- "$STATUS_FILE"
+            git commit -m "Registrar falha do Atualizar Brasileirao - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then
+              echo "Status crítico publicado."
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "ERRO: não foi possível publicar o status crítico após 5 tentativas."
+          exit 1

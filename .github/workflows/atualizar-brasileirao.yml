@@ -55,6 +55,9 @@ jobs:
         run: |
           python -m py_compile \
             atualizar_espn.py \
+            fontes_brasileirao.py \
+            scripts/atualizar_transmissoes_tv_brasileirao.py \
+            scripts/gerenciar_status_brasileirao.py \
             scripts/buscar_lideres_jogadores_espn.py \
             scripts/buscar_detalhes_jogos_brasileirao.py \
             scripts/gerar_estatisticas_brasileirao.py \
@@ -67,6 +70,9 @@ jobs:
             scripts/gerar_probabilidades_jogos.py \
             scripts/avaliar_af_previsao.py
           python atualizar_espn.py --selftest
+          python fontes_brasileirao.py --selftest
+          python scripts/atualizar_transmissoes_tv_brasileirao.py --selftest
+          python scripts/gerenciar_status_brasileirao.py --selftest
           python scripts/buscar_lideres_jogadores_espn.py --self-test
           python scripts/buscar_detalhes_jogos_brasileirao.py --self-test
           python scripts/atualizar_competicoes_af_previsao.py --self-test
@@ -120,12 +126,15 @@ jobs:
           print(f'Estado anterior do AF: {digest}')
           PY
 
-      # --- DADOS DO BRASILEIRAO (100% ESPN) ---
-      # O script só grava os quatro JSONs em conjunto quando standings e
-      # scoreboard estiverem sincronizados e os 20 nomes canônicos forem válidos.
-      # Em dessincronia transitória, preserva o último snapshot íntegro.
-      - name: Atualizar tabela, jogos, resultados e eventos (ESPN)
+      # --- DADOS DO BRASILEIRAO ---
+      # A ESPN permanece como fonte principal. Somente quando a auditoria não
+      # fecha, o coletor tenta summary ESPN, CBF oficial, API-Football opcional
+      # e, por último, override manual. Os quatro JSONs são gravados juntos.
+      - name: Atualizar tabela, jogos, resultados e eventos
         id: espn
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          API_FOOTBALL_LEAGUE_ID: ${{ secrets.API_FOOTBALL_LEAGUE_ID }}
         run: python atualizar_espn.py
 
       - name: Informar preservação por dessincronia temporária da ESPN
@@ -137,6 +146,59 @@ jobs:
           printf '::warning::A ESPN não sincronizou standings e scoreboard após %s tentativa(s).\n' "${ESPN_TENTATIVAS:-0}"
           printf '::warning::%s\n' "${ESPN_MOTIVO:-Motivo não informado pelo coletor.}"
           echo "O workflow termina com sucesso sem publicar arquivos parciais ou contraditórios."
+
+      - name: Registrar alerta de snapshot preservado
+        if: steps.espn.outputs.sincronizado != 'true'
+        env:
+          BR_STATUS: ${{ steps.espn.outputs.status }}
+          BR_MOTIVO: ${{ steps.espn.outputs.motivo }}
+          BR_FALLBACKS: ${{ steps.espn.outputs.fallbacks }}
+          BR_TENTATIVAS: ${{ steps.espn.outputs.tentativas }}
+          BR_SINCRONIZADO: ${{ steps.espn.outputs.sincronizado }}
+          BR_WORKFLOW: Atualizar Brasileirao (ESPN)
+          BR_SITE: Brasileirão 2026 Almoço
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+        run: python scripts/gerenciar_status_brasileirao.py --from-env --notify
+
+      - name: Publicar somente o status preservado
+        if: steps.espn.outputs.sincronizado != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          STATUS_FILE="dados-br/status-atualizacao.json"
+          if [[ -z "$(git status --porcelain -- "$STATUS_FILE")" ]]; then
+            echo "Status operacional sem alteração."
+            exit 0
+          fi
+          TMP_DIR="$(mktemp -d)"
+          mkdir -p "$TMP_DIR/dados-br"
+          cp -a "$STATUS_FILE" "$TMP_DIR/$STATUS_FILE"
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            mkdir -p dados-br
+            cp -a "$TMP_DIR/$STATUS_FILE" "$STATUS_FILE"
+            if [[ -z "$(git status --porcelain -- "$STATUS_FILE")" ]]; then
+              echo "Outro run já publicou o mesmo status."
+              exit 0
+            fi
+            git add -- "$STATUS_FILE"
+            git commit -m "Registrar aviso operacional do Brasileirao - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          echo "ERRO: não foi possível publicar o status preservado."
+          exit 1
+
+      - name: Atualizar transmissões oficiais da agenda
+        if: steps.espn.outputs.sincronizado == 'true'
+        run: python scripts/atualizar_transmissoes_tv_brasileirao.py
 
       - name: Gerar auditoria estrutural do calendário
         if: steps.espn.outputs.sincronizado == 'true'
@@ -264,12 +326,27 @@ jobs:
         if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_auditoria_cobertura_resultados.py
 
+      - name: Registrar saúde da atualização e alertar em fallback
+        if: steps.espn.outputs.sincronizado == 'true'
+        env:
+          BR_STATUS: ${{ steps.espn.outputs.status }}
+          BR_MOTIVO: ${{ steps.espn.outputs.motivo }}
+          BR_FALLBACKS: ${{ steps.espn.outputs.fallbacks }}
+          BR_TENTATIVAS: ${{ steps.espn.outputs.tentativas }}
+          BR_SINCRONIZADO: ${{ steps.espn.outputs.sincronizado }}
+          BR_WORKFLOW: Atualizar Brasileirao (ESPN)
+          BR_SITE: Brasileirão 2026 Almoço
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+        run: python scripts/gerenciar_status_brasileirao.py --from-env --notify
+
       - name: Conferir e validar JSONs gerados
         if: steps.espn.outputs.sincronizado == 'true'
         run: |
           set -euo pipefail
           echo "Arquivos JSON presentes e validos:"
-          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
+          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/transmissoes-tv.json dados-br/status-atualizacao.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
             if [ ! -f "$arq" ]; then
               echo "ERRO: $arq nao foi gerado."
               exit 1
@@ -277,8 +354,8 @@ jobs:
             python -m json.tool "$arq" > /dev/null
             echo "  OK   $arq"
           done
-          # Travas extras: todos os JSONs principais precisam vir da ESPN
-          # e a tabela precisa preservar os 20 times do Ranking.
+          # A fonte principal permanece ESPN; fallbacks pontuais são registrados
+          # por evento sem alterar a origem principal do snapshot.
           python - <<'PY'
           import json
           import math
@@ -292,7 +369,12 @@ jobs:
           r = json.load(open('resultados.json', encoding='utf-8'))
           e = json.load(open('espn_eventos.json', encoding='utf-8'))
           assert isinstance(r.get('resultados'), list), 'resultados.json sem lista resultados'
-          print('  OK   JSONs principais: fonte ESPN; tabela com 20 times')
+          status_ops = json.load(open('dados-br/status-atualizacao.json', encoding='utf-8'))
+          assert status_ops.get('status') in {'ok', 'aviso'}, 'status operacional incompatível com publicação sincronizada'
+          assert status_ops.get('sincronizado') is True, 'status operacional não reconhece snapshot sincronizado'
+          tv = json.load(open('dados-br/transmissoes-tv.json', encoding='utf-8'))
+          assert isinstance(tv.get('jogos'), dict), 'transmissoes-tv.json sem mapa de jogos'
+          print('  OK   JSONs principais: ESPN como fonte principal; tabela com 20 times')
           stats = json.load(open('dados-br/estatisticas.json', encoding='utf-8'))
           rank = json.load(open('dados-br/ranking-desempenho.json', encoding='utf-8'))
           hist_rank = json.load(open('dados-br/historico-ranking-desempenho.json', encoding='utf-8'))
@@ -579,6 +661,8 @@ jobs:
             "espn_eventos.json"
             "jogos.json"
             "resultados.json"
+            "dados-br/transmissoes-tv.json"
+            "dados-br/status-atualizacao.json"
             "dados-br/estatisticas.json"
             "dados-br/ranking-desempenho.json"
             "dados-br/historico-ranking-desempenho.json"
@@ -640,7 +724,7 @@ jobs:
             fi
 
             git add -- "${FILES[@]}"
-            git commit -m "Atualizar dados e estatisticas Brasileirao (ESPN) - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            git commit -m "Atualizar dados auditados do Brasileirao - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
 
             if git push origin HEAD:main; then
               echo "Push OK na tentativa $i."
