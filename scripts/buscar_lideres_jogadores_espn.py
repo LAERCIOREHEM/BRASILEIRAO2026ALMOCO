@@ -655,19 +655,34 @@ def merge_local_as_primary(
 
         merged.append(row)
 
-    # Deduplicação defensiva por (nome_normalizado, time_normalizado)
-    dedup: list[dict[str, Any]] = []
+    # Deduplicação estrita por (nome_norm, time_norm) + fallback _name_compatible.
+    # A deduplicação estrita evita que aliases com nome canônico ligeiramente
+    # diferente gerem duplicatas detectadas pelo validate_ranking.
+    _seen_strict: dict[tuple[str, str], int] = {}
+    _dedup_strict: list[dict[str, Any]] = []
     for row in sorted(merged, key=lambda x: (-int(x.get(field) or 0), norm(x.get("nome")), norm(x.get("time")))):
-        duplicate = next(
-            (x for x in dedup
-             if norm(x.get("time")) == norm(row.get("time"))
-             and _name_compatible(x.get("nome"), row.get("nome"))),
-            None,
-        )
-        if duplicate is None:
-            dedup.append(row)
-        elif int(row.get(field) or 0) > int(duplicate.get(field) or 0):
-            duplicate.update(row)
+        _key = (norm(str(row.get("nome") or "")), norm(str(row.get("time") or "")))
+        if _key in _seen_strict:
+            _existing = _dedup_strict[_seen_strict[_key]]
+            if int(row.get(field) or 0) > int(_existing.get(field) or 0):
+                _existing.update(row)
+        else:
+            # Verifica também alias aproximado antes de inserir
+            _alias = next(
+                (i for i, x in enumerate(_dedup_strict)
+                 if norm(str(x.get("time") or "")) == _key[1]
+                 and _name_compatible(x.get("nome"), row.get("nome"))),
+                None,
+            )
+            if _alias is not None:
+                _ex = _dedup_strict[_alias]
+                if int(row.get(field) or 0) > int(_ex.get(field) or 0):
+                    _ex.update(row)
+                    _seen_strict[_key] = _alias
+            else:
+                _seen_strict[_key] = len(_dedup_strict)
+                _dedup_strict.append(row)
+    dedup = _dedup_strict
 
     dedup.sort(key=lambda x: (-int(x.get(field) or 0), norm(x.get("nome")), norm(x.get("time"))))
     for pos, item in enumerate(dedup, 1):
@@ -721,14 +736,31 @@ def merge_official_and_local(
             continue
         merged.append(dict(row))
 
-    # Deduplicação defensiva após aliases oficiais/local.
-    dedup: list[dict[str, Any]] = []
+    # Deduplicação estrita por (nome_norm, time_norm) + fallback _name_compatible.
+    _seen2: dict[tuple[str, str], int] = {}
+    _dedup2: list[dict[str, Any]] = []
     for row in sorted(merged, key=lambda x: (-int(x.get(field) or 0), norm(x.get("nome")), norm(x.get("time")))):
-        duplicate = next((x for x in dedup if norm(x.get("time")) == norm(row.get("time")) and _name_compatible(x.get("nome"), row.get("nome"))), None)
-        if duplicate is None:
-            dedup.append(row)
-        elif int(row.get(field) or 0) > int(duplicate.get(field) or 0):
-            duplicate.update(row)
+        _k2 = (norm(str(row.get("nome") or "")), norm(str(row.get("time") or "")))
+        if _k2 in _seen2:
+            _ex2 = _dedup2[_seen2[_k2]]
+            if int(row.get(field) or 0) > int(_ex2.get(field) or 0):
+                _ex2.update(row)
+        else:
+            _al2 = next(
+                (i for i, x in enumerate(_dedup2)
+                 if norm(str(x.get("time") or "")) == _k2[1]
+                 and _name_compatible(x.get("nome"), row.get("nome"))),
+                None,
+            )
+            if _al2 is not None:
+                _ex2 = _dedup2[_al2]
+                if int(row.get(field) or 0) > int(_ex2.get(field) or 0):
+                    _ex2.update(row)
+                    _seen2[_k2] = _al2
+            else:
+                _seen2[_k2] = len(_dedup2)
+                _dedup2.append(row)
+    dedup = _dedup2
 
     dedup.sort(key=lambda x: (-int(x.get(field) or 0), norm(x.get("nome")), norm(x.get("time"))))
     for pos, item in enumerate(dedup, 1):
