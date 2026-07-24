@@ -492,11 +492,15 @@
     .bolao-projection-detail { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .bolao-af-intro { align-items:flex-start; flex-direction:column; }
     .bolao-af-intro a { width:100%; text-align:center; }
-    .ranking-table thead th.col-pos,.ranking-table tbody td.col-pos { position:sticky; left:0; z-index:4; min-width:54px; background:var(--card); }
-    .ranking-table thead th.col-nome,.ranking-table tbody td.col-nome { position:sticky; left:54px; z-index:4; min-width:112px; max-width:112px; background:var(--card); }
-    .ranking-table thead th.col-total,.ranking-table tbody td.col-total { position:sticky; left:166px; z-index:4; min-width:58px; background:#10241f; }
-    .ranking-table thead th.col-chance,.ranking-table tbody td.col-chance { position:sticky; left:224px; z-index:4; min-width:74px; background:#112432; box-shadow:6px 0 10px rgba(0,0,0,.18); }
-    .ranking-table thead th.col-pos,.ranking-table thead th.col-nome,.ranking-table thead th.col-total,.ranking-table thead th.col-chance { z-index:7; }
+    /* No celular, somente posição e participante permanecem congelados.
+       Total e chance de título fazem parte da planilha e acompanham a
+       rolagem horizontal, liberando espaço útil para os palpites. */
+    .ranking-table thead th.col-pos,.ranking-table tbody td.col-pos { position:sticky; left:0; z-index:4; min-width:54px; background:#0e181c; background-clip:padding-box; }
+    .ranking-table thead th.col-nome,.ranking-table tbody td.col-nome { position:sticky; left:54px; z-index:4; min-width:112px; max-width:112px; background:#0e181c; background-clip:padding-box; box-shadow:6px 0 10px rgba(0,0,0,.18); }
+    .ranking-table thead th.col-total,.ranking-table tbody td.col-total { position:static; min-width:58px; }
+    .ranking-table thead th.col-chance,.ranking-table tbody td.col-chance { position:static; min-width:84px; box-shadow:none; }
+    .ranking-table thead th.col-pos,.ranking-table thead th.col-nome { z-index:7; }
+    .ranking-table tbody tr.bob-row td.col-pos,.ranking-table tbody tr.bob-row td.col-nome { background:#25212b !important; }
   }
 
   /* PRÓXIMOS JOGOS */
