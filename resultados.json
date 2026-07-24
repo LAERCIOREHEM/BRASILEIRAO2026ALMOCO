@@ -1,7 +1,21 @@
 {
-  "atualizado_em": "2026-07-24T02:51:32.058067-03:00",
-  "atualizado_em_br": "24/07/2026 02:51 BRT",
+  "atualizado_em": "2026-07-24T10:53:22.708798-03:00",
+  "atualizado_em_br": "24/07/2026 10:53 BRT",
   "fonte": "ESPN",
+  "fontes_complementares": [
+    "override manual"
+  ],
+  "fallbacks_resultado": [
+    {
+      "event_id": "401840998",
+      "rodada": 4,
+      "jogo": "Bahia x Chapecoense",
+      "placar": "2 x 0",
+      "fonte": "override manual",
+      "origem": "manual confirmado — resultado público e vídeo publicado pelo UOL Esporte",
+      "motivo": "A ESPN manteve o event_id reagendado com placar/status incompatível com o resultado público confirmado."
+    }
+  ],
   "ultima_rodada_disputada": 19,
   "rodadas_consultadas": [
     1,
@@ -64,7 +78,7 @@
       },
       "estadio": "Joao Havelange Stadium",
       "transmissao": "CazéTV",
-      "status": "0'",
+      "status": "Encerrado",
       "estado": "post",
       "adiado": true,
       "data_definir": false,
@@ -285,8 +299,11 @@
       "adiado": true,
       "data_definir": false,
       "finalizado_em": "2026-07-17T21:30:00-03:00",
-      "resultado_manual": true,
+      "resultado_fallback": true,
+      "fonte_resultado": "override manual",
       "origem_resultado": "manual confirmado — resultado público e vídeo publicado pelo UOL Esporte",
+      "motivo_fallback": "A ESPN manteve o event_id reagendado com placar/status incompatível com o resultado público confirmado.",
+      "resultado_manual": true,
       "motivo_resultado_manual": "A ESPN manteve o event_id reagendado com placar/status incompatível com o resultado público confirmado.",
       "placar_mandante": 2,
       "placar_visitante": 0
