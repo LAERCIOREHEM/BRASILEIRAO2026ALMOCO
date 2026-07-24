@@ -25,7 +25,7 @@ jobs:
   atualizar:
     name: Buscar dados ESPN e publicar JSONs
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Baixar repositorio
@@ -121,28 +121,45 @@ jobs:
           PY
 
       # --- DADOS DO BRASILEIRAO (100% ESPN) ---
-      # O script grava os quatro JSONs de uma vez e falha antes de publicar
-      # se a tabela nao preservar exatamente os 20 nomes canonicos do Ranking.
+      # O script só grava os quatro JSONs em conjunto quando standings e
+      # scoreboard estiverem sincronizados e os 20 nomes canônicos forem válidos.
+      # Em dessincronia transitória, preserva o último snapshot íntegro.
       - name: Atualizar tabela, jogos, resultados e eventos (ESPN)
         id: espn
         run: python atualizar_espn.py
 
+      - name: Informar preservação por dessincronia temporária da ESPN
+        if: steps.espn.outputs.sincronizado != 'true'
+        env:
+          ESPN_TENTATIVAS: ${{ steps.espn.outputs.tentativas }}
+          ESPN_MOTIVO: ${{ steps.espn.outputs.motivo }}
+        run: |
+          printf '::warning::A ESPN não sincronizou standings e scoreboard após %s tentativa(s).\n' "${ESPN_TENTATIVAS:-0}"
+          printf '::warning::%s\n' "${ESPN_MOTIVO:-Motivo não informado pelo coletor.}"
+          echo "O workflow termina com sucesso sem publicar arquivos parciais ou contraditórios."
+
       - name: Gerar auditoria estrutural do calendário
+        if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_auditoria_calendario.py
 
       - name: Buscar estatísticas por jogo finalizado
+        if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/buscar_detalhes_jogos_brasileirao.py
 
       - name: Buscar líderes oficiais de gols e assistências
+        if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/buscar_lideres_jogadores_espn.py
 
       - name: Gerar estatísticas e Ranking Vivo de desempenho
+        if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_estatisticas_brasileirao.py
 
       - name: Atualizar competições que alteram as vagas continentais
+        if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/atualizar_competicoes_af_previsao.py --max-age-minutes 45
 
       - name: Verificar se o estado esportivo exige novo AF-Previsão
+        if: steps.espn.outputs.sincronizado == 'true'
         id: af_gate
         env:
           FORCAR_AF: ${{ inputs.forcar_af }}
@@ -216,34 +233,39 @@ jobs:
           PY
 
       - name: Gerar probabilidades pré-jogo de vitória, empate e derrota
-        if: steps.af_gate.outputs.run_af == 'true'
+        if: steps.espn.outputs.sincronizado == 'true' && steps.af_gate.outputs.run_af == 'true'
         run: python scripts/gerar_probabilidades_jogos.py
 
       - name: Gerar AF-Previsão integrado e simular o restante do campeonato
-        if: steps.af_gate.outputs.run_af == 'true'
+        if: steps.espn.outputs.sincronizado == 'true' && steps.af_gate.outputs.run_af == 'true'
         run: python scripts/gerar_probabilidades_brasileirao.py
 
       - name: Sincronizar histórico com o AF efetivamente publicado
+        if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_probabilidades_brasileirao.py --sincronizar-historico-publicado
 
       - name: Auditar histórico e preparar avaliação final do AF-Previsão
-        if: steps.af_gate.outputs.run_af == 'true'
+        if: steps.espn.outputs.sincronizado == 'true' && steps.af_gate.outputs.run_af == 'true'
         run: python scripts/avaliar_af_previsao.py --strict
 
       - name: Informar preservação do último AF-Previsão
-        if: steps.af_gate.outputs.run_af != 'true'
+        if: steps.espn.outputs.sincronizado == 'true' && steps.af_gate.outputs.run_af != 'true'
         run: echo "Nenhuma mudança esportiva relevante; último AF-Previsão válido preservado sem repetir 2 milhões de simulações."
 
       - name: Gerar estatísticas gerais da competição
+        if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_estatisticas_competicao_brasileirao.py
 
       - name: Auditar estatísticas do Brasileirão
+        if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_auditoria_estatisticas_brasileirao.py
 
       - name: Gerar auditoria de cobertura da aba Resultados
+        if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_auditoria_cobertura_resultados.py
 
       - name: Conferir e validar JSONs gerados
+        if: steps.espn.outputs.sincronizado == 'true'
         run: |
           set -euo pipefail
           echo "Arquivos JSON presentes e validos:"
@@ -543,6 +565,7 @@ jobs:
       # reaplica os arquivos -> commit -> push. Nunca gera conflito artificial
       # de rebase em arquivos-artefato, mesmo sob concorrencia real.
       - name: Commitar JSONs juntos com push robusto
+        if: steps.espn.outputs.sincronizado == 'true'
         shell: bash
         run: |
           set -euo pipefail

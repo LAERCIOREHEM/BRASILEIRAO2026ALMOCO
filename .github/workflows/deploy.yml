@@ -47,15 +47,17 @@ permissions:
   pages: write
   id-token: write
 
+# Não cancelar uma publicação já iniciada. Novos deploys aguardam na fila e,
+# ao começar, fazem checkout do main mais recente.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
     name: Publicar GitHub Pages
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     if: >-
       github.event_name == 'workflow_dispatch' ||
