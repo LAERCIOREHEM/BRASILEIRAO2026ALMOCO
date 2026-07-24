@@ -23,9 +23,7 @@
   var operationalState = {
     loaded: false,
     loading: false,
-    update: null,
-    deploy: null,
-    error: ""
+    update: null
   };
 
   global.BR_AUTH_READY = new Promise(function (resolve) { readyResolve = resolve; });
@@ -170,21 +168,6 @@
     }
   }
 
-  function operationalDate(value) {
-    if (!value) return "não registrado";
-    var date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    try {
-      return new Intl.DateTimeFormat("pt-BR", {
-        dateStyle: "short",
-        timeStyle: "short",
-        timeZone: "America/Sao_Paulo"
-      }).format(date);
-    } catch (_) {
-      return date.toLocaleString("pt-BR");
-    }
-  }
-
   function operationalTone(status) {
     var value = String(status || "").toLowerCase();
     if (value === "ok") return "ok";
@@ -192,112 +175,32 @@
     return "error";
   }
 
-  function createText(tag, className, text) {
-    var el = document.createElement(tag);
-    if (className) el.className = className;
-    el.textContent = String(text == null ? "" : text);
-    return el;
-  }
-
-  function operationalHost() {
-    var existing = document.querySelector("[data-br-operational-status]");
-    if (existing) return existing;
-    var nav = document.querySelector(".nav[data-br-auth-menu]");
-    if (!nav || !nav.parentNode) return null;
-    var host = document.createElement("section");
-    host.className = "br-operational-stack";
-    host.setAttribute("data-br-operational-status", "1");
-    host.setAttribute("aria-live", "polite");
-    nav.parentNode.insertBefore(host, nav.nextSibling);
-    return host;
-  }
-
-  function appendOperationalLink(container, href, label) {
-    if (!href) return;
-    var link = document.createElement("a");
-    link.className = "br-data-status-link";
-    link.href = String(href);
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.textContent = label;
-    container.appendChild(link);
+  function operationalLabel(status) {
+    var tone = operationalTone(status);
+    if (tone === "ok") return "Atualização do Brasileirão normal";
+    if (tone === "warning") return "Atualização do Brasileirão com aviso";
+    return "Erro na atualização do Brasileirão";
   }
 
   function renderOperationalStatus() {
-    var host = operationalHost();
-    if (!host) return;
-    host.textContent = "";
     var update = operationalState.update;
-    var isAdmin = Boolean(authState.authenticated && authState.usuario && authState.usuario.admin);
+    var status = update && update.status ? update.status : "erro";
+    var tone = operationalTone(status);
+    var label = operationalLabel(status);
 
-    if (update && update.mostrar_publico === true) {
-      var publicBox = document.createElement("div");
-      publicBox.className = "br-data-status br-data-status--" + operationalTone(update.status);
-      publicBox.setAttribute("role", String(update.status) === "erro" ? "alert" : "status");
-      publicBox.appendChild(createText("span", "br-data-status-icon", String(update.status) === "erro" ? "!" : "i"));
-      var publicBody = document.createElement("div");
-      publicBody.className = "br-data-status-body";
-      publicBody.appendChild(createText("strong", "", "Atualização dos dados"));
-      publicBody.appendChild(createText("p", "", update.mensagem_publica || "Estamos exibindo o último levantamento confiável."));
-      if (update.ultimo_snapshot_valido || update.ultimo_sucesso) {
-        publicBody.appendChild(createText("small", "", "Último levantamento confiável: " + operationalDate(update.ultimo_snapshot_valido || update.ultimo_sucesso) + "."));
-      }
-      publicBox.appendChild(publicBody);
-      host.appendChild(publicBox);
-    }
-
-    if (isAdmin) {
-      var adminBox = document.createElement("details");
-      var adminStatus = update ? update.status : "erro";
-      adminBox.className = "br-data-status br-data-status--admin br-data-status--" + operationalTone(adminStatus);
-      if (update && update.status !== "ok") adminBox.open = true;
-      var summary = document.createElement("summary");
-      summary.appendChild(createText("span", "br-data-status-admin-dot", ""));
-      summary.appendChild(createText("strong", "", update ? "Saúde do Brasileirão: " + String(update.status || "indefinido").toUpperCase() : "Saúde do Brasileirão: indisponível"));
-      if (update && update.ultima_tentativa) summary.appendChild(createText("small", "", operationalDate(update.ultima_tentativa)));
-      adminBox.appendChild(summary);
-      var detail = document.createElement("div");
-      detail.className = "br-data-status-admin-grid";
-      if (update) {
-        detail.appendChild(createText("p", "br-data-status-wide", update.mensagem_admin || "Sem mensagem técnica."));
-        detail.appendChild(createText("p", "", "Última tentativa: " + operationalDate(update.ultima_tentativa)));
-        detail.appendChild(createText("p", "", "Último sucesso: " + operationalDate(update.ultimo_sucesso)));
-        detail.appendChild(createText("p", "", "Fonte principal: " + String(update.fonte_principal || "ESPN")));
-        var complementary = Array.isArray(update.fontes_complementares) && update.fontes_complementares.length ? update.fontes_complementares.join(", ") : "nenhuma";
-        detail.appendChild(createText("p", "", "Fontes complementares: " + complementary));
-        detail.appendChild(createText("p", "", "Tentativas: " + String(update.tentativas == null ? "—" : update.tentativas)));
-        detail.appendChild(createText("p", "", "Snapshot: " + String(update.snapshot_hash || "").slice(0, 12) + (update.snapshot_hash ? "…" : "não registrado")));
-        appendOperationalLink(detail, update.run_url, "Abrir atualização no GitHub Actions");
-      } else {
-        detail.appendChild(createText("p", "br-data-status-wide", operationalState.error || "Não foi possível carregar o arquivo de status operacional."));
-      }
-      if (operationalState.deploy) {
-        detail.appendChild(createText("p", "", "Deploy publicado: " + operationalDate(operationalState.deploy.publicado_em)));
-        detail.appendChild(createText("p", "", "Commit publicado: " + String(operationalState.deploy.source_commit || "").slice(0, 12) + (operationalState.deploy.source_commit ? "…" : "não registrado")));
-        appendOperationalLink(detail, operationalState.deploy.run_url, "Abrir deploy no GitHub Actions");
-      } else {
-        detail.appendChild(createText("p", "", "Deploy: status ainda não disponível."));
-      }
-      adminBox.appendChild(detail);
-      host.appendChild(adminBox);
-    }
-
-    host.hidden = host.childElementCount === 0;
-    resetFloatingOrigins();
+    document.documentElement.setAttribute("data-br-update-status", tone);
+    Array.prototype.forEach.call(document.querySelectorAll(".br-update-status-dot"), function (dot) {
+      dot.setAttribute("title", label);
+      dot.setAttribute("aria-label", label);
+    });
   }
 
   async function loadOperationalStatus() {
     if (operationalState.loading) return;
     operationalState.loading = true;
-    var values = await Promise.all([
-      fetchOperationalJson("/dados-br/status-atualizacao.json"),
-      fetchOperationalJson("/dados-br/status-deploy.json")
-    ]);
-    operationalState.update = values[0];
-    operationalState.deploy = values[1];
+    operationalState.update = await fetchOperationalJson("/dados-br/status-atualizacao.json");
     operationalState.loaded = true;
     operationalState.loading = false;
-    operationalState.error = values[0] ? "" : "Status operacional indisponível nesta publicação.";
     renderOperationalStatus();
   }
 

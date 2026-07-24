@@ -888,110 +888,27 @@ html.br-private-pending body {
 }
 
 /* ======================================================================
-   SAÚDE OPERACIONAL — aviso público e diagnóstico exclusivo do admin
+   SAÚDE OPERACIONAL — indicador mínimo junto ao horário da atualização
    ====================================================================== */
-.br-operational-stack {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  display: grid;
-  gap: 10px;
-  margin: 10px 0 14px;
-}
-.br-operational-stack[hidden] { display: none !important; }
-.br-data-status {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
-  gap: 11px;
-  align-items: start;
-  padding: 12px 14px;
-  border: 1px solid rgba(148, 163, 184, .24);
-  border-radius: 14px;
-  color: #e5edf8;
-  background: rgba(15, 31, 40, .96);
-}
-.br-data-status--warning {
-  border-color: rgba(250, 204, 21, .42);
-  background: linear-gradient(90deg, rgba(113, 63, 18, .30), rgba(15, 31, 40, .96) 48%);
-}
-.br-data-status--error {
-  border-color: rgba(248, 113, 113, .46);
-  background: linear-gradient(90deg, rgba(127, 29, 29, .30), rgba(15, 31, 40, .96) 48%);
-}
-.br-data-status--ok {
-  border-color: rgba(74, 222, 128, .34);
-}
-.br-data-status-icon {
-  width: 34px;
-  height: 34px;
-  box-sizing: border-box;
-  display: inline-grid;
-  place-items: center;
-  border: 1px solid currentColor;
-  border-radius: 11px;
-  font-weight: 900;
-  color: #fde047;
-  background: rgba(250, 204, 21, .09);
-}
-.br-data-status--error .br-data-status-icon { color: #fca5a5; background: rgba(248, 113, 113, .10); }
-.br-data-status-body { min-width: 0; }
-.br-data-status-body strong { display: block; color: #f8fafc; font-size: 14px; }
-.br-data-status-body p { margin: 3px 0 0; overflow-wrap: anywhere; }
-.br-data-status-body small { display: block; margin-top: 5px; color: rgba(203, 213, 225, .78); }
-.br-data-status--admin {
-  display: block;
-  padding: 0;
-  overflow: hidden;
-}
-.br-data-status--admin summary {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto;
-  gap: 9px;
-  align-items: center;
-  padding: 11px 14px;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-.br-data-status--admin summary::-webkit-details-marker { display: none; }
-.br-data-status--admin summary small { color: rgba(203, 213, 225, .75); font-weight: 700; }
-.br-data-status-admin-dot {
-  width: 9px;
-  height: 9px;
+.br-update-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 6px;
   border-radius: 50%;
+  vertical-align: .05em;
+  background: #94a3b8;
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, .16);
+}
+html[data-br-update-status="ok"] .br-update-status-dot {
   background: #4ade80;
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, .12);
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, .16);
 }
-.br-data-status--warning .br-data-status-admin-dot { background: #facc15; box-shadow: 0 0 0 3px rgba(250, 204, 21, .13); }
-.br-data-status--error .br-data-status-admin-dot { background: #f87171; box-shadow: 0 0 0 3px rgba(248, 113, 113, .13); }
-.br-data-status-admin-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px 14px;
-  padding: 12px 14px 14px;
-  border-top: 1px solid rgba(148, 163, 184, .16);
+html[data-br-update-status="warning"] .br-update-status-dot {
+  background: #facc15;
+  box-shadow: 0 0 0 2px rgba(250, 204, 21, .17);
 }
-.br-data-status-admin-grid p { min-width: 0; margin: 0; color: rgba(226, 232, 240, .88); overflow-wrap: anywhere; }
-.br-data-status-admin-grid .br-data-status-wide { grid-column: 1 / -1; color: #f8fafc; }
-.br-data-status-link {
-  width: fit-content;
-  max-width: 100%;
-  color: #bfdbfe;
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  overflow-wrap: anywhere;
-}
-@media (max-width: 620px) {
-  .br-operational-stack { margin: 8px 0 12px; gap: 8px; }
-  .br-data-status { grid-template-columns: 30px minmax(0, 1fr); gap: 9px; padding: 11px 12px; border-radius: 12px; }
-  .br-data-status-icon { width: 30px; height: 30px; border-radius: 9px; }
-  .br-data-status--admin summary { grid-template-columns: 9px minmax(0, 1fr); padding: 10px 12px; }
-  .br-data-status--admin summary small { grid-column: 2; }
-  .br-data-status-admin-grid { grid-template-columns: 1fr; padding: 11px 12px 13px; }
-  .br-data-status-admin-grid .br-data-status-wide { grid-column: auto; }
+html[data-br-update-status="error"] .br-update-status-dot {
+  background: #f87171;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, .17);
 }

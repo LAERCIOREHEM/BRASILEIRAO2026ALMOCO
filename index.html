@@ -2523,7 +2523,7 @@ body > .container > section.hero > img {
     .jogo-time.br-club-link, .resultado-time.br-club-link { padding: 4px 2px; }
   }
 </style>
-<link rel="stylesheet" href="css/br-global.css?v=20260724-status-operacional-v1">
+<link rel="stylesheet" href="css/br-global.css?v=20260724-status-dot-v2">
 </head>
 <body>
 <div class="container">
@@ -4791,7 +4791,7 @@ function renderJogos() {
   if (temLive) {
     html += `<span class="live-info-bar"><span class="badge-aovivo">AO VIVO</span> ESPN a cada 30s${state._espnLiveUltima ? ' · ' + formatarSomenteHora(state._espnLiveUltima) : ''}</span>`;
   } else if (meta.atualizado_em_br) {
-    html += `<span style="font-size:11px;color:var(--accent);font-weight:700;">Atualizado em ${meta.atualizado_em_br} · Fonte ESPN</span>`;
+    html += `<span style="font-size:11px;color:var(--accent);font-weight:700;">Atualizado em ${meta.atualizado_em_br} · Fonte ESPN<span class="br-update-status-dot" role="img" aria-label="Status da atualização do Brasileirão" title="Status da atualização do Brasileirão"></span></span>`;
   }
   html += '</div>';
 
@@ -5175,7 +5175,7 @@ function renderResultados() {
   html += '<div class="resultados-titulo-area">';
   html += `<h2 style="font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; margin: 0;">Resultados${filtroTime ? ' · ' + filtroTime : ''}</h2>`;
   if (meta.atualizado_em_br) {
-    html += `<span style="font-size:11px;color:var(--accent);font-weight:700;">Atualizado em ${meta.atualizado_em_br} · Fonte ESPN</span>`;
+    html += `<span style="font-size:11px;color:var(--accent);font-weight:700;">Atualizado em ${meta.atualizado_em_br} · Fonte ESPN<span class="br-update-status-dot" role="img" aria-label="Status da atualização do Brasileirão" title="Status da atualização do Brasileirão"></span></span>`;
   }
   html += '</div>';
 
@@ -6082,7 +6082,7 @@ setTimeout(sincronizarAvisosAniversarioComSessao, 800);
 </script>
 <script src="js/br-clube-retorno.js?v=20260717-retorno-exato-v1"></script>
 <script src="js/br-config.js?v=20260712-menu-publico-login-v1"></script>
-<script src="js/br-menu.js?v=20260724-status-operacional-v1"></script>
+<script src="js/br-menu.js?v=20260724-status-dot-v2"></script>
 <script src="js/br-feedback.js?v=20260713-disclaimers-publicos-v1"></script>
 </body>
 </html>
