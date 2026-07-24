@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "descricao": "Fallback versionado para resultados pontuais quando a fonte principal mantém um evento reagendado em estado ou placar antigo. O robô preserva a ESPN finalizada por padrão; só permite sobreposição quando o jogo traz autorização explícita e auditável.",
+  "descricao": "Fallback final, versionado e auditável, aplicado somente depois de ESPN (scoreboard + summary), CBF e API-Football opcional. A ESPN finalizada é preservada por padrão; sobreposição exige autorização explícita.",
   "jogos": {
     "401840998": {
       "ativo": true,
@@ -20,6 +20,26 @@
       "permitir_sobrescrever_espn_finalizada": true,
       "auditoria": "Sobreposição autorizada apenas para este event_id, pois a ESPN retornou finalizado 0x0 apesar do resultado público Bahia 2x0 Chapecoense.",
       "event_id_detalhes": "401879459"
+    },
+    "401840999": {
+      "ativo": true,
+      "event_id": "401840999",
+      "event_id_espn_pagina": "401879458",
+      "rodada": 4,
+      "mandante": "Botafogo",
+      "visitante": "Vitória",
+      "data_iso": "2026-07-23T19:30",
+      "placar_mandante": 0,
+      "placar_visitante": 0,
+      "estado": "post",
+      "concluido": true,
+      "status": "Encerrado",
+      "adiado": true,
+      "origem": "CBF — tabela/jogo oficial do Campeonato Brasileiro Série A 2026",
+      "url_origem": "https://www.cbf.com.br/futebol-brasileiro/jogos/campeonato-brasileiro/serie-a/2026/botafogo-x-vitoria/831920",
+      "motivo": "Última trava para o caso em que a ESPN mantenha o jogo encerrado em estado incompatível com a classificação oficial.",
+      "permitir_sobrescrever_espn_finalizada": false,
+      "auditoria": "O override só entra se as fontes automáticas anteriores não resolverem; o pipeline ainda exige que resultados reconstruídos e standings fechem integralmente."
     }
   }
 }

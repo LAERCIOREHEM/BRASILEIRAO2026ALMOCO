@@ -32,11 +32,21 @@ import re
 import sys
 import time
 import unicodedata
+import urllib.parse
 import urllib.request
+import copy
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+
+from fontes_brasileirao import (
+    CBF_TABELA_DETALHADA_URL,
+    buscar_tabela_detalhada_cbf,
+    fetch_api_football_fixtures,
+    localizar_fixture_api_football,
+    localizar_partida_cbf,
+)
 
 FUSO_BRASILIA = timezone(timedelta(hours=-3))
 TEMPORADA = int(os.environ.get("BRASILEIRAO_TEMPORADA", "2026"))
@@ -47,6 +57,7 @@ URLS_STANDINGS = [
     f"https://site.web.api.espn.com/apis/v2/sports/soccer/bra.1/standings?season={TEMPORADA}",
 ]
 URL_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard"
+URL_RESUMO_EVENTO = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary"
 ARQ_AJUSTES_CALENDARIO = Path("dados-br/ajustes-calendario.json")
 ARQ_RESULTADOS_MANUAIS = Path("dados-br/resultados-manuais.json")
 MAX_TENTATIVAS_SINCRONIA = max(1, int(os.environ.get("ESPN_MAX_TENTATIVAS_SINCRONIA", "3")))
@@ -935,8 +946,11 @@ def aplicar_resultados_manuais(eventos: list[dict[str, Any]]) -> int:
         alvo["concluido"] = True
         alvo["status"] = str(ajuste.get("status") or "Encerrado")
         alvo["resultado_manual"] = True
+        alvo["resultado_fallback"] = True
+        alvo["fonte_resultado"] = "override manual"
         alvo["origem_resultado"] = str(ajuste.get("origem") or "fallback manual versionado")
         alvo["motivo_resultado_manual"] = str(ajuste.get("motivo") or "Fonte principal manteve estado inconsistente")
+        alvo["motivo_fallback"] = alvo["motivo_resultado_manual"]
         alvo["adiado"] = bool(ajuste.get("adiado", alvo.get("adiado") is True))
         aplicados += 1
     eventos.sort(key=lambda e: e.get("_sort") or 0)
@@ -944,6 +958,245 @@ def aplicar_resultados_manuais(eventos: list[dict[str, Any]]) -> int:
         print(f"Resultados manuais aplicados: {aplicados}")
     return aplicados
 
+
+
+def _clubes_das_discrepancias(discrepancias: list[dict[str, Any]]) -> set[str]:
+    return {
+        str(item.get("clube") or "")
+        for item in discrepancias
+        if str(item.get("clube") or "") in CANONICOS
+    }
+
+
+def _eventos_candidatos_fallback(
+    eventos: list[dict[str, Any]],
+    discrepancias: list[dict[str, Any]],
+    *,
+    permitir_finalizados_espn: bool = False,
+) -> list[dict[str, Any]]:
+    clubes = _clubes_das_discrepancias(discrepancias)
+    agora = agora_brt()
+    candidatos: list[dict[str, Any]] = []
+    for evento in eventos:
+        inicio = evento.get("data_dt")
+        if not isinstance(inicio, datetime) or inicio > agora - timedelta(minutes=90):
+            continue
+        mandante = str(evento.get("mandante_nome") or "")
+        visitante = str(evento.get("visitante_nome") or "")
+        if clubes and mandante not in clubes and visitante not in clubes:
+            continue
+        # Regra geral: uma fonte auxiliar não substitui silenciosamente um
+        # resultado ESPN já considerado final. A exceção é a CBF, autoridade
+        # oficial da competição: ela pode corrigir um placar final da ESPN, mas
+        # a mudança só é aceita se a auditoria completa reduzir a divergência.
+        if evento_realmente_finalizado(evento, agora) and not permitir_finalizados_espn:
+            continue
+        candidatos.append(evento)
+    candidatos.sort(key=lambda item: item.get("_sort") or 0, reverse=True)
+    return candidatos
+
+
+def _aplicar_placar_complementar(
+    evento: dict[str, Any],
+    *,
+    placar_mandante: int,
+    placar_visitante: int,
+    fonte: str,
+    origem: str,
+    motivo: str,
+    status: str = "Encerrado",
+) -> None:
+    evento["placar_mandante"] = int(placar_mandante)
+    evento["placar_visitante"] = int(placar_visitante)
+    evento["estado"] = "post"
+    evento["concluido"] = True
+    evento["status"] = status
+    evento["resultado_fallback"] = fonte != "ESPN summary"
+    evento["fonte_resultado"] = fonte
+    evento["origem_resultado"] = origem
+    evento["motivo_fallback"] = motivo
+
+
+def _evento_bruto_do_summary(payload: dict[str, Any], event_id: str) -> dict[str, Any] | None:
+    header = payload.get("header") or {}
+    competitions = header.get("competitions") or []
+    competition = competitions[0] if competitions else None
+    if not isinstance(competition, dict):
+        return None
+    return {
+        "id": str(header.get("id") or event_id),
+        "date": competition.get("date") or header.get("date"),
+        "status": competition.get("status") or header.get("status"),
+        "competitions": [competition],
+    }
+
+
+def aplicar_resumos_alternativos_espn(
+    eventos: list[dict[str, Any]], discrepancias: list[dict[str, Any]]
+) -> int:
+    """Tenta o summary individual da ESPN antes de abandonar a fonte principal."""
+    aplicados = 0
+    for alvo in _eventos_candidatos_fallback(eventos, discrepancias)[:8]:
+        event_id = str(alvo.get("event_id") or "").strip()
+        if not event_id:
+            continue
+        try:
+            payload = fetch_json(f"{URL_RESUMO_EVENTO}?event={urllib.parse.quote(event_id)}", timeout=20, tentativas=1)
+            bruto = _evento_bruto_do_summary(payload, event_id)
+            if not bruto:
+                continue
+            normalizados = normalizar_eventos_scoreboard([bruto])
+            if not normalizados:
+                continue
+            resumo = normalizados[0]
+            if not evento_realmente_finalizado(resumo, agora_brt()):
+                continue
+            if resumo.get("placar_mandante") is None or resumo.get("placar_visitante") is None:
+                continue
+            # Confirma o confronto. O ID pode ter sido duplicado/reagendado pela ESPN.
+            if (
+                resumo.get("mandante_nome") != alvo.get("mandante_nome")
+                or resumo.get("visitante_nome") != alvo.get("visitante_nome")
+            ):
+                continue
+            antes = (alvo.get("placar_mandante"), alvo.get("placar_visitante"), alvo.get("estado"), alvo.get("concluido"))
+            _aplicar_placar_complementar(
+                alvo,
+                placar_mandante=int(resumo["placar_mandante"]),
+                placar_visitante=int(resumo["placar_visitante"]),
+                fonte="ESPN summary",
+                origem=f"{URL_RESUMO_EVENTO}?event={event_id}",
+                motivo="Scoreboard geral divergente; resultado confirmado no summary individual da ESPN.",
+                status=str(resumo.get("status") or "Encerrado"),
+            )
+            depois = (alvo.get("placar_mandante"), alvo.get("placar_visitante"), alvo.get("estado"), alvo.get("concluido"))
+            if antes != depois:
+                aplicados += 1
+        except Exception as exc:  # noqa: BLE001
+            print(f"::warning::Summary ESPN indisponível para {event_id}: {type(exc).__name__}: {exc}")
+    if aplicados:
+        print(f"Resultados recuperados por endpoint alternativo da ESPN: {aplicados}")
+    return aplicados
+
+
+def aplicar_resultados_cbf(
+    eventos: list[dict[str, Any]], discrepancias: list[dict[str, Any]]
+) -> int:
+    """Usa a tabela detalhada oficial da CBF apenas para placares já encerrados."""
+    try:
+        linhas = buscar_tabela_detalhada_cbf(resolver=para_canonico)
+    except Exception as exc:  # noqa: BLE001
+        print(f"::warning::Fallback CBF indisponível: {type(exc).__name__}: {exc}")
+        return 0
+
+    aplicados = 0
+    agora = agora_brt()
+    for alvo in _eventos_candidatos_fallback(
+        eventos, discrepancias, permitir_finalizados_espn=True
+    ):
+        linha = localizar_partida_cbf(
+            linhas,
+            mandante=str(alvo.get("mandante_nome") or ""),
+            visitante=str(alvo.get("visitante_nome") or ""),
+            rodada=int(alvo.get("rodada") or 0),
+            data_iso=str(alvo.get("data_iso") or ""),
+        )
+        if not linha or linha.placar_mandante is None or linha.placar_visitante is None:
+            continue
+        inicio = parse_iso_brt(linha.data_iso)
+        if not inicio or inicio > agora - timedelta(minutes=90):
+            continue
+        antes = (alvo.get("placar_mandante"), alvo.get("placar_visitante"), alvo.get("estado"), alvo.get("concluido"))
+        _aplicar_placar_complementar(
+            alvo,
+            placar_mandante=linha.placar_mandante,
+            placar_visitante=linha.placar_visitante,
+            fonte="CBF",
+            origem=linha.origem,
+            motivo=(
+                "A ESPN permaneceu divergente da classificação; placar final "
+                f"confirmado na tabela detalhada oficial da CBF (ref. {linha.referencia or 'não informada'})."
+            ),
+        )
+        depois = (alvo.get("placar_mandante"), alvo.get("placar_visitante"), alvo.get("estado"), alvo.get("concluido"))
+        if antes != depois or alvo.get("fonte_resultado") != "CBF":
+            aplicados += 1
+    if aplicados:
+        print(f"Resultados confirmados pela CBF: {aplicados}")
+    return aplicados
+
+
+def aplicar_resultados_api_football(
+    eventos: list[dict[str, Any]], discrepancias: list[dict[str, Any]]
+) -> int:
+    """Fallback opcional e cirúrgico; não consome quota sem divergência."""
+    api_key = os.environ.get("API_FOOTBALL_KEY", "").strip()
+    league_id = os.environ.get("API_FOOTBALL_LEAGUE_ID", "").strip()
+    if not api_key or not league_id:
+        print("API-Football não configurada; fallback opcional ignorado.")
+        return 0
+
+    candidatos = _eventos_candidatos_fallback(eventos, discrepancias)
+    por_data: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for evento in candidatos:
+        inicio = evento.get("data_dt")
+        if isinstance(inicio, datetime):
+            por_data[inicio.date().isoformat()].append(evento)
+
+    aplicados = 0
+    for data_iso, itens in por_data.items():
+        try:
+            fixtures = fetch_api_football_fixtures(
+                api_key=api_key,
+                league_id=league_id,
+                season=TEMPORADA,
+                match_date=datetime.fromisoformat(data_iso).date(),
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"::warning::API-Football indisponível em {data_iso}: {type(exc).__name__}: {exc}")
+            continue
+        for alvo in itens:
+            fixture = localizar_fixture_api_football(
+                fixtures,
+                mandante=str(alvo.get("mandante_nome") or ""),
+                visitante=str(alvo.get("visitante_nome") or ""),
+                resolver=para_canonico,
+            )
+            if not fixture:
+                continue
+            antes = (alvo.get("placar_mandante"), alvo.get("placar_visitante"), alvo.get("estado"), alvo.get("concluido"))
+            _aplicar_placar_complementar(
+                alvo,
+                placar_mandante=int(fixture["placar_mandante"]),
+                placar_visitante=int(fixture["placar_visitante"]),
+                fonte="API-Football",
+                origem=f"API-Football fixture {fixture.get('fixture_id') or '?'}",
+                motivo="ESPN e CBF não resolveram a divergência; resultado final confirmado pela API auxiliar.",
+            )
+            depois = (alvo.get("placar_mandante"), alvo.get("placar_visitante"), alvo.get("estado"), alvo.get("concluido"))
+            if antes != depois or alvo.get("fonte_resultado") != "API-Football":
+                aplicados += 1
+    if aplicados:
+        print(f"Resultados confirmados pela API-Football: {aplicados}")
+    return aplicados
+
+
+def listar_fallbacks_eventos(eventos: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for evento in eventos:
+        fonte = str(evento.get("fonte_resultado") or "")
+        if not fonte or fonte == "ESPN":
+            continue
+        out.append({
+            "event_id": str(evento.get("event_id") or ""),
+            "rodada": int(evento.get("rodada") or 0),
+            "jogo": f"{evento.get('mandante_nome')} x {evento.get('visitante_nome')}",
+            "placar": f"{evento.get('placar_mandante')} x {evento.get('placar_visitante')}",
+            "fonte": fonte,
+            "origem": str(evento.get("origem_resultado") or ""),
+            "motivo": str(evento.get("motivo_fallback") or ""),
+        })
+    return out
 
 def carregar_transmissoes_manuais() -> list[dict[str, Any]]:
     p = Path("transmissoes.json")
@@ -1043,6 +1296,9 @@ def aplicar_finalizados_em(eventos: list[dict[str, Any]], anteriores: dict[str, 
 
 
 def payload_jogo(e: dict[str, Any], incluir_placar: bool = True) -> dict[str, Any]:
+    status_publico = str(e.get("status") or "")
+    if str(e.get("estado") or "").lower() == "post" and status_publico.strip().lower() in {"", "0'", "0", "0:00"}:
+        status_publico = "Encerrado"
     obj = {
         "event_id": e.get("event_id", ""),
         "rodada": int(e.get("rodada") or 0),
@@ -1051,16 +1307,20 @@ def payload_jogo(e: dict[str, Any], incluir_placar: bool = True) -> dict[str, An
         "visitante": e["visitante"],
         "estadio": e.get("estadio", ""),
         "transmissao": e.get("transmissao", ""),
-        "status": e.get("status", ""),
+        "status": status_publico,
         "estado": e.get("estado", "pre"),
         "adiado": bool(e.get("adiado") is True),
         "data_definir": bool(e.get("data_definir") is True),
     }
     if e.get("finalizado_em"):
         obj["finalizado_em"] = e["finalizado_em"]
+    if e.get("resultado_fallback") is True:
+        obj["resultado_fallback"] = True
+        obj["fonte_resultado"] = e.get("fonte_resultado", "fonte complementar")
+        obj["origem_resultado"] = e.get("origem_resultado", "")
+        obj["motivo_fallback"] = e.get("motivo_fallback", "")
     if e.get("resultado_manual") is True:
         obj["resultado_manual"] = True
-        obj["origem_resultado"] = e.get("origem_resultado", "fallback manual versionado")
         obj["motivo_resultado_manual"] = e.get("motivo_resultado_manual", "")
     if incluir_placar:
         obj["placar_mandante"] = e.get("placar_mandante")
@@ -1096,9 +1356,13 @@ def evento_realmente_finalizado(e: dict[str, Any], agora: datetime) -> bool:
 
 def gerar_jogos_resultados_eventos(eventos_brutos: list[dict[str, Any]],
                                      anteriores: dict[str, dict[str, Any]] | None = None,
-                                     snapshot_anterior_em: datetime | None = None) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    eventos = normalizar_eventos_scoreboard(eventos_brutos)
-    aplicar_resultados_manuais(eventos)
+                                     snapshot_anterior_em: datetime | None = None,
+                                     *,
+                                     eventos_ja_normalizados: bool = False,
+                                     aplicar_manuais: bool = True) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    eventos = eventos_brutos if eventos_ja_normalizados else normalizar_eventos_scoreboard(eventos_brutos)
+    if aplicar_manuais:
+        aplicar_resultados_manuais(eventos)
     aplicar_transmissoes_manuais(eventos)
     if not eventos:
         raise RuntimeError("Nenhum evento ESPN foi normalizado; abortando para não publicar JSON vazio.")
@@ -1132,11 +1396,15 @@ def gerar_jogos_resultados_eventos(eventos_brutos: list[dict[str, Any]],
 
     atualizado_em = iso_agora_brt()
     atualizado_br = agora_brt().strftime("%d/%m/%Y %H:%M BRT")
+    fallbacks_resultado = listar_fallbacks_eventos(eventos)
+    fontes_complementares = sorted({item["fonte"] for item in fallbacks_resultado if item.get("fonte")})
 
     jogos_json = {
         "atualizado_em": atualizado_em,
         "atualizado_em_br": atualizado_br,
         "fonte": "ESPN",
+        "fontes_complementares": fontes_complementares,
+        "fallbacks_resultado": fallbacks_resultado,
         "rodada_atual": rodadas_usadas[0] if rodadas_usadas else None,
         "rodadas_consultadas": rodadas_usadas,
         "total_jogos": len(proximos),
@@ -1147,6 +1415,8 @@ def gerar_jogos_resultados_eventos(eventos_brutos: list[dict[str, Any]],
         "atualizado_em": atualizado_em,
         "atualizado_em_br": atualizado_br,
         "fonte": "ESPN",
+        "fontes_complementares": fontes_complementares,
+        "fallbacks_resultado": fallbacks_resultado,
         "ultima_rodada_disputada": max(rodadas_resultados) if rodadas_resultados else None,
         "rodadas_consultadas": rodadas_resultados,
         "total_resultados": len(finalizados),
@@ -1157,6 +1427,8 @@ def gerar_jogos_resultados_eventos(eventos_brutos: list[dict[str, Any]],
     eventos_json = {
         "atualizado_em": atualizado_em,
         "fonte": "ESPN",
+        "fontes_complementares": fontes_complementares,
+        "fallbacks_resultado": fallbacks_resultado,
         "total": len(eventos),
         "eventos": [
             {
@@ -1178,7 +1450,10 @@ def gerar_jogos_resultados_eventos(eventos_brutos: list[dict[str, Any]],
                 "rodada_corrigida_de": e.get("rodada_corrigida_de"),
                 "motivo_ajuste": e.get("motivo_ajuste", ""),
                 "resultado_manual": bool(e.get("resultado_manual") is True),
+                "resultado_fallback": bool(e.get("resultado_fallback") is True),
+                "fonte_resultado": e.get("fonte_resultado", "ESPN"),
                 "origem_resultado": e.get("origem_resultado", ""),
+                "motivo_fallback": e.get("motivo_fallback", ""),
                 "motivo_resultado_manual": e.get("motivo_resultado_manual", ""),
             }
             for e in eventos
@@ -1368,15 +1643,81 @@ def snapshot_local_sincronizado() -> tuple[bool, str]:
     return True, "snapshot anterior íntegro nos quatro artefatos ESPN"
 
 
-def escrever_outputs_github(*, sincronizado: bool, motivo: str, tentativas: int) -> None:
+
+def avaliar_eventos_normalizados(
+    eventos: list[dict[str, Any]],
+    tabela: dict[str, Any],
+    anteriores: dict[str, dict[str, Any]],
+    snapshot_anterior_em: datetime | None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+    jogos, resultados, eventos_json = gerar_jogos_resultados_eventos(
+        eventos,
+        anteriores,
+        snapshot_anterior_em,
+        eventos_ja_normalizados=True,
+        aplicar_manuais=False,
+    )
+    discrepancias = diagnosticar_sincronia_tabela_resultados(tabela, resultados)
+    return jogos, resultados, eventos_json, discrepancias
+
+
+def tentar_fallback_transacional(
+    eventos: list[dict[str, Any]],
+    tabela: dict[str, Any],
+    anteriores: dict[str, dict[str, Any]],
+    snapshot_anterior_em: datetime | None,
+    discrepancias_atuais: list[dict[str, Any]],
+    nome: str,
+    aplicador: Any,
+) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any], dict[str, Any], list[dict[str, Any]], int]:
+    """Só aceita o fallback quando ele reduz a divergência ou fecha a tabela."""
+    candidato = copy.deepcopy(eventos)
+    aplicados = int(aplicador(candidato, discrepancias_atuais) or 0)
+    if not aplicados:
+        jogos, resultados, eventos_json, discrepancias = avaliar_eventos_normalizados(
+            eventos, tabela, anteriores, snapshot_anterior_em
+        )
+        return eventos, jogos, resultados, eventos_json, discrepancias, 0
+
+    jogos, resultados, eventos_json, novas = avaliar_eventos_normalizados(
+        candidato, tabela, anteriores, snapshot_anterior_em
+    )
+    if len(novas) < len(discrepancias_atuais):
+        print(
+            f"Fallback {nome} aceito: divergências {len(discrepancias_atuais)} -> {len(novas)}."
+        )
+        return candidato, jogos, resultados, eventos_json, novas, aplicados
+
+    print(
+        f"::warning::Fallback {nome} rejeitado pela auditoria: divergências "
+        f"{len(discrepancias_atuais)} -> {len(novas)}; estado anterior preservado."
+    )
+    jogos, resultados, eventos_json, discrepancias = avaliar_eventos_normalizados(
+        eventos, tabela, anteriores, snapshot_anterior_em
+    )
+    return eventos, jogos, resultados, eventos_json, discrepancias, 0
+
+def escrever_outputs_github(
+    *,
+    sincronizado: bool,
+    motivo: str,
+    tentativas: int,
+    status: str | None = None,
+    fallbacks: list[dict[str, Any]] | None = None,
+) -> None:
     caminho = os.environ.get("GITHUB_OUTPUT")
     if not caminho:
         return
     texto = " ".join(str(motivo).splitlines())
+    fallbacks = fallbacks or []
+    status_final = status or ("ok" if sincronizado else "preservado")
+    fallbacks_json = json.dumps(fallbacks, ensure_ascii=False, separators=(",", ":"))
     with open(caminho, "a", encoding="utf-8") as output:
         output.write(f"sincronizado={str(sincronizado).lower()}\n")
+        output.write(f"status={status_final}\n")
         output.write(f"tentativas={tentativas}\n")
         output.write(f"motivo={texto}\n")
+        output.write(f"fallbacks={fallbacks_json}\n")
 
 
 def erro_transitorio_de_fonte(exc: Exception) -> bool:
@@ -1468,7 +1809,12 @@ def selftest_execucao_6() -> None:
     # e placar final, mas manteve completed=false/displayClock="0'".
     agora_teste = datetime(2026, 7, 23, 21, 22, tzinfo=FUSO_BRASILIA)
     empate_post = {
+        "event_id": "sync-zero",
+        "rodada": 4,
+        "data_iso": "2026-07-23T19:30",
         "data_dt": datetime(2026, 7, 23, 19, 30, tzinfo=FUSO_BRASILIA),
+        "mandante": info_time("Botafogo"),
+        "visitante": info_time("Vitória"),
         "placar_mandante": 0,
         "placar_visitante": 0,
         "estado": "post",
@@ -1476,6 +1822,7 @@ def selftest_execucao_6() -> None:
         "status": "0'",
     }
     assert evento_realmente_finalizado(empate_post, agora_teste)
+    assert payload_jogo(empate_post)["status"] == "Encerrado"
     empate_pre = dict(empate_post, estado="pre")
     assert not evento_realmente_finalizado(empate_pre, agora_teste)
 
@@ -1502,6 +1849,27 @@ def selftest_execucao_6() -> None:
     por_time["Botafogo"]["jogos"] = 2
     divergencias = diagnosticar_sincronia_tabela_resultados(tabela_teste, resultados_teste)
     assert any(item["clube"] == "Botafogo" and item["campo"] == "jogos" for item in divergencias)
+
+    # Uma fonte auxiliar comum não pode trocar resultado ESPN finalizado; a CBF,
+    # como autoridade oficial, pode oferecê-lo à auditoria transacional. A troca
+    # só será efetivada posteriormente se reduzir as divergências da tabela.
+    final_espn = {
+        "event_id": "sync-final",
+        "mandante_nome": "Botafogo",
+        "visitante_nome": "Vitória",
+        "data_dt": agora_teste - timedelta(hours=4),
+        "_sort": (agora_teste - timedelta(hours=4)).timestamp(),
+        "placar_mandante": 1,
+        "placar_visitante": 0,
+        "estado": "post",
+        "concluido": True,
+        "status": "Encerrado",
+    }
+    divergencias_times = [{"clube": "Botafogo", "campo": "pontos"}, {"clube": "Vitória", "campo": "pontos"}]
+    assert _eventos_candidatos_fallback([final_espn], divergencias_times) == []
+    assert _eventos_candidatos_fallback(
+        [final_espn], divergencias_times, permitir_finalizados_espn=True
+    ) == [final_espn]
     print("Selftest Execução 6 e sincronização cruzada OK")
 
 
@@ -1515,60 +1883,150 @@ def main() -> None:
             tabela = gerar_tabela()
             validar_contra_ranking(tabela)
             eventos_brutos = buscar_eventos_scoreboard()
-            jogos, resultados, eventos = gerar_jogos_resultados_eventos(
-                eventos_brutos, anteriores, snapshot_anterior_em
+            eventos_normalizados = normalizar_eventos_scoreboard(eventos_brutos)
+            aplicar_transmissoes_manuais(eventos_normalizados)
+            if not eventos_normalizados:
+                raise RuntimeError("Nenhum evento ESPN foi normalizado; mantendo snapshot anterior.")
+
+            jogos, resultados, eventos_json, discrepancias = avaliar_eventos_normalizados(
+                eventos_normalizados, tabela, anteriores, snapshot_anterior_em
             )
-            discrepancias = diagnosticar_sincronia_tabela_resultados(tabela, resultados)
+
+            if discrepancias:
+                print(
+                    "::warning::Scoreboard principal divergente da tabela: "
+                    + resumir_discrepancias(discrepancias)
+                )
+
+                # 1) A própria ESPN continua prioritária: tenta o summary individual.
+                eventos_normalizados, jogos, resultados, eventos_json, discrepancias, _ = tentar_fallback_transacional(
+                    eventos_normalizados,
+                    tabela,
+                    anteriores,
+                    snapshot_anterior_em,
+                    discrepancias,
+                    "ESPN summary",
+                    aplicar_resumos_alternativos_espn,
+                )
+
+            if discrepancias:
+                # 2) Autoridade esportiva oficial: resultado/tabela da CBF.
+                eventos_normalizados, jogos, resultados, eventos_json, discrepancias, _ = tentar_fallback_transacional(
+                    eventos_normalizados,
+                    tabela,
+                    anteriores,
+                    snapshot_anterior_em,
+                    discrepancias,
+                    "CBF",
+                    aplicar_resultados_cbf,
+                )
+
+            if discrepancias:
+                # 3) API auxiliar opcional, só quando key + league id estiverem configurados.
+                eventos_normalizados, jogos, resultados, eventos_json, discrepancias, _ = tentar_fallback_transacional(
+                    eventos_normalizados,
+                    tabela,
+                    anteriores,
+                    snapshot_anterior_em,
+                    discrepancias,
+                    "API-Football",
+                    aplicar_resultados_api_football,
+                )
+
+            if discrepancias:
+                # 4) Última trava: override manual explícito, versionado e auditável.
+                eventos_normalizados, jogos, resultados, eventos_json, discrepancias, _ = tentar_fallback_transacional(
+                    eventos_normalizados,
+                    tabela,
+                    anteriores,
+                    snapshot_anterior_em,
+                    discrepancias,
+                    "override manual",
+                    lambda itens, _disc: aplicar_resultados_manuais(itens),
+                )
+
             if not discrepancias:
+                fallbacks = listar_fallbacks_eventos(eventos_normalizados)
                 gravar_json_atomico("tabela.json", tabela)
                 gravar_json_atomico("jogos.json", jogos)
                 gravar_json_atomico("resultados.json", resultados)
-                gravar_json_atomico("espn_eventos.json", eventos)
+                gravar_json_atomico("espn_eventos.json", eventos_json)
+
+                fontes = sorted({item.get("fonte") for item in fallbacks if item.get("fonte")})
+                if fallbacks:
+                    motivo = (
+                        "snapshot auditado e publicado; ESPN permaneceu principal e "
+                        "foram usadas fontes complementares: " + ", ".join(fontes)
+                    )
+                    status = "aviso"
+                else:
+                    motivo = "standings e scoreboard ESPN descrevem o mesmo estado esportivo"
+                    status = "ok"
 
                 escrever_outputs_github(
                     sincronizado=True,
-                    motivo="standings e scoreboard descrevem o mesmo estado esportivo",
+                    motivo=motivo,
                     tentativas=tentativa,
+                    status=status,
+                    fallbacks=fallbacks,
                 )
                 print("== ARQUIVOS GERADOS ==")
-                print(f"  tabela.json        {len(tabela['tabela'])} times, fonte ESPN")
-                print(f"  jogos.json         {len(jogos['jogos'])} próximos jogos, fonte ESPN")
-                print(f"  resultados.json    {len(resultados['resultados'])} resultados, fonte ESPN")
-                print(f"  espn_eventos.json  {len(eventos['eventos'])} eventos ESPN")
-                print("Concluído com snapshot ESPN sincronizado.")
+                print(f"  tabela.json        {len(tabela['tabela'])} times, fonte principal ESPN")
+                print(f"  jogos.json         {len(jogos['jogos'])} próximos jogos")
+                print(f"  resultados.json    {len(resultados['resultados'])} resultados")
+                print(f"  espn_eventos.json  {len(eventos_json['eventos'])} eventos")
+                if fallbacks:
+                    for item in fallbacks:
+                        print(
+                            "  FALLBACK: "
+                            f"{item.get('jogo')} {item.get('placar')} — {item.get('fonte')}"
+                        )
+                print("Concluído com auditoria resultados x tabela aprovada.")
                 return
 
             ultima_falha = (
-                "standings e scoreboard fora de sincronia: "
+                "fontes ainda fora de sincronia após a cadeia ESPN -> CBF -> "
+                "API-Football opcional -> override manual: "
                 + resumir_discrepancias(discrepancias)
             )
             print(f"::warning::{ultima_falha}")
         except Exception as exc:  # noqa: BLE001
             if not erro_transitorio_de_fonte(exc):
                 print(f"ERRO FATAL: {type(exc).__name__}: {exc}")
-                escrever_outputs_github(sincronizado=False, motivo=str(exc), tentativas=tentativa)
+                escrever_outputs_github(
+                    sincronizado=False,
+                    motivo=str(exc),
+                    tentativas=tentativa,
+                    status="erro",
+                )
                 sys.exit(1)
-            ultima_falha = f"fonte ESPN temporariamente indisponível: {type(exc).__name__}: {exc}"
+            ultima_falha = f"fonte temporariamente indisponível: {type(exc).__name__}: {exc}"
             print(f"::warning::{ultima_falha}")
 
         if tentativa < MAX_TENTATIVAS_SINCRONIA:
             espera = ESPERA_SINCRONIA_SEGUNDOS * tentativa
-            print(f"Aguardando {espera}s antes de repetir standings + scoreboard...")
+            print(f"Aguardando {espera}s antes de repetir a coleta completa...")
             time.sleep(espera)
 
     anterior_ok, diagnostico_anterior = snapshot_local_sincronizado()
     if anterior_ok:
         motivo = f"{ultima_falha}. {diagnostico_anterior}; nenhum arquivo foi sobrescrito"
         escrever_outputs_github(
-            sincronizado=False, motivo=motivo, tentativas=MAX_TENTATIVAS_SINCRONIA
+            sincronizado=False,
+            motivo=motivo,
+            tentativas=MAX_TENTATIVAS_SINCRONIA,
+            status="preservado",
         )
         print(f"::warning::{motivo}")
-        print("Coleta encerrada com sucesso operacional: último snapshot íntegro preservado.")
+        print("Coleta encerrada com segurança: último snapshot íntegro preservado.")
         return
 
     motivo = f"{ultima_falha}. Não foi possível preservar dados: {diagnostico_anterior}"
     escrever_outputs_github(
-        sincronizado=False, motivo=motivo, tentativas=MAX_TENTATIVAS_SINCRONIA
+        sincronizado=False,
+        motivo=motivo,
+        tentativas=MAX_TENTATIVAS_SINCRONIA,
+        status="erro",
     )
     print(f"ERRO FATAL: {motivo}")
     sys.exit(1)
