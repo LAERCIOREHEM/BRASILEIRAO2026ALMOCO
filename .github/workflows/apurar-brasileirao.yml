@@ -20,6 +20,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Validar regras de apuração
+        run: python scripts/apurar_rodada.py --self-test
+
       - name: Apurar apostas com sigilo
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
