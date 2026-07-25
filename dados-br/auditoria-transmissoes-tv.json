@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 28,
     "jogos_sem_transmissao_14d": 2,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 0,
+    "registros_preservados": 2,
     "fontes_com_falha": 1
   },
   "fontes": {
@@ -15,21 +15,21 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 22,
-      "duracao_ms": 5944
+      "jogos_com_canal": 20,
+      "duracao_ms": 7027
     },
     "ge_artigos": {
       "ok": true,
       "artigos_consultados": 4,
       "jogos_com_canal": 14,
-      "duracao_ms": 62770
+      "duracao_ms": 80461
     },
     "espn": {
       "ok": true,
       "eventos_na_janela": 38,
       "scoreboard_com_canal": 0,
       "summary_com_canal": 0,
-      "duracao_ms": 2672
+      "duracao_ms": 3505
     }
   },
   "sem_transmissao": [
@@ -38,7 +38,7 @@
       "rodada": 21,
       "jogo": "Fluminense x Bahia",
       "data_iso": "2026-07-29T21:30",
-      "faltam_horas": 102.1,
+      "faltam_horas": 101.7,
       "nivel": "aviso"
     },
     {
@@ -46,11 +46,26 @@
       "rodada": 21,
       "jogo": "Corinthians x Athletico-PR",
       "data_iso": "2026-07-30T19:30",
-      "faltam_horas": 124.1,
+      "faltam_horas": 123.7,
       "nivel": "aviso"
     }
   ],
-  "preservados": [],
+  "preservados": [
+    {
+      "event_id": "401841180",
+      "jogo": "Palmeiras x Internacional",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
+      "event_id": "401841192",
+      "jogo": "Fluminense x Palmeiras",
+      "canais": [
+        "Globo"
+      ]
+    }
+  ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: RuntimeError: falha ao buscar página oficial: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada :: curl_cffi=CertificateVerifyError: Failed to perform, curl: (60) SSL certificate problem: unable to get local issuer certificate. See https://curl.se/libcurl/c/libcurl-errors.html first for more details. | urllib=URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)> | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: RuntimeError: falha ao buscar página oficial: https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada :: curl_cffi=CertificateVerifyError: Failed to perform, curl: (60) SSL certificate problem: unable to get local issuer certificate. See https://curl.se/libcurl/c/libcurl-errors.html first for more details. | urllib=URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>"
   ],
@@ -60,5 +75,5 @@
     "https://ge.globo.com/pr/futebol/brasileirao-serie-a/noticia/2026/07/25/athletico-x-internacional-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/pa/futebol/times/remo/noticia/2026/07/24/remo-encerra-turno-com-apenas-duas-rodadas-fora-do-z-4-um-dos-piores-mandantes-e-incomodando-gigantes.ghtml"
   ],
-  "atualizado_em": "2026-07-25T15:22:50-03:00"
+  "atualizado_em": "2026-07-25T15:45:46-03:00"
 }
