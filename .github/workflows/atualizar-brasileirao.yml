@@ -746,3 +746,38 @@ jobs:
 
           echo "ERRO: Push falhou apos 5 tentativas."
           exit 1
+
+  # Job de alerta de falha crítica — substitui o Monitorar (workflow_run).
+  # Roda apenas quando o job principal falha; não ocupa repo-write-main.
+  alertar_falha:
+    name: Alertar falha crítica por e-mail
+    needs: atualizar
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout mínimo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Enviar alerta de falha
+        env:
+          BR_STATUS: erro
+          BR_MOTIVO: "O workflow Atualizar Brasileirão terminou com falha. Verifique em ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BR_FALLBACKS: '[]'
+          BR_TENTATIVAS: '0'
+          BR_SINCRONIZADO: 'false'
+          BR_WORKFLOW: 'Atualizar Brasileirao (ESPN)'
+          BR_SITE: 'Brasileirão 2026 Almoço'
+          BR_RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BR_SOURCE_RUN_ID: "${{ github.run_id }}"
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+        run: python scripts/gerenciar_status_brasileirao.py --from-env --notify

@@ -4,7 +4,10 @@ on:
   # Carga pesada de elencos/fotos: uma vez por semana.
   # Segunda-feira, 06:17 UTC = 03:17 no horário de Brasília.
   schedule:
-    - cron: '17 6 * * 1'
+    # Segunda-feira às 06:43 UTC (03:43 BRT) — longe do :22 das transmissões
+    # e do :16/:22/:44/:59 do cron-job.org. Elencos muda pouco; uma vez por
+    # semana é suficiente.
+    - cron: '43 6 * * 1'
   workflow_dispatch:
 
 permissions:

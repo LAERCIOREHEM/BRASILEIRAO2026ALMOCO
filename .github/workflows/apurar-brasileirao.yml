@@ -8,6 +8,13 @@ on:
 permissions:
   contents: write
 
+# Serializa com todos os outros workflows que fazem git push em main.
+# Sem isso, Apurar e Atualizar BR podem colidir se o cron-job.org
+# disparar ambos quase ao mesmo tempo (:16/:22 ou :44/:59).
+concurrency:
+  group: repo-write-main
+  cancel-in-progress: false
+
 jobs:
   apurar:
     runs-on: ubuntu-latest

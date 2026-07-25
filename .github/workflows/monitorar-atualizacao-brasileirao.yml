@@ -1,10 +1,19 @@
 name: Monitorar Atualizar Brasileirao
 
 on:
-  workflow_run:
-    workflows:
-      - 'Atualizar Brasileirao (ESPN)'
-    types: [completed]
+  # DIAGNÓSTICO MANUAL DE EMERGÊNCIA — não dispara automaticamente.
+  #
+  # Antes, usava workflow_run (disparava após cada Atualizar BR), o que
+  # causava dois efeitos indesejados:
+  #   1. Deploy duplo: o Atualizar já dispara um deploy; o Monitor
+  #      disparava um segundo deploy logo depois, sem necessidade.
+  #   2. Ocupava o grupo repo-write-main logo após o Atualizar,
+  #      atrasando Transmissões e outros workflows na fila.
+  #
+  # O alerta de falha agora está embutido no próprio Atualizar BR
+  # (job separado com if: always()), então este workflow só precisa
+  # ser acionado manualmente quando há suspeita de problema.
+  workflow_dispatch:
 
 permissions:
   contents: write

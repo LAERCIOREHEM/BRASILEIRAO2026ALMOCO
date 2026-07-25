@@ -30,7 +30,10 @@ on:
   # 3 vezes ao dia. 04:30, 11:30 e 17:30 UTC equivalem a
   # 01:30, 08:30 e 14:30 no horário de Brasília.
   schedule:
-    - cron: '30 4,11,17 * * *'
+    # Copa encerrada em 20/07/2026. Mantém 2 execuções diárias em horários
+    # de baixo tráfego, longe dos minutos :16/:22/:44/:59 do cron-job.org
+    # e dos :07/:37 das transmissões. Revisão: uma de manhã, uma à tarde.
+    - cron: '51 5,14 * * *'
 
 permissions:
   contents: write
