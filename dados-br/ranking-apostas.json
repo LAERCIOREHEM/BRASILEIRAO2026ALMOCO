@@ -1,8 +1,16 @@
 {
   "temporada": 2026,
-  "atualizado_em": "2026-07-25T16:20:01.753273-03:00",
+  "atualizado_em": "2026-07-25T17:44:20.149193-03:00",
   "fonte": "Supabase br_palpites + resultados finais auditados dos JSONs locais",
   "politica_sigilo": "Rodadas não publicadas não expõem palpites nem ranking no JSON público.",
+  "validacao_resultados": {
+    "versao": 2,
+    "somente_finalizados": true,
+    "criterios": [
+      "estado final (post/final/finished/complete/completed/encerrado)",
+      "ou concluido=true"
+    ]
+  },
   "ligas": [
     {
       "id": "068a5421-5cbe-493b-ae25-1fe404c2aff7",
@@ -23,14 +31,5 @@
     "almoco-de-sexta": [],
     "d42fd0f4-b035-4243-bf3e-50719e342b20": [],
     "liga-geral": []
-  },
-  "validacao_resultados": {
-    "versao": 2,
-    "somente_finalizados": true,
-    "criterios": [
-      "estado final (post/final/finished/complete/completed/encerrado)",
-      "ou concluido=true"
-    ],
-    "observacao": "Pontuação de partidas não encerradas foi removida. Placar inicial 0 x 0 não é resultado."
   }
 }
