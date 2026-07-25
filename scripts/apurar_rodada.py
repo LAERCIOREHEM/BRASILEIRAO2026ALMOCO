@@ -3,11 +3,14 @@
 """
 apurar_rodada.py — Apuração auditável das apostas do Brasileirão 2026.
 
-Execução 13:
+Execução 15:
   - mantém sigilo das rodadas não publicadas;
   - gera ranking geral;
   - gera rankings acumulados e por rodada também por liga;
   - a aposta continua única por participante/rodada.
+  - só pontua partidas comprovadamente encerradas;
+  - rejeita o placar inicial 0 x 0 de jogos futuros ou em andamento;
+  - publica metadados de validação para defesa adicional no front-end.
 """
 from __future__ import annotations
 
@@ -26,6 +29,7 @@ TEMPORADA = int(os.environ.get("BRASILEIRAO_TEMPORADA", "2026"))
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 ROOT = Path(__file__).resolve().parents[1]
+ESTADOS_FINAIS = {"post", "final", "finished", "complete", "completed", "encerrado"}
 
 
 def agora_brt() -> datetime:
@@ -93,38 +97,98 @@ def placar_disponivel(j: dict[str, Any]) -> bool:
     return j.get("placar_mandante") is not None and j.get("placar_visitante") is not None
 
 
+def resultado_temporalmente_plausivel(j: dict[str, Any]) -> bool:
+    """Rejeita finais impossíveis, como jogo futuro marcado como concluído pelo feed."""
+    kickoff = parse_dt(j.get("data_iso"))
+    agora = agora_brt()
+    if kickoff and kickoff > agora + timedelta(minutes=5):
+        return False
+    return True
+
+
+def jogo_finalizado(j: dict[str, Any]) -> bool:
+    """Confirma que o placar representa resultado final, não o 0 x 0 inicial do feed."""
+    if not placar_disponivel(j):
+        return False
+    estado = str(j.get("estado") or j.get("state") or "").strip().lower()
+    concluido = j.get("concluido") is True or j.get("completed") is True
+    return (estado in ESTADOS_FINAIS or concluido) and resultado_temporalmente_plausivel(j)
+
+
+def jogo_para_evento(e: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "event_id": e.get("event_id"),
+        "rodada": e.get("rodada"),
+        "data_iso": e.get("data_iso"),
+        "mandante": {"nome": e.get("mandante")},
+        "visitante": {"nome": e.get("visitante")},
+        "placar_mandante": e.get("placar_mandante"),
+        "placar_visitante": e.get("placar_visitante"),
+        "estado": e.get("estado"),
+        "concluido": e.get("concluido"),
+        "status": e.get("status"),
+        "finalizado_em": e.get("finalizado_em"),
+        "fonte_resultado": e.get("fonte_resultado"),
+    }
+
+
+def escolher_mais_confiavel(atual: dict[str, Any] | None, candidato: dict[str, Any]) -> dict[str, Any]:
+    """Prefere sempre um resultado final sobre uma versão pré-jogo do mesmo evento."""
+    if atual is None:
+        return candidato
+    if jogo_finalizado(candidato) and not jogo_finalizado(atual):
+        return candidato
+    if jogo_finalizado(atual) and not jogo_finalizado(candidato):
+        return atual
+    # Em empate de estado, mantém a versão mais rica e mais recente da cadeia.
+    riqueza_atual = sum(atual.get(k) not in (None, "") for k in ("estado", "concluido", "finalizado_em", "fonte_resultado"))
+    riqueza_candidato = sum(candidato.get(k) not in (None, "") for k in ("estado", "concluido", "finalizado_em", "fonte_resultado"))
+    return candidato if riqueza_candidato >= riqueza_atual else atual
+
+
 def carregar_todos_jogos() -> list[dict[str, Any]]:
     jogos = carregar_json("jogos.json", {}).get("jogos", []) or []
     resultados = carregar_json("resultados.json", {}).get("resultados", []) or []
     eventos = carregar_json("espn_eventos.json", {}).get("eventos", []) or []
     todos: dict[str, dict[str, Any]] = {}
-    for j in jogos + resultados:
+    for j in jogos:
         if not isinstance(j, dict):
             continue
-        todos.setdefault(jogo_id(j), j)
+        jid = jogo_id(j)
+        todos[jid] = escolher_mais_confiavel(todos.get(jid), j)
+    # resultados.json é a fonte local autoritativa de partidas encerradas.
+    for j in resultados:
+        if not isinstance(j, dict):
+            continue
+        jid = jogo_id(j)
+        todos[jid] = escolher_mais_confiavel(todos.get(jid), j)
     for e in eventos:
         if not isinstance(e, dict):
             continue
-        j = {
-            "event_id": e.get("event_id"),
-            "rodada": e.get("rodada"),
-            "data_iso": e.get("data_iso"),
-            "mandante": {"nome": e.get("mandante")},
-            "visitante": {"nome": e.get("visitante")},
-            "placar_mandante": e.get("placar_mandante"),
-            "placar_visitante": e.get("placar_visitante"),
-            "estado": e.get("estado"),
-        }
-        todos.setdefault(jogo_id(j), j)
-        if e.get("event_id"):
-            todos[str(e["event_id"])] = j
+        j = jogo_para_evento(e)
+        jid = jogo_id(j)
+        todos[jid] = escolher_mais_confiavel(todos.get(jid), j)
     return list(todos.values())
+
+
+def carregar_resultados_finais() -> list[dict[str, Any]]:
+    """Carrega exclusivamente o arquivo transacional de resultados encerrados."""
+    resultados = carregar_json("resultados.json", {}).get("resultados", []) or []
+    finais: list[dict[str, Any]] = []
+    for j in resultados:
+        if not isinstance(j, dict):
+            continue
+        if jogo_finalizado(j):
+            finais.append(j)
+        else:
+            print(f"Aviso: resultado rejeitado por estado/tempo inconsistente: {jogo_id(j)}")
+    return finais
 
 
 def resultado_mapa(jogos: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     mapa: dict[str, dict[str, Any]] = {}
     for j in jogos:
-        if not placar_disponivel(j):
+        if not jogo_finalizado(j):
             continue
         rid = jogo_id(j)
         obj = {
@@ -135,11 +199,73 @@ def resultado_mapa(jogos: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
             "placar_mandante": int(j["placar_mandante"]),
             "placar_visitante": int(j["placar_visitante"]),
             "data_iso": j.get("data_iso"),
+            "estado": str(j.get("estado") or "post").lower(),
+            "concluido": bool(j.get("concluido") is True or str(j.get("estado") or "").lower() in ESTADOS_FINAIS),
+            "finalizado_em": j.get("finalizado_em"),
+            "fonte_resultado": j.get("fonte_resultado") or "ESPN/resultados.json",
         }
         mapa[rid] = obj
         if j.get("event_id"):
             mapa[str(j["event_id"])] = obj
     return mapa
+
+
+def validar_payload(payload: dict[str, Any]) -> None:
+    """Impede publicação de pontuação derivada de partida não encerrada."""
+    erros: list[str] = []
+    for rodada in payload.get("rodadas", []) or []:
+        jogos = rodada.get("jogos", []) or []
+        ids = set()
+        for item in jogos:
+            resultado = item.get("resultado") or {}
+            if not jogo_finalizado(resultado):
+                erros.append(f"rodada {rodada.get('rodada')}: resultado não finalizado {resultado.get('event_id')}")
+            rid = str(resultado.get("event_id") or item.get("event_id") or "")
+            if rid:
+                ids.add(rid)
+        if int(rodada.get("jogos_apurados") or 0) != len(ids):
+            erros.append(
+                f"rodada {rodada.get('rodada')}: jogos_apurados={rodada.get('jogos_apurados')} difere de {len(ids)}"
+            )
+        if not ids and (rodada.get("ranking") or []):
+            erros.append(f"rodada {rodada.get('rodada')}: ranking publicado sem jogo encerrado")
+    if erros:
+        raise RuntimeError("Apuração bloqueada por inconsistência de resultados: " + "; ".join(erros))
+
+
+def executar_self_tests() -> None:
+    futuro = {"event_id": "futuro", "estado": "pre", "concluido": False, "placar_mandante": 0, "placar_visitante": 0}
+    ao_vivo = {"event_id": "live", "estado": "in", "concluido": False, "placar_mandante": 0, "placar_visitante": 0}
+    final_zero = {"event_id": "final0", "estado": "post", "concluido": False, "placar_mandante": 0, "placar_visitante": 0}
+    final_flag = {"event_id": "final1", "estado": "", "concluido": True, "placar_mandante": 2, "placar_visitante": 1}
+    falso_final_futuro = {
+        "event_id": "future-post",
+        "estado": "post",
+        "concluido": True,
+        "placar_mandante": 0,
+        "placar_visitante": 0,
+        "data_iso": (agora_brt() + timedelta(days=2)).isoformat(),
+    }
+    assert not jogo_finalizado(futuro)
+    assert not jogo_finalizado(ao_vivo)
+    assert jogo_finalizado(final_zero)
+    assert jogo_finalizado(final_flag)
+    assert not jogo_finalizado(falso_final_futuro)
+    mapa = resultado_mapa([futuro, ao_vivo, final_zero, final_flag, falso_final_futuro])
+    assert set(mapa) == {"final0", "final1"}
+    escolhido = escolher_mais_confiavel(futuro, final_zero)
+    assert escolhido["event_id"] == "final0" and jogo_finalizado(escolhido)
+    palpite = {"placar_mandante": 0, "placar_visitante": 0}
+    assert calcular(palpite, mapa["final0"]) == {"pontos": 5, "tipo": "exato"}
+    invalido = {
+        "rodadas": [{"rodada": 20, "jogos_apurados": 1, "ranking": [{"membro": "Teste"}], "jogos": [{"event_id": "futuro", "resultado": futuro}]}]
+    }
+    try:
+        validar_payload(invalido)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("validar_payload deveria bloquear pontuação de jogo não encerrado")
 
 
 def sinal(n: int) -> int:
@@ -396,7 +522,23 @@ def apurar(palpites: list[dict[str, Any]], configs: list[dict[str, Any]], compro
     ranking_geral = ordenar_ranking(list(geral.values()))
     rankings_por_liga = ranking_ligas(ranking_geral, ligas_map, membros_por_liga)
 
-    return {"temporada": TEMPORADA, "atualizado_em": iso_agora(), "fonte": "Supabase br_palpites + JSONs ESPN locais", "politica_sigilo": "Rodadas não publicadas não expõem palpites nem ranking no JSON público.", "ligas": list(ligas_map.values()), "rodadas": saida_rodadas, "ranking_geral": ranking_geral, "rankings_por_liga": rankings_por_liga}
+    payload = {
+        "temporada": TEMPORADA,
+        "atualizado_em": iso_agora(),
+        "fonte": "Supabase br_palpites + resultados finais auditados dos JSONs locais",
+        "politica_sigilo": "Rodadas não publicadas não expõem palpites nem ranking no JSON público.",
+        "validacao_resultados": {
+            "versao": 2,
+            "somente_finalizados": True,
+            "criterios": ["estado final (post/final/finished/complete/completed/encerrado)", "ou concluido=true"],
+        },
+        "ligas": list(ligas_map.values()),
+        "rodadas": saida_rodadas,
+        "ranking_geral": ranking_geral,
+        "rankings_por_liga": rankings_por_liga,
+    }
+    validar_payload(payload)
+    return payload
 
 
 def gravar(path: Path, payload: dict[str, Any]) -> None:
@@ -407,6 +549,12 @@ def gravar(path: Path, payload: dict[str, Any]) -> None:
 
 
 def main() -> int:
+    if "--self-test" in sys.argv:
+        executar_self_tests()
+        print("Self-tests da apuração concluídos com sucesso.")
+        return 0
+
+    executar_self_tests()
     try:
         palpites, configs, comprovantes, auditoria, participantes, ligas, liga_participantes = buscar_supabase()
     except Exception as exc:  # noqa: BLE001
@@ -414,10 +562,19 @@ def main() -> int:
         return 1
 
     jogos = carregar_todos_jogos()
-    resultados = resultado_mapa(jogos)
+    resultados = resultado_mapa(carregar_resultados_finais())
     payload = apurar(palpites, configs, comprovantes, auditoria, jogos, resultados, ligas, liga_participantes)
     gravar(ROOT / "dados-br" / "apuracao.json", payload)
-    gravar(ROOT / "dados-br" / "ranking-apostas.json", {"temporada": TEMPORADA, "atualizado_em": payload["atualizado_em"], "fonte": payload["fonte"], "politica_sigilo": payload["politica_sigilo"], "ligas": payload.get("ligas", []), "ranking_geral": payload["ranking_geral"], "rankings_por_liga": payload.get("rankings_por_liga", {})})
+    gravar(ROOT / "dados-br" / "ranking-apostas.json", {
+        "temporada": TEMPORADA,
+        "atualizado_em": payload["atualizado_em"],
+        "fonte": payload["fonte"],
+        "politica_sigilo": payload["politica_sigilo"],
+        "validacao_resultados": payload["validacao_resultados"],
+        "ligas": payload.get("ligas", []),
+        "ranking_geral": payload["ranking_geral"],
+        "rankings_por_liga": payload.get("rankings_por_liga", {}),
+    })
 
     print("Apuração concluída com política de sigilo e rankings por liga.")
     print(f"Rodadas no arquivo: {len(payload['rodadas'])}")

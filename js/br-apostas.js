@@ -1,6 +1,6 @@
 /* ========================================================================== 
    br-apostas.js — Apostas logadas do Brasileirão 2026
-   Execução 14: permissões por liga, exportação CSV e polimento mobile.
+   Execução 15: pontuação defensiva apenas para partidas encerradas.
    ========================================================================== */
 (function (global, document) {
   "use strict";
@@ -540,6 +540,7 @@
   }
 
   function rankingPorLigaPayload(payload, ligaId) {
+    if (!payloadPontuacaoConfiavel(payload)) return null;
     const porLiga = (payload && (payload.rankings_por_liga || payload.ranking_por_liga)) || {};
     const liga = state.ligas.find(l => String(l.liga_id) === String(ligaId)) || ligaAtualObj();
     const chaves = [
@@ -554,8 +555,49 @@
     return null;
   }
 
+  function payloadPontuacaoConfiavel(payload) {
+    return Boolean(payload && payload.validacao_resultados && payload.validacao_resultados.somente_finalizados === true);
+  }
+
+  function resultadoFinalLocal(eventId) {
+    const id = String(eventId || "");
+    if (!id) return null;
+    const lista = (state.resultadosJson && state.resultadosJson.resultados) || [];
+    return lista.find(r => String(r.event_id || r.id || "") === id) || null;
+  }
+
+  function resultadoFinalizado(resultado, eventId) {
+    const r = resultado || {};
+    const temPlacar = r.placar_mandante !== null && r.placar_mandante !== undefined
+      && r.placar_visitante !== null && r.placar_visitante !== undefined;
+    if (!temPlacar) return false;
+    const local = resultadoFinalLocal(eventId || r.event_id || r.id);
+    if (!local) return false;
+    return Number(local.placar_mandante) === Number(r.placar_mandante)
+      && Number(local.placar_visitante) === Number(r.placar_visitante);
+  }
+
+  function apuracaoRodadaConfiavel(ap) {
+    if (!ap || !payloadPontuacaoConfiavel(state.apuracao)) return false;
+    const jogos = Array.isArray(ap.jogos) ? ap.jogos : [];
+    const finais = jogos.filter(j => resultadoFinalizado(j.resultado || {}, j.event_id));
+    const ids = new Set(finais.map(j => String((j.resultado || {}).event_id || j.event_id || "")).filter(Boolean));
+    return finais.length === jogos.length && Number(ap.jogos_apurados || 0) === ids.size;
+  }
+
+  function rankingGeralConfiavel() {
+    const candidatos = [state.rankingApostas, state.apuracao];
+    for (const payload of candidatos) {
+      if (!payloadPontuacaoConfiavel(payload)) continue;
+      const porLiga = rankingPorLigaPayload(payload, state.ligaAtual);
+      if (Array.isArray(porLiga)) return porLiga;
+      if (Array.isArray(payload.ranking_geral)) return payload.ranking_geral;
+    }
+    return [];
+  }
+
   function rankingRodadaPorLiga(ap, ligaId) {
-    if (!ap) return [];
+    if (!ap || !apuracaoRodadaConfiavel(ap)) return [];
     const porLiga = (ap.rankings_por_liga || ap.ranking_por_liga || {});
     const liga = state.ligas.find(l => String(l.liga_id) === String(ligaId)) || ligaAtualObj();
     const chaves = [liga?.liga_id, liga?.slug, normalizarTexto(liga?.nome || ""), "liga-geral"].filter(Boolean).map(String);
@@ -566,7 +608,7 @@
   }
 
   function vencedoresRodadaPorLiga(ap, ligaId) {
-    if (!ap) return [];
+    if (!ap || !apuracaoRodadaConfiavel(ap)) return [];
     const porLiga = (ap.vencedores_por_liga || {});
     const liga = state.ligas.find(l => String(l.liga_id) === String(ligaId)) || ligaAtualObj();
     const chaves = [liga?.liga_id, liga?.slug, normalizarTexto(liga?.nome || ""), "liga-geral"].filter(Boolean).map(String);
@@ -814,10 +856,13 @@
   function mapaPontosRodada(rodada) {
     const ap = apuracaoRodada(rodada);
     const mapa = new Map();
-    if (!ap || !Array.isArray(ap.jogos)) return mapa;
+    if (!ap || !apuracaoRodadaConfiavel(ap) || !Array.isArray(ap.jogos)) return mapa;
     ap.jogos.forEach(j => {
+      if (!resultadoFinalizado(j.resultado || {}, j.event_id)) return;
       (j.palpites || []).forEach(p => {
-        mapa.set(`${p.membro || ""}::${j.resultado?.event_id || j.event_id || ""}`, p);
+        const eventId = j.resultado?.event_id || j.event_id || "";
+        if (p.participante_id) mapa.set(`id:${p.participante_id}::${eventId}`, p);
+        mapa.set(`nome:${normalizarTexto(p.membro || "")}::${eventId}`, p);
       });
     });
     return mapa;
@@ -826,22 +871,26 @@
   function renderRanking() {
     const root = $("#conteudo");
     const ap = apuracaoRodada(state.rodada);
-    const geral = rankingPorLigaPayload(state.rankingApostas, state.ligaAtual) || rankingPorLigaPayload(state.apuracao, state.ligaAtual) || (state.rankingApostas && state.rankingApostas.ranking_geral) || (state.apuracao && state.apuracao.ranking_geral) || [];
+    const geral = rankingGeralConfiavel();
     if (!ap || ap.sigilosa) {
       root.innerHTML = `<section class="panel"><div class="panel-inner empty"><strong>Ranking da rodada ainda não publicado.</strong><p>A apuração só aparece aqui depois que a rodada tiver resultados e for marcada como apurada/publicada. Enquanto isso, os palpites seguem sigilosos.</p>${canAdminAny() ? `<p class="muted-note">Admin: rode o workflow <strong>Apurar Apostas Brasileirão</strong> após os jogos e depois publique a rodada quando quiser liberar para todos.</p>` : ""}</div></section>${renderRankingGeral(geral)}`;
       return;
     }
-    const ranking = rankingRodadaPorLiga(ap, state.ligaAtual);
-    const vencedoresLiga = vencedoresRodadaPorLiga(ap, state.ligaAtual);
+    const confiavel = apuracaoRodadaConfiavel(ap);
+    const ranking = confiavel ? rankingRodadaPorLiga(ap, state.ligaAtual) : [];
+    const vencedoresLiga = confiavel ? vencedoresRodadaPorLiga(ap, state.ligaAtual) : [];
+    const jogosApurados = confiavel ? Number(ap.jogos_apurados || 0) : 0;
+    const avisoValidacao = confiavel ? "" : `<div class="status warn">Pontuação temporariamente ocultada porque o arquivo de apuração não comprovou que todos os jogos usados estavam encerrados.</div>`;
     root.innerHTML = `<section class="ranking-grid">
       <article class="panel"><div class="panel-inner">
         <div class="kicker">Ranking da rodada</div><h2>Rodada ${state.rodada} · ${escapeHtml(nomeLigaAtual())}</h2>
+        ${avisoValidacao}
         <p>${vencedoresLiga.length ? `🏆 Vencedor(es) da liga: <strong>${vencedoresLiga.map(escapeHtml).join(", ")}</strong>` : "Aguardando jogos apurados nesta liga."}</p>
         ${ranking.length ? `<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar ranking CSV</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Participante</th><th>Pontos</th><th>Cravadas</th><th>Saldo</th><th>Resultado</th><th>Erros</th></tr></thead><tbody>${ranking.map(r => `<tr><td>${r.pos}</td><td>${escapeHtml(r.membro)}</td><td class="num gold-num">${r.pontos}</td><td>${r.cravadas}</td><td>${r.saldos}</td><td>${r.resultados}</td><td>${r.erros}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Nenhum jogo apurado nesta rodada.</div>`}
       </div></article>
       <article class="panel"><div class="panel-inner">
         <div class="kicker">Resumo técnico</div><h2>Apuração</h2>
-        <div class="audit-kpis"><span><strong>${ap.participantes || 0}</strong><small>participantes</small></span><span><strong>${ap.jogos_apurados || 0}</strong><small>jogos apurados</small></span><span><strong>${ap.palpites_descartados_fora_do_prazo || 0}</strong><small>descartados</small></span></div>
+        <div class="audit-kpis"><span><strong>${ap.participantes || 0}</strong><small>participantes</small></span><span><strong>${jogosApurados}</strong><small>jogos apurados</small></span><span><strong>${ap.palpites_descartados_fora_do_prazo || 0}</strong><small>descartados</small></span></div>
         <p class="muted-note">Atualizado em ${fmtDataLonga((state.apuracao || {}).atualizado_em)}.</p>
       </div></article>
     </section>${renderRankingGeral(geral)}`;
@@ -867,14 +916,18 @@
       root.innerHTML = `<section class="panel"><div class="panel-inner empty">Nenhum palpite público encontrado para a rodada ${state.rodada}.</div></section>`;
       return;
     }
+    const apConfiavel = ap && !ap.sigilosa && apuracaoRodadaConfiavel(ap);
+    const jogosApurados = apConfiavel ? Number(ap.jogos_apurados || 0) : 0;
     root.innerHTML = `<section class="panel"><div class="panel-inner">
       <div class="kicker">Palpites públicos</div><h2>Rodada ${state.rodada} · ${escapeHtml(nomeLigaAtual())}</h2>
       <p>Lista aberta após publicação da rodada. Quando a apuração já estiver disponível, a tabela mostra pontos e tipo de acerto jogo a jogo.</p>
-      ${ap && !ap.sigilosa ? `<div class="status ok">Apuração publicada · ${ap.jogos_apurados || 0} jogos apurados.</div>` : `<div class="status warn">Palpites publicados; pontos aparecem após o workflow de apuração.</div>`}
+      ${jogosApurados > 0 ? `<div class="status ok">Apuração publicada · ${jogosApurados} jogos encerrados e apurados.</div>` : `<div class="status warn">Palpites publicados; a pontuação aparecerá somente após o encerramento dos jogos.</div>`}
       <div class="export-row"><button class="btn secondary" type="button" id="export-publicos">⬇️ Exportar palpites CSV</button></div>
       <div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Participante</th><th>Jogo</th><th>Palpite</th><th>Pontos</th><th>Tipo</th><th>Hash</th></tr></thead><tbody>
         ${state.publicos.map(p => {
-          const det = pontosMap.get(`${p.membro || ""}::${p.event_id || ""}`) || {};
+          const det = (p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`))
+            || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`)
+            || {};
           return `<tr><td>${escapeHtml(p.membro)}</td><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td class="num ${pontosClasse(det.pontos)}">${det.pontos ?? "—"}</td><td>${escapeHtml(tipoLabel(det.tipo))}</td><td class="hash">${escapeHtml(p.hash_fechamento || "—")}</td></tr>`;
         }).join("")}
       </tbody></table></div>
@@ -1004,7 +1057,7 @@
   function exportarRankingCsv() {
     const ap = apuracaoRodada(state.rodada);
     const rankingRodada = ap ? rankingRodadaPorLiga(ap, state.ligaAtual) : [];
-    const geral = rankingPorLigaPayload(state.rankingApostas, state.ligaAtual) || rankingPorLigaPayload(state.apuracao, state.ligaAtual) || [];
+    const geral = rankingGeralConfiavel();
     const linhas = [["tipo", "liga", "rodada", "pos", "participante", "pontos", "cravadas", "saldo", "resultado", "erros", "vitorias_rodada"]];
     rankingRodada.forEach(r => linhas.push(["rodada", nomeLigaAtual(), state.rodada, r.pos, r.membro, r.pontos, r.cravadas, r.saldos, r.resultados, r.erros, ""]));
     geral.forEach(r => linhas.push(["acumulado", nomeLigaAtual(), "", r.pos, r.membro, r.pontos, r.cravadas, r.saldos, r.resultados, r.erros || 0, r.vitorias_rodada || 0]));
