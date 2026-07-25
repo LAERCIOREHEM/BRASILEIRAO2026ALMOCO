@@ -77,18 +77,42 @@ def normalizar_texto(valor: Any) -> str:
 
 
 def fetch_text(url: str, *, timeout: int = 30, tentativas: int = 2) -> str:
+    """Busca HTML oficial com fingerprint de navegador e fallback padrão.
+
+    A CBF e outros portais esportivos podem aplicar políticas diferentes por
+    cliente HTTP. O curl_cffi é opcional; se falhar, urllib continua sendo
+    tentado na mesma rodada, evitando dependência rígida de um único cliente.
+    """
     ultimo: Exception | None = None
     for tentativa in range(1, tentativas + 1):
+        separador = "&" if "?" in url else "?"
+        cache_url = f"{url}{separador}_={int(time.time())}"
+        erros_tentativa: list[str] = []
         try:
-            separador = "&" if "?" in url else "?"
-            req = urllib.request.Request(
-                f"{url}{separador}_={int(time.time())}", headers=HEADERS_HTML
+            from curl_cffi import requests as curl_requests  # type: ignore
+
+            response = curl_requests.get(
+                cache_url,
+                impersonate="chrome",
+                timeout=timeout + (tentativa - 1) * 8,
+                headers={"Accept-Language": HEADERS_HTML["Accept-Language"]},
             )
-            with urllib.request.urlopen(req, timeout=timeout + (tentativa - 1) * 10) as response:
+            response.raise_for_status()
+            return response.text
+        except ImportError:
+            pass
+        except Exception as exc:  # noqa: BLE001
+            erros_tentativa.append(f"curl_cffi={type(exc).__name__}: {exc}")
+            ultimo = exc
+
+        try:
+            req = urllib.request.Request(cache_url, headers=HEADERS_HTML)
+            with urllib.request.urlopen(req, timeout=timeout + (tentativa - 1) * 8) as response:
                 charset = response.headers.get_content_charset() or "utf-8"
                 return response.read().decode(charset, errors="replace")
         except Exception as exc:  # noqa: BLE001
-            ultimo = exc
+            erros_tentativa.append(f"urllib={type(exc).__name__}: {exc}")
+            ultimo = RuntimeError(" | ".join(erros_tentativa))
             if tentativa < tentativas:
                 time.sleep(2 * tentativa)
     raise RuntimeError(f"falha ao buscar página oficial: {url} :: {ultimo}")

@@ -443,6 +443,90 @@ def fetch_video_details(client: YouTubeClient, ids: Iterable[str]) -> List[Dict[
     return out
 
 
+def extract_video_ids_from_streams_html(page: str) -> List[str]:
+    """Extrai videoIds da aba /streams sem executar JavaScript.
+
+    O YouTube repete o mesmo ID em vários blocos; a ordem de primeira aparição
+    é preservada e somente IDs sintaticamente válidos são retornados.
+    """
+    decoded = page.replace("\\u0026", "&").replace("\\u003d", "=").replace("\\/", "/")
+    patterns = (
+        r'"videoId"\s*:\s*"([A-Za-z0-9_-]{11})"',
+        r'(?:watch\?v=|/live/)([A-Za-z0-9_-]{11})',
+    )
+    out: List[str] = []
+    seen: set[str] = set()
+    for pattern in patterns:
+        for match in re.finditer(pattern, decoded):
+            video_id = match.group(1)
+            if video_id not in seen:
+                seen.add(video_id)
+                out.append(video_id)
+    return out
+
+
+def fetch_streams_page(url: str, timeout: int = 25) -> str:
+    """Busca a aba oficial de streams com fingerprint de navegador quando disponível."""
+    try:
+        from curl_cffi import requests as curl_requests  # type: ignore
+        response = curl_requests.get(
+            url,
+            impersonate="chrome",
+            timeout=timeout,
+            headers={"Accept-Language": "pt-BR,pt;q=0.9,en;q=0.7"},
+        )
+        response.raise_for_status()
+        return response.text
+    except ImportError:
+        pass
+    request = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36",
+            "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.7",
+            "Cache-Control": "no-cache",
+        },
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        return response.read().decode(charset, errors="replace")
+
+
+def scan_streams_page(
+    client: YouTubeClient,
+    channel: Mapping[str, str],
+    max_items: int,
+    errors: List[str],
+) -> List[Candidate]:
+    """Captura lives agendadas diretamente da aba oficial /streams.
+
+    Essa camada costuma enxergar transmissões futuras antes da playlist de
+    uploads e usa somente videos.list para validação, com custo baixo de quota.
+    """
+    url = str(channel.get("streams_url") or "").strip()
+    if not url:
+        return []
+    try:
+        page = fetch_streams_page(url)
+        ids = extract_video_ids_from_streams_html(page)[:max_items]
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"Falha ao ler /streams de {channel.get('nome')}: {exc}")
+        return []
+    if not ids:
+        return []
+    try:
+        details = fetch_video_details(client, ids)
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"Falha ao validar /streams de {channel.get('nome')}: {exc}")
+        return []
+    out: List[Candidate] = []
+    for item in details:
+        cand = candidate_from_video(item, str(channel.get("chave")), "streams-page")
+        if cand and cand.channel_id == channel.get("channel_id") and cand.status in {"upcoming", "live"}:
+            out.append(cand)
+    return out
+
+
 def scan_uploads(client: YouTubeClient, channel: Mapping[str, str], max_items: int, errors: List[str]) -> List[Candidate]:
     playlist = channel.get("uploads_playlist") or ""
     if not playlist:
@@ -745,13 +829,19 @@ def build_outputs(
 
     candidates: List[Candidate] = []
 
-    # 1) Varredura profunda da playlist de uploads via API (custo ~10 unidades por canal).
-    #    500 itens cobre ~2 semanas de publicações da CazéTV — suficiente para achar
-    #    lives agendadas que não aparecem nos uploads mais recentes.
+    # 1) Aba /streams oficial: costuma publicar a live futura antes de ela
+    #    aparecer com destaque na playlist de uploads.
+    for channel in channels.values():
+        candidates.extend(scan_streams_page(
+            client, channel, int(config.get("streams_max_itens") or 120), errors
+        ))
+
+    # 2) Playlist de uploads via API. Mantida como fonte independente e
+    #    redundante para quando o HTML do YouTube muda ou sofre bloqueio.
     for channel in channels.values():
         candidates.extend(scan_uploads(client, channel, int(config.get("uploads_max_itens") or 500), errors))
 
-    # 2) Revalida links já existentes/manuais para manter status atualizado
+    # 3) Revalida links já existentes/manuais para manter status atualizado
     existing_ids = load_existing_video_ids(existing, manual)
     if existing_ids:
         try:
@@ -767,8 +857,8 @@ def build_outputs(
         except Exception as exc:
             errors.append(f"Falha ao revalidar links existentes: {exc}")
 
-    # Deduplica: uploads > validação-direta
-    source_rank = {"uploads": 2, "validação-direta": 1}
+    # Deduplica: /streams > uploads > validação-direta.
+    source_rank = {"streams-page": 3, "uploads": 2, "validação-direta": 1}
     unique: Dict[str, Candidate] = {}
     for cand in candidates:
         old = unique.get(cand.video_id)
@@ -852,7 +942,7 @@ def build_outputs(
         "quota_estimada_youtube": {
             "unidades": client.quota_estimated,
             "requisicoes": client.requests,
-            "observacao": "search.list não é mais usado. Custo: ~2 unidades (channels) + ~20 (playlistItems 500 itens) + ~10 (videos) por execução ≈ 32 unidades. Cabe 300+ execuções/dia dentro das 10.000 gratuitas.",
+            "observacao": "search.list não é usado. A aba /streams custa apenas videos.list; a playlist de uploads mantém redundância. A execução típica permanece muito abaixo da cota diária gratuita do YouTube Data API.",
         },
     }
     return output_base, audit, True
@@ -900,20 +990,11 @@ def selftest() -> None:
     {"videoId":"BBBBBBBBBBB"}
     watch?v=CCCCCCCCCCC
     '''
-    ids_found = []
-    seen: set = set()
-    for m in re.finditer(r'"videoId"\s*:\s*"([A-Za-z0-9_-]{11})"', html_fake):
-        v = m.group(1)
-        if v not in seen:
-            seen.add(v); ids_found.append(v)
-    for m in re.finditer(r'watch\?v=([A-Za-z0-9_-]{11})', html_fake):
-        v = m.group(1)
-        if v not in seen:
-            seen.add(v); ids_found.append(v)
+    ids_found = extract_video_ids_from_streams_html(html_fake)
     assert "Cih-UxYNCSs" in ids_found, f"ID da live Cazé não encontrado: {ids_found}"
     assert len(ids_found) == 3
 
-    print("SELFTEST OK: vínculo, rejeições, aliases, prioridade CazéTV, link único, scraping HTML")
+    print("SELFTEST OK: vínculo, rejeições, aliases, prioridade CazéTV, link único, /streams e uploads")
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
