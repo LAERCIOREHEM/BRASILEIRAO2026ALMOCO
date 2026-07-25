@@ -41,8 +41,10 @@ jobs:
           cache: 'pip'
           cache-dependency-path: requirements-af-previsao.txt
 
-      - name: Instalar dependências do AF-Previsão
-        run: python -m pip install --disable-pip-version-check -r requirements-af-previsao.txt
+      - name: Instalar dependências do AF-Previsão e coleta web
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-af-previsao.txt
+          python -m pip install --disable-pip-version-check --no-cache-dir curl-cffi==0.15.0
 
       - name: Mostrar horario da execucao
         run: |
@@ -80,6 +82,8 @@ jobs:
           python scripts/gerar_probabilidades_brasileirao.py --self-test
           python scripts/gerar_probabilidades_jogos.py --self-test
           python scripts/avaliar_af_previsao.py --self-test
+          python -m json.tool dados-br/config-transmissoes-tv.json > /dev/null
+          python -m json.tool dados-br/auditoria-transmissoes-tv.json > /dev/null
 
       - name: Registrar estado esportivo anterior do AF-Previsão
         run: |
@@ -346,7 +350,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "Arquivos JSON presentes e validos:"
-          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/transmissoes-tv.json dados-br/status-atualizacao.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
+          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/transmissoes-tv.json dados-br/auditoria-transmissoes-tv.json dados-br/status-atualizacao.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
             if [ ! -f "$arq" ]; then
               echo "ERRO: $arq nao foi gerado."
               exit 1
@@ -374,6 +378,10 @@ jobs:
           assert status_ops.get('sincronizado') is True, 'status operacional não reconhece snapshot sincronizado'
           tv = json.load(open('dados-br/transmissoes-tv.json', encoding='utf-8'))
           assert isinstance(tv.get('jogos'), dict), 'transmissoes-tv.json sem mapa de jogos'
+          aud_tv = json.load(open('dados-br/auditoria-transmissoes-tv.json', encoding='utf-8'))
+          assert isinstance(aud_tv.get('fontes'), dict), 'auditoria de transmissões sem mapa de fontes'
+          assert isinstance(aud_tv.get('sem_transmissao'), list), 'auditoria de transmissões sem pendências'
+          assert int((aud_tv.get('resumo') or {}).get('jogos_com_transmissao') or 0) == len(tv['jogos']), 'auditoria de transmissões divergente'
           print('  OK   JSONs principais: ESPN como fonte principal; tabela com 20 times')
           stats = json.load(open('dados-br/estatisticas.json', encoding='utf-8'))
           rank = json.load(open('dados-br/ranking-desempenho.json', encoding='utf-8'))
@@ -662,6 +670,7 @@ jobs:
             "jogos.json"
             "resultados.json"
             "dados-br/transmissoes-tv.json"
+            "dados-br/auditoria-transmissoes-tv.json"
             "dados-br/status-atualizacao.json"
             "dados-br/estatisticas.json"
             "dados-br/ranking-desempenho.json"

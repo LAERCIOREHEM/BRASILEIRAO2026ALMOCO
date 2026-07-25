@@ -1,10 +1,13 @@
 name: Buscar transmissões ao vivo do Brasileirão
 
 on:
-  # Duas consultas diárias são suficientes para jogos futuros:
-  # 09:15 e 18:15 no horário de Brasília (12:15 e 21:15 UTC).
+  # Busca ativa a cada 15 minutos entre 06:07 e 23:52 BRT.
+  # Na madrugada, uma verificação por hora preserva atualidade sem desperdício.
+  # Minutos deslocados evitam o pico de carga do GitHub no início da hora.
   schedule:
-    - cron: '15 12,21 * * *'
+    - cron: '7,22,37,52 9-23 * * *'
+    - cron: '7,22,37,52 0-2 * * *'
+    - cron: '17 3-8 * * *'
   workflow_dispatch:
     inputs:
       event_id:
@@ -22,7 +25,7 @@ on:
       - 'scripts/buscar_transmissoes_aovivo_brasileirao.py'
       - 'dados-br/config-transmissoes-aovivo.json'
       - 'dados-br/transmissoes-aovivo-manual.json'
-      - 'dados-br/transmissoes-tv.json'
+      - 'dados-br/config-transmissoes-tv.json'
       - 'transmissoes.json'
       - 'scripts/atualizar_transmissoes_tv_brasileirao.py'
       - '.github/workflows/buscar-transmissoes-aovivo-brasileirao.yml'
@@ -38,7 +41,7 @@ jobs:
   buscar:
     name: Procurar transmissões oficiais
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       - name: Baixar repositório
@@ -52,6 +55,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Instalar cliente HTTP com fingerprint de navegador
+        run: python -m pip install --disable-pip-version-check --no-cache-dir curl-cffi==0.15.0
+
       - name: Validar script e configuração
         run: |
           set -euo pipefail
@@ -60,10 +66,12 @@ jobs:
           python -m py_compile scripts/atualizar_transmissoes_tv_brasileirao.py
           python scripts/atualizar_transmissoes_tv_brasileirao.py --selftest
           python -m json.tool dados-br/config-transmissoes-aovivo.json > /dev/null
+          python -m json.tool dados-br/config-transmissoes-tv.json > /dev/null
           python -m json.tool dados-br/transmissoes-aovivo.json > /dev/null
           python -m json.tool dados-br/transmissoes-aovivo-manual.json > /dev/null
           python -m json.tool dados-br/auditoria-transmissoes-aovivo.json > /dev/null
           python -m json.tool dados-br/transmissoes-tv.json > /dev/null
+          python -m json.tool dados-br/auditoria-transmissoes-tv.json > /dev/null
           python -m json.tool transmissoes.json > /dev/null
 
       - name: Buscar transmissões oficiais
@@ -102,6 +110,7 @@ jobs:
           python -m json.tool dados-br/transmissoes-aovivo.json > /dev/null
           python -m json.tool dados-br/auditoria-transmissoes-aovivo.json > /dev/null
           python -m json.tool dados-br/transmissoes-tv.json > /dev/null
+          python -m json.tool dados-br/auditoria-transmissoes-tv.json > /dev/null
           python - <<'PY'
           import json
           from urllib.parse import urlparse, parse_qs
@@ -130,9 +139,19 @@ jobs:
           for event_id, jogo in tv['jogos'].items():
               assert str(jogo.get('event_id')) == str(event_id), f'TV: event_id divergente em {event_id}'
               assert jogo.get('canais'), f'TV: {event_id} sem canais'
+              assert jogo.get('confianca') in {'confirmado', 'manual', 'preservado'}, f'TV: confiança inválida em {event_id}'
+              assert isinstance(jogo.get('fontes'), list) and jogo['fontes'], f'TV: {event_id} sem evidências'
               invalidos = set(jogo['canais']) - permitidos
               assert not invalidos, f'TV: canal não permitido em {event_id}: {sorted(invalidos)}'
-          print('YouTube e transmissões TV validados')
+          aud_tv = json.load(open('dados-br/auditoria-transmissoes-tv.json', encoding='utf-8'))
+          resumo_tv = aud_tv.get('resumo') or {}
+          assert isinstance(aud_tv.get('fontes'), dict), 'auditoria TV sem fontes'
+          assert isinstance(aud_tv.get('sem_transmissao'), list), 'auditoria TV sem lista de pendências'
+          assert int(resumo_tv.get('jogos_com_transmissao') or 0) == len(tv['jogos']), 'auditoria TV diverge da saída'
+          criticos = int(resumo_tv.get('jogos_criticos_sem_transmissao_72h') or 0)
+          if criticos:
+              print(f'::warning title=Transmissões pendentes::{criticos} jogo(s) nas próximas 72h ainda sem canal confirmado')
+          print(f'YouTube e transmissões TV validados; críticos sem canal: {criticos}')
           PY
 
       - name: Commitar somente quando houver mudança real
@@ -149,6 +168,7 @@ jobs:
             "dados-br/transmissoes-aovivo.json"
             "dados-br/auditoria-transmissoes-aovivo.json"
             "dados-br/transmissoes-tv.json"
+            "dados-br/auditoria-transmissoes-tv.json"
           )
 
           if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
