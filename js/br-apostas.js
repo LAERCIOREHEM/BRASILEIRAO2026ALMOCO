@@ -910,18 +910,42 @@
         var kNome = 'nome:' + normalizarTexto(p.membro || '') + '::' + (p.event_id || '');
         var det = (p.participante_id && pontosMap.get(kId)) || pontosMap.get(kNome) || {};
         var pontosCls = det.pontos != null ? pontosClasse(det.pontos) : '';
-        var pontosStr = det.pontos != null ? String(det.pontos) : '—';
-        var tipoStr = det.tipo ? tipoLabel(det.tipo) : '—';
+        var pontosStr = det.pontos != null ? String(det.pontos) + ' pts' : '— pts';
+        var tipoStr = det.tipo ? tipoLabel(det.tipo) : null;
         var rr = resultadoReal.get(String(p.event_id || ''));
-        var placarRealHtml = rr != null
-          ? '<span class="pex-real ' + pontosCls + '">' + rr.pm + ' x ' + rr.pv + '</span>'
-          : '<span class="pex-real pex-real-nd">—</span>';
-        return '<div class="palpite-expand-row">'
-          + '<span class="pex-jogo">' + escapeHtml(p.mandante) + ' <em>x</em> ' + escapeHtml(p.visitante) + '</span>'
-          + '<span class="pex-placar"><small class="pex-label">palpite</small>' + p.placar_mandante + ' x ' + p.placar_visitante + '</span>'
-          + placarRealHtml
-          + '<span class="pex-tipo ' + pontosCls + '">' + escapeHtml(tipoStr) + '</span>'
-          + '<span class="pex-pts ' + pontosCls + '">' + pontosStr + '<small>pts</small></span>'
+        var temReal = rr != null;
+
+        // Layout:
+        // ┌──────────────────────────────────────┐
+        // │ Santos x Chapecoense                 │
+        // │ 2 x 2  [cravou · 5 pts]              │  ← resultado real + veredito
+        // │ Palpite: 2 x 0                       │  ← palpite do apostador
+        // └──────────────────────────────────────┘
+
+        var jogoHtml = '<div class="pex-jogo">'
+          + escapeHtml(p.mandante) + ' <em>×</em> ' + escapeHtml(p.visitante)
+          + '</div>';
+
+        var veredito = tipoStr ? ('<span class="pex-veredito ' + pontosCls + '">' + escapeHtml(tipoStr) + ' · ' + pontosStr + '</span>') : '';
+
+        var realHtml = temReal
+          ? '<div class="pex-resultado-real ' + pontosCls + '">'
+              + '<span class="pex-score">' + rr.pm + ' × ' + rr.pv + '</span>'
+              + veredito
+            + '</div>'
+          : '<div class="pex-resultado-real pex-aguardando">'
+              + '<span class="pex-score pex-nd">—</span>'
+            + '</div>';
+
+        var palHtml = '<div class="pex-palpite-row">'
+          + '<span class="pex-pal-label">Palpite:</span>'
+          + '<span class="pex-pal-score">' + p.placar_mandante + ' × ' + p.placar_visitante + '</span>'
+          + '</div>';
+
+        return '<div class="palpite-card ' + pontosCls + '">'
+          + jogoHtml
+          + realHtml
+          + palHtml
           + '</div>';
       }).join('') + '</div>';
     }
