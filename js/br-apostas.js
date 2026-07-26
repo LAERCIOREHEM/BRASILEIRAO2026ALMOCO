@@ -886,6 +886,19 @@
     const publicos = Array.isArray(state.publicos) ? state.publicos : [];
     const pontosMap = mapaPontosRodada(state.rodada);
 
+    // Mapa de resultados reais: event_id → {pm, pv}
+    const resultadoReal = new Map();
+    const apRef = apuracaoRodada(state.rodada);
+    if (apRef && Array.isArray(apRef.jogos)) {
+      apRef.jogos.forEach(function(j) {
+        var res = j.resultado || {};
+        var eid = String(res.event_id || j.event_id || '');
+        if (eid && res.placar_mandante != null && res.placar_visitante != null) {
+          resultadoReal.set(eid, { pm: res.placar_mandante, pv: res.placar_visitante });
+        }
+      });
+    }
+
     function palpitesDoParticipante(membro, participanteId) {
       var minha = publicos.filter(function(p) {
         return (participanteId && p.participante_id && String(p.participante_id) === String(participanteId))
@@ -899,9 +912,14 @@
         var pontosCls = det.pontos != null ? pontosClasse(det.pontos) : '';
         var pontosStr = det.pontos != null ? String(det.pontos) : '—';
         var tipoStr = det.tipo ? tipoLabel(det.tipo) : '—';
+        var rr = resultadoReal.get(String(p.event_id || ''));
+        var placarRealHtml = rr != null
+          ? '<span class="pex-real ' + pontosCls + '">' + rr.pm + ' x ' + rr.pv + '</span>'
+          : '<span class="pex-real pex-real-nd">—</span>';
         return '<div class="palpite-expand-row">'
           + '<span class="pex-jogo">' + escapeHtml(p.mandante) + ' <em>x</em> ' + escapeHtml(p.visitante) + '</span>'
-          + '<span class="pex-placar">' + p.placar_mandante + ' x ' + p.placar_visitante + '</span>'
+          + '<span class="pex-placar"><small class="pex-label">palpite</small>' + p.placar_mandante + ' x ' + p.placar_visitante + '</span>'
+          + placarRealHtml
           + '<span class="pex-tipo ' + pontosCls + '">' + escapeHtml(tipoStr) + '</span>'
           + '<span class="pex-pts ' + pontosCls + '">' + pontosStr + '<small>pts</small></span>'
           + '</div>';

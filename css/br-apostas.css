@@ -871,3 +871,40 @@ body > .container > section.hero > img {
   .pex-tipo { grid-column: 1; }
   .pex-pts  { grid-column: 2; grid-row: 1 / 3; align-self: center; }
 }
+
+/* Placar real na linha de palpite expandida */
+.pex-real {
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+  text-align: right;
+}
+.pex-real-nd { color: var(--muted-2); }
+
+/* Label "palpite" em cima do placar apostado */
+.pex-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  margin-bottom: 1px;
+}
+
+/* Grid das linhas: jogo | palpite | real | tipo | pts */
+.palpite-expand-row {
+  grid-template-columns: 1fr auto auto auto auto;
+}
+
+@media (max-width: 600px) {
+  .palpite-expand-row {
+    grid-template-columns: 1fr auto auto;
+    grid-template-rows: auto auto;
+    gap: 4px 8px;
+  }
+  .pex-real  { grid-column: 2; grid-row: 1; }
+  .pex-placar { grid-column: 3; grid-row: 1; }
+  .pex-tipo  { grid-column: 1; grid-row: 2; }
+  .pex-pts   { grid-column: 2 / 4; grid-row: 2; text-align: right; }
+}
