@@ -728,14 +728,9 @@
     const autenticado = Boolean(state.usuario);
     $("#login-area").hidden = autenticado;
     $("#app-area").hidden = !autenticado;
-    const kicker = $("#area-kicker");
-    const titulo = $("#area-titulo");
-    const descricao = $("#area-descricao");
-    if (kicker) kicker.textContent = autenticado ? "Bolão Brasileirão 2026" : "Área restrita";
-    if (titulo) titulo.textContent = autenticado ? "Apostas logadas da rodada" : "Acesso do participante";
-    if (descricao) descricao.textContent = autenticado
-      ? "Os placares ficam sigilosos até a publicação. Depois, a rodada ganha ranking, comprovantes e auditoria."
-      : "Entre com seu usuário e PIN para acessar as funcionalidades privadas.";
+    // Oculta o card de título quando logado — não agrega após o login
+    const titleSection = document.querySelector(".br-page-title");
+    if (titleSection) titleSection.hidden = autenticado;
     renderUsuario();
   }
 
@@ -871,36 +866,101 @@
   function renderRanking() {
     const root = $("#conteudo");
     const ap = apuracaoRodada(state.rodada);
-    const geral = rankingGeralConfiavel();
     if (!ap || ap.sigilosa) {
-      root.innerHTML = `<section class="panel"><div class="panel-inner empty"><strong>Ranking da rodada ainda não publicado.</strong><p>A apuração só aparece aqui depois que a rodada tiver resultados e for marcada como apurada/publicada. Enquanto isso, os palpites seguem sigilosos.</p>${canAdminAny() ? `<p class="muted-note">Admin: rode o workflow <strong>Apurar Apostas Brasileirão</strong> após os jogos e depois publique a rodada quando quiser liberar para todos.</p>` : ""}</div></section>${renderRankingGeral(geral)}`;
+      root.innerHTML = `<section class="panel"><div class="panel-inner empty">
+        <strong>Ranking da rodada ainda não publicado.</strong>
+        <p>A apuração só aparece aqui depois que a rodada tiver resultados e for publicada. Enquanto isso, os palpites seguem sigilosos.</p>
+        ${canAdminAny() ? `<p class="muted-note">Admin: rode o workflow <strong>Apurar Apostas Brasileirão</strong> após os jogos e publique a rodada.</p>` : ""}
+      </div></section>`;
       return;
     }
     const confiavel = apuracaoRodadaConfiavel(ap);
     const ranking = confiavel ? rankingRodadaPorLiga(ap, state.ligaAtual) : [];
     const vencedoresLiga = confiavel ? vencedoresRodadaPorLiga(ap, state.ligaAtual) : [];
     const jogosApurados = confiavel ? Number(ap.jogos_apurados || 0) : 0;
-    const avisoValidacao = confiavel ? "" : `<div class="status warn">Pontuação temporariamente ocultada porque o arquivo de apuração não comprovou que todos os jogos usados estavam encerrados.</div>`;
-    root.innerHTML = `<section class="ranking-grid">
-      <article class="panel"><div class="panel-inner">
-        <div class="kicker">Ranking da rodada</div><h2>Rodada ${state.rodada} · ${escapeHtml(nomeLigaAtual())}</h2>
-        ${avisoValidacao}
-        <p>${vencedoresLiga.length ? `🏆 Vencedor(es) da liga: <strong>${vencedoresLiga.map(escapeHtml).join(", ")}</strong>` : "Aguardando jogos apurados nesta liga."}</p>
-        ${ranking.length ? `<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar ranking CSV</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Participante</th><th>Pontos</th><th>Cravadas</th><th>Saldo</th><th>Resultado</th><th>Erros</th></tr></thead><tbody>${ranking.map(r => `<tr><td>${r.pos}</td><td>${escapeHtml(r.membro)}</td><td class="num gold-num">${r.pontos}</td><td>${r.cravadas}</td><td>${r.saldos}</td><td>${r.resultados}</td><td>${r.erros}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Nenhum jogo apurado nesta rodada.</div>`}
-      </div></article>
-      <article class="panel"><div class="panel-inner">
-        <div class="kicker">Resumo técnico</div><h2>Apuração</h2>
-        <div class="audit-kpis"><span><strong>${ap.participantes || 0}</strong><small>participantes</small></span><span><strong>${jogosApurados}</strong><small>jogos apurados</small></span><span><strong>${ap.palpites_descartados_fora_do_prazo || 0}</strong><small>descartados</small></span></div>
-        <p class="muted-note">Atualizado em ${fmtDataLonga((state.apuracao || {}).atualizado_em)}.</p>
-      </div></article>
-    </section>${renderRankingGeral(geral)}`;
+    const avisoValidacao = confiavel ? ""
+      : `<div class="status warn">Pontuação ocultada: apuração não confirmou todos os jogos encerrados.</div>`;
+
+    // Palpites por participante para o botão recolhível
+    // Usa publicos se disponível, senão marca como indisponível
+    const publicos = Array.isArray(state.publicos) ? state.publicos : [];
+    const pontosMap = mapaPontosRodada(state.rodada);
+
+    function palpitesDoParticipante(membro, participanteId) {
+      var minha = publicos.filter(function(p) {
+        return (participanteId && p.participante_id && String(p.participante_id) === String(participanteId))
+          || (!participanteId && normalizarTexto(p.membro || '') === normalizarTexto(membro || ''));
+      });
+      if (!minha.length) return '<p class="muted-note" style="margin:8px 0">Palpites não disponíveis ou rodada ainda sigilosa.</p>';
+      return '<div class="palpite-expand-grid">' + minha.map(function(p) {
+        var kId = 'id:' + (p.participante_id || '') + '::' + (p.event_id || '');
+        var kNome = 'nome:' + normalizarTexto(p.membro || '') + '::' + (p.event_id || '');
+        var det = (p.participante_id && pontosMap.get(kId)) || pontosMap.get(kNome) || {};
+        var pontosCls = det.pontos != null ? pontosClasse(det.pontos) : '';
+        var pontosStr = det.pontos != null ? String(det.pontos) : '—';
+        var tipoStr = det.tipo ? tipoLabel(det.tipo) : '—';
+        return '<div class="palpite-expand-row">'
+          + '<span class="pex-jogo">' + escapeHtml(p.mandante) + ' <em>x</em> ' + escapeHtml(p.visitante) + '</span>'
+          + '<span class="pex-placar">' + p.placar_mandante + ' x ' + p.placar_visitante + '</span>'
+          + '<span class="pex-tipo ' + pontosCls + '">' + escapeHtml(tipoStr) + '</span>'
+          + '<span class="pex-pts ' + pontosCls + '">' + pontosStr + '<small>pts</small></span>'
+          + '</div>';
+      }).join('') + '</div>';
+    }
+
+    const posIcons = ["", "🥇", "🥈", "🥉"];
+
+    const linhasRanking = ranking.map((r, idx) => {
+      const uid = `rk-${idx}-${normalizarTexto(r.membro)}`;
+      const icon = posIcons[r.pos] || "";
+      const isVencedor = vencedoresLiga.includes(r.membro);
+      return `<article class="rk-card${isVencedor ? " rk-vencedor" : ""}" id="${uid}">
+        <div class="rk-main">
+          <div class="rk-pos">${icon || r.pos}</div>
+          <div class="rk-info">
+            <div class="rk-nome">${escapeHtml(r.membro)}${isVencedor ? " 🏆" : ""}</div>
+            <div class="rk-badges">
+              <span class="rk-badge">✅ ${r.cravadas} cravada${r.cravadas !== 1 ? "s" : ""}</span>
+              <span class="rk-badge">📊 ${r.resultados} resultado${r.resultados !== 1 ? "s" : ""}</span>
+              <span class="rk-badge">💧 saldo ${r.saldos >= 0 ? "+" : ""}${r.saldos}</span>
+              <span class="rk-badge rk-badge-err">❌ ${r.erros} erro${r.erros !== 1 ? "s" : ""}</span>
+            </div>
+          </div>
+          <div class="rk-pts"><strong>${r.pontos}</strong><small>pts</small></div>
+        </div>
+        <details class="rk-palpites">
+          <summary><span>Ver palpites</span><i aria-hidden="true"></i></summary>
+          <div class="rk-palpites-body">${palpitesDoParticipante(r.membro, r.participante_id)}</div>
+        </details>
+      </article>`;
+    });
+
+    root.innerHTML = `<section class="ranking-rodada-section">
+      <div class="rk-header">
+        <div>
+          <div class="kicker">Ranking da rodada</div>
+          <h2>Rodada ${state.rodada} · ${escapeHtml(nomeLigaAtual())}</h2>
+          ${vencedoresLiga.length
+            ? `<p class="rk-winner-line">🏆 Vencedor da liga: <strong>${vencedoresLiga.map(escapeHtml).join(", ")}</strong></p>`
+            : `<p class="rk-winner-line muted">Aguardando jogos apurados.</p>`}
+        </div>
+        <div class="rk-header-kpis">
+          <span><strong>${ap.participantes || 0}</strong><small>participantes</small></span>
+          <span><strong>${jogosApurados}</strong><small>jogos apurados</small></span>
+        </div>
+      </div>
+      ${avisoValidacao}
+      ${ranking.length
+        ? `<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div>
+           <div class="rk-list">${linhasRanking.join("")}</div>`
+        : `<div class="panel"><div class="panel-inner empty">Nenhum jogo apurado nesta rodada.</div></div>`}
+    </section>`;
     $("#export-ranking")?.addEventListener("click", exportarRankingCsv);
   }
 
-  function renderRankingGeral(geral) {
-    const lista = Array.isArray(geral) ? geral : [];
-    if (!lista.length) return `<section class="panel"><div class="panel-inner empty">Ranking acumulado ainda sem rodadas publicadas.</div></section>`;
-    return `<section class="panel"><div class="panel-inner"><div class="kicker">Ranking acumulado</div><h2>Bolão de placares · ${escapeHtml(nomeLigaAtual())}</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>#</th><th>Participante</th><th>Pontos</th><th>Cravadas</th><th>Saldo</th><th>Resultado</th><th>Vitórias de rodada</th></tr></thead><tbody>${lista.map(r => `<tr><td>${r.pos}</td><td>${escapeHtml(r.membro)}</td><td class="num gold-num">${r.pontos}</td><td>${r.cravadas}</td><td>${r.saldos}</td><td>${r.resultados}</td><td>${r.vitorias_rodada || 0}</td></tr>`).join("")}</tbody></table></div></div></section>`;
+  function renderRankingGeral(_geral) {
+    // Card de ranking acumulado removido a pedido — exibe apenas ranking da rodada.
+    return "";
   }
 
   async function renderPublico() {
@@ -1522,7 +1582,7 @@
     renderRodadas();
     $$("[data-aba]").forEach(btn => btn.classList.toggle("active", btn.dataset.aba === state.aba));
     if (state.aba === "meus") return renderMeus();
-    if (state.aba === "ranking") return renderRanking();
+    if (state.aba === "ranking") { carregarPublicos().then(() => renderRanking()); return; }
     if (state.aba === "publico") return renderPublico();
     if (state.aba === "auditoria") return renderAuditoria();
     if (state.aba === "admin") return renderAdmin();
