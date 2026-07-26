@@ -884,3 +884,74 @@ body > .container > section.hero > img {
   .rk-pts strong { font-size: 1.7rem; }
   .pex-score { font-size: 20px; }
 }
+
+/* ========================================================================== 
+   HOTFIX 20260726 — Administração de ligas responsiva
+   Impede que a largura mínima da tabela expanda o grid e corte o formulário
+   no celular. A tabela continua com rolagem horizontal dentro do próprio card.
+   ========================================================================== */
+.league-admin-grid,
+.league-admin-grid > *,
+.league-form,
+.league-list {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.league-form label,
+.league-form .two,
+.league-form input,
+.league-form select,
+.league-form textarea,
+.league-list .table-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .league-admin-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%;
+  }
+
+  .league-admin-grid > .league-form,
+  .league-admin-grid > .league-list {
+    width: 100%;
+  }
+
+  .league-form .two {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .league-form .actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    gap: 8px;
+  }
+
+  .league-form .actions .btn {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+
+  .league-list .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 380px) {
+  .league-form {
+    padding: 11px;
+  }
+
+  .league-form-head span,
+  .league-form .muted-note {
+    overflow-wrap: anywhere;
+  }
+}
