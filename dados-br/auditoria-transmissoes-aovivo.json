@@ -10,11 +10,11 @@
     "manual": "dados-br/transmissoes-aovivo-manual.json tem prioridade absoluta"
   },
   "resumo": {
-    "jogos_na_janela": 37,
+    "jogos_na_janela": 39,
     "busca_streams_executada": true,
-    "candidatos_oficiais_encontrados": 31,
+    "candidatos_oficiais_encontrados": 30,
     "transmissoes_publicadas": 1,
-    "sem_transmissao": 36,
+    "sem_transmissao": 38,
     "erros": 0
   },
   "canais_resolvidos": {
@@ -374,6 +374,24 @@
       "principal": "",
       "fontes_encontradas": [],
       "manual": false
+    },
+    {
+      "event_id": "401841199",
+      "rodada": 24,
+      "jogo": "Chapecoense x São Paulo",
+      "data_iso": "2026-08-23T18:30:00-03:00",
+      "principal": "",
+      "fontes_encontradas": [],
+      "manual": false
+    },
+    {
+      "event_id": "401841201",
+      "rodada": 24,
+      "jogo": "Santos x Mirassol",
+      "data_iso": "2026-08-23T18:30:00-03:00",
+      "principal": "",
+      "fontes_encontradas": [],
+      "manual": false
     }
   ],
   "aceitos": [
@@ -396,6 +414,16 @@
   ],
   "rejeitados": [
     {
+      "video_id": "Kry2ULRGehE",
+      "url": "https://www.youtube.com/watch?v=Kry2ULRGehE",
+      "fonte": "cazetv",
+      "canal": "CazéTV",
+      "titulo": "AO VIVO: VALE TÍTULO! HUGO CALDERANO NA FINAL DO WTT STAR CONTENDER DE SÃO JOSÉ DOS CAMPOS",
+      "status": "live",
+      "inicio_programado": "2026-07-26T17:00:00-03:00",
+      "motivo": "não identifica com segurança os dois clubes"
+    },
+    {
       "video_id": "M8yN4SFLj_k",
       "url": "https://www.youtube.com/watch?v=M8yN4SFLj_k",
       "fonte": "cazetv",
@@ -403,16 +431,6 @@
       "titulo": "AO VIVO: COPA DO MUNDO DE CLUBES KINGS LEAGUE | 1ª RODADA | DIA 2",
       "status": "upcoming",
       "inicio_programado": "2026-07-27T13:00:00-03:00",
-      "motivo": "não identifica com segurança os dois clubes"
-    },
-    {
-      "video_id": "uSjmapoQzdg",
-      "url": "https://www.youtube.com/watch?v=uSjmapoQzdg",
-      "fonte": "cazetv",
-      "canal": "CazéTV",
-      "titulo": "AO VIVO: STALLIONS X DESIMPAIN | 1ª RODADA | COPA DO MUNDO DE CLUBES KINGS LEAGUE",
-      "status": "live",
-      "inicio_programado": "2026-07-26T17:20:00-03:00",
       "motivo": "não identifica com segurança os dois clubes"
     },
     {
@@ -454,16 +472,6 @@
       "status": "upcoming",
       "inicio_programado": "2026-08-23T16:30:00-03:00",
       "motivo": "conteúdo rejeitado: pre jogo"
-    },
-    {
-      "video_id": "Kry2ULRGehE",
-      "url": "https://www.youtube.com/watch?v=Kry2ULRGehE",
-      "fonte": "cazetv",
-      "canal": "CazéTV",
-      "titulo": "AO VIVO: VALE TÍTULO! HUGO CALDERANO NA FINAL DO WTT STAR CONTENDER DE SÃO JOSÉ DOS CAMPOS",
-      "status": "live",
-      "inicio_programado": "2026-07-26T17:00:00-03:00",
-      "motivo": "não identifica com segurança os dois clubes"
     },
     {
       "video_id": "O7EbG7MSZC0",
@@ -560,10 +568,10 @@
       "url": "https://www.youtube.com/watch?v=5LfxhWTrs3s",
       "fonte": "getv",
       "canal": "ge tv",
-      "titulo": "BAHIA X CORINTHIANS | AO VIVO E COM IMAGENS | BRASILEIRÃO 2026 | ge tv",
+      "titulo": "BAHIA 1 X 1 CORINTHIANS: EMPATE COM CONFUSÃO NA FONTE NOVA! | PÓS-JOGO AO VIVO | TROPA GE TV",
       "status": "live",
       "inicio_programado": "2026-07-26T14:30:00-03:00",
-      "motivo": "não identifica com segurança os dois clubes"
+      "motivo": "conteúdo rejeitado: pos jogo"
     },
     {
       "video_id": "G7BpC_UC9Hw",
@@ -948,6 +956,20 @@
       "jogo": "Vitória x Bahia",
       "data_iso": "2026-08-23T16:00:00-03:00",
       "motivo": "nenhuma transmissão oficial validada em CazéTV ou GE TV"
+    },
+    {
+      "event_id": "401841199",
+      "rodada": 24,
+      "jogo": "Chapecoense x São Paulo",
+      "data_iso": "2026-08-23T18:30:00-03:00",
+      "motivo": "nenhuma transmissão oficial validada em CazéTV ou GE TV"
+    },
+    {
+      "event_id": "401841201",
+      "rodada": 24,
+      "jogo": "Santos x Mirassol",
+      "data_iso": "2026-08-23T18:30:00-03:00",
+      "motivo": "nenhuma transmissão oficial validada em CazéTV ou GE TV"
     }
   ],
   "erros": [],
@@ -960,5 +982,5 @@
     },
     "observacao": "search.list não é usado. A aba /streams custa apenas videos.list; a playlist de uploads mantém redundância. A execução típica permanece muito abaixo da cota diária gratuita do YouTube Data API."
   },
-  "atualizado_em": "2026-07-26T18:08:30-03:00"
+  "atualizado_em": "2026-07-26T19:16:26-03:00"
 }
