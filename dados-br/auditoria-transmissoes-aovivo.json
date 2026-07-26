@@ -10,11 +10,11 @@
     "manual": "dados-br/transmissoes-aovivo-manual.json tem prioridade absoluta"
   },
   "resumo": {
-    "jogos_na_janela": 39,
+    "jogos_na_janela": 37,
     "busca_streams_executada": true,
-    "candidatos_oficiais_encontrados": 32,
-    "transmissoes_publicadas": 2,
-    "sem_transmissao": 37,
+    "candidatos_oficiais_encontrados": 31,
+    "transmissoes_publicadas": 1,
+    "sem_transmissao": 36,
     "erros": 0
   },
   "canais_resolvidos": {
@@ -40,26 +40,6 @@
     }
   },
   "jogos_analisados": [
-    {
-      "event_id": "401841159",
-      "rodada": 20,
-      "jogo": "Bahia x Corinthians",
-      "data_iso": "2026-07-26T16:00:00-03:00",
-      "principal": "GE TV",
-      "fontes_encontradas": [
-        "GE TV"
-      ],
-      "manual": false
-    },
-    {
-      "event_id": "401841167",
-      "rodada": 20,
-      "jogo": "Cruzeiro x Botafogo",
-      "data_iso": "2026-07-26T16:00:00-03:00",
-      "principal": "",
-      "fontes_encontradas": [],
-      "manual": false
-    },
     {
       "event_id": "401841163",
       "rodada": 20,
@@ -398,23 +378,6 @@
   ],
   "aceitos": [
     {
-      "event_id": "401841159",
-      "jogo": "Bahia x Corinthians",
-      "fonte": "getv",
-      "video_id": "5LfxhWTrs3s",
-      "url": "https://www.youtube.com/watch?v=5LfxhWTrs3s",
-      "titulo": "BAHIA X CORINTHIANS | AO VIVO E COM IMAGENS | BRASILEIRÃO 2026 | ge tv",
-      "status": "live",
-      "confianca": 0.9,
-      "motivos": [
-        "os dois clubes aparecem no título",
-        "identifica Brasileirão/competição",
-        "identifica transmissão ao vivo",
-        "transmissão já está ao vivo",
-        "horário compatível (90 min de diferença)"
-      ]
-    },
-    {
       "event_id": "401841172",
       "jogo": "Vitória x Palmeiras",
       "fonte": "getv",
@@ -433,16 +396,6 @@
   ],
   "rejeitados": [
     {
-      "video_id": "1WEHcbiWwdw",
-      "url": "https://www.youtube.com/watch?v=1WEHcbiWwdw",
-      "fonte": "cazetv",
-      "canal": "CazéTV",
-      "titulo": "AO VIVO: ULTIMATE MÓSTOLES X ANIQUILADORES | 1ª RODADA | COPA DO MUNDO DE CLUBES KINGS LEAGUE",
-      "status": "live",
-      "inicio_programado": "2026-07-26T13:00:00-03:00",
-      "motivo": "não identifica com segurança os dois clubes"
-    },
-    {
       "video_id": "M8yN4SFLj_k",
       "url": "https://www.youtube.com/watch?v=M8yN4SFLj_k",
       "fonte": "cazetv",
@@ -458,8 +411,8 @@
       "fonte": "cazetv",
       "canal": "CazéTV",
       "titulo": "AO VIVO: STALLIONS X DESIMPAIN | 1ª RODADA | COPA DO MUNDO DE CLUBES KINGS LEAGUE",
-      "status": "upcoming",
-      "inicio_programado": "2026-07-26T17:00:00-03:00",
+      "status": "live",
+      "inicio_programado": "2026-07-26T17:20:00-03:00",
       "motivo": "não identifica com segurança os dois clubes"
     },
     {
@@ -468,7 +421,7 @@
       "fonte": "getv",
       "canal": "ge tv",
       "titulo": "PALMEIRAS X ATLÉTICO-MG | AQUECIMENTO AO VIVO | BRASILEIRÃO 2026 | #live | sportv",
-      "status": "upcoming",
+      "status": "live",
       "inicio_programado": "2026-07-26T18:30:00-03:00",
       "motivo": "conteúdo rejeitado: pre jogo"
     },
@@ -603,6 +556,16 @@
       "motivo": "conteúdo rejeitado: melhores momentos"
     },
     {
+      "video_id": "5LfxhWTrs3s",
+      "url": "https://www.youtube.com/watch?v=5LfxhWTrs3s",
+      "fonte": "getv",
+      "canal": "ge tv",
+      "titulo": "BAHIA X CORINTHIANS | AO VIVO E COM IMAGENS | BRASILEIRÃO 2026 | ge tv",
+      "status": "live",
+      "inicio_programado": "2026-07-26T14:30:00-03:00",
+      "motivo": "não identifica com segurança os dois clubes"
+    },
+    {
       "video_id": "G7BpC_UC9Hw",
       "url": "https://www.youtube.com/watch?v=G7BpC_UC9Hw",
       "fonte": "getv",
@@ -734,13 +697,6 @@
     }
   ],
   "sem_transmissao": [
-    {
-      "event_id": "401841167",
-      "rodada": 20,
-      "jogo": "Cruzeiro x Botafogo",
-      "data_iso": "2026-07-26T16:00:00-03:00",
-      "motivo": "nenhuma transmissão oficial validada em CazéTV ou GE TV"
-    },
     {
       "event_id": "401841163",
       "rodada": 20,
@@ -1004,5 +960,5 @@
     },
     "observacao": "search.list não é usado. A aba /streams custa apenas videos.list; a playlist de uploads mantém redundância. A execução típica permanece muito abaixo da cota diária gratuita do YouTube Data API."
   },
-  "atualizado_em": "2026-07-26T17:04:33-03:00"
+  "atualizado_em": "2026-07-26T18:08:30-03:00"
 }
