@@ -3,7 +3,7 @@
 """
 apurar_rodada.py — Apuração auditável das apostas do Brasileirão 2026.
 
-Execução 4:
+Execução 4.1:
   - preserva a Rodada 20 e os formatos anteriores;
   - pontua somente partidas comprovadamente encerradas;
   - atualiza rankings parciais por rodada, bloco, geral e liga;
@@ -363,13 +363,33 @@ def buscar_supabase() -> dict[str, list[dict[str, Any]]]:
 def config_publica(config: dict[str, Any] | None) -> bool:
     if not config:
         return False
+
     status = str(config.get("status") or "").lower()
     if status in {"apurada", "publicada"}:
         return True
+
     publica = parse_dt(config.get("publica_em"))
-    if not publica and config.get("bloco_id"):
-        publica = parse_dt(config.get("fecha_em"))
-    return bool(publica and agora_brt() >= publica)
+    if publica:
+        return agora_brt() >= publica
+
+    # Rodadas vinculadas a bloco são publicadas automaticamente no fechamento.
+    if config.get("bloco_id"):
+        fecha_bloco = parse_dt(config.get("fecha_em"))
+        return bool(fecha_bloco and agora_brt() >= fecha_bloco)
+
+    # Compatibilidade com a Rodada 20, criada antes da infraestrutura de blocos.
+    # O fluxo legado usava status "fechada" sem preencher publica_em. Após o
+    # horário de fechamento, os palpites já devem ser públicos e a apuração
+    # precisa voltar a produzir ranking e detalhes normalmente.
+    try:
+        rodada = int(config.get("rodada") or 0)
+    except (TypeError, ValueError):
+        rodada = 0
+    if rodada == 20 and status == "fechada":
+        fecha_legado = parse_dt(config.get("fecha_em"))
+        return bool(fecha_legado and agora_brt() >= fecha_legado)
+
+    return False
 
 
 def por_rodada_config(configs: Iterable[dict[str, Any]]) -> dict[int, dict[str, Any]]:
@@ -1211,6 +1231,50 @@ def executar_self_tests() -> None:
     )
     assert ranking[0]["membro"] == "A" and ranking[0]["indice_aproveitamento"] == 66.7
     assert vencedores_ranking(ranking) == ["A"]
+
+    passado = (agora_brt() - timedelta(hours=2)).isoformat()
+    futuro_publicacao = (agora_brt() + timedelta(hours=2)).isoformat()
+    assert config_publica(
+        {
+            "temporada": TEMPORADA,
+            "rodada": 20,
+            "status": "fechada",
+            "fecha_em": passado,
+            "publica_em": None,
+            "bloco_id": None,
+        }
+    )
+    assert not config_publica(
+        {
+            "temporada": TEMPORADA,
+            "rodada": 20,
+            "status": "fechada",
+            "fecha_em": futuro_publicacao,
+            "publica_em": None,
+            "bloco_id": None,
+        }
+    )
+    assert not config_publica(
+        {
+            "temporada": TEMPORADA,
+            "rodada": 21,
+            "status": "fechada",
+            "fecha_em": passado,
+            "publica_em": None,
+            "bloco_id": None,
+        }
+    )
+    assert config_publica(
+        {
+            "temporada": TEMPORADA,
+            "rodada": 21,
+            "status": "fechada",
+            "fecha_em": passado,
+            "publica_em": None,
+            "bloco_id": "bloco-teste",
+        }
+    )
+
     bloco_incompleto = {
         "validacao_resultados": {"somente_finalizados": True},
         "rodadas": [],
@@ -1233,7 +1297,7 @@ def executar_self_tests() -> None:
 def main() -> int:
     if "--self-test" in sys.argv:
         executar_self_tests()
-        print("Self-tests da apuração da Execução 4 concluídos com sucesso.")
+        print("Self-tests da apuração da Execução 4.1 concluídos com sucesso.")
         return 0
 
     executar_self_tests()

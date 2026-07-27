@@ -1,6 +1,6 @@
 /* ========================================================================== 
    br-apostas.js — Apostas logadas do Brasileirão 2026
-   Execuções 1–4: UX, blocos, apostas progressivas, apuração e rankings.
+   Execuções 1–4.1: UX, blocos, apostas progressivas, apuração e rankings.
    ========================================================================== */
 (function (global, document) {
   "use strict";
@@ -61,6 +61,7 @@
     draftRestaurado: false,
     salvandoPalpites: false,
     rankingVisao: "geral",
+    rankingVisaoInicialResolvida: false,
     rankingRodadaSelecionada: null,
     rankingBlocoInicio: null,
     rankingExportAtual: null,
@@ -1498,19 +1499,67 @@
     return ranking.filter(r => Number(r.pontos||0)===Number(top.pontos||0) && Number(r.cravadas||0)===Number(top.cravadas||0) && Number(r.saldos||0)===Number(top.saldos||0) && Number(r.resultados||0)===Number(top.resultados||0) && Number(r.erros||0)===Number(top.erros||0)).map(r => r.membro);
   }
 
+  function palpitesPublicosDaApuracao(rodada) {
+    const ap = apuracaoRodada(rodada);
+    const linhas = [];
+    (ap?.jogos || []).forEach(jogo => {
+      const resultado = jogo.resultado || {};
+      const eventId = String(resultado.event_id || jogo.event_id || "");
+      (jogo.palpites || []).forEach(palpite => {
+        linhas.push({
+          participante_id: palpite.participante_id || null,
+          membro: palpite.membro || "",
+          rodada: Number(rodada),
+          event_id: eventId,
+          mandante: resultado.mandante || "",
+          visitante: resultado.visitante || "",
+          placar_mandante: palpite.placar_mandante,
+          placar_visitante: palpite.placar_visitante
+        });
+      });
+    });
+    return linhas;
+  }
+
   function palpitesParticipanteRodada(membro, participanteId, rodada) {
-    const publicos = (state.publicos || []).filter(p => Number(p.rodada || state.rodada) === Number(rodada));
-    const minha = publicos.filter(p => (participanteId && p.participante_id && String(p.participante_id) === String(participanteId)) || (!participanteId && normalizarTexto(p.membro || "") === normalizarTexto(membro || "")));
+    const linhas = [
+      ...(state.publicos || []).filter(p => Number(p.rodada || state.rodada) === Number(rodada)),
+      ...palpitesPublicosDaApuracao(rodada)
+    ];
+    const filtrados = linhas.filter(p =>
+      (participanteId && p.participante_id && String(p.participante_id) === String(participanteId))
+      || ((!participanteId || !p.participante_id) && normalizarTexto(p.membro || "") === normalizarTexto(membro || ""))
+    );
+    const vistos = new Set();
+    const minha = filtrados.filter(p => {
+      const chave = String(p.event_id || "");
+      if (!chave || vistos.has(chave)) return false;
+      vistos.add(chave);
+      return true;
+    });
     if (!minha.length) return '<p class="muted-note" style="margin:8px 0">Palpites não disponíveis nesta visão.</p>';
+
     const pontosMap = mapaPontosRodada(rodada);
     const ap = apuracaoRodada(rodada);
     const resultados = new Map();
-    (ap?.jogos || []).forEach(j => { const r=j.resultado||{}; resultados.set(String(r.event_id||j.event_id||""), r); });
+    (ap?.jogos || []).forEach(j => {
+      const r = j.resultado || {};
+      resultados.set(String(r.event_id || j.event_id || ""), r);
+    });
+
+    minha.sort((a, b) => {
+      const ra = resultados.get(String(a.event_id || ""));
+      const rb = resultados.get(String(b.event_id || ""));
+      return String(ra?.data_iso || "").localeCompare(String(rb?.data_iso || ""));
+    });
+
     return `<div class="palpite-expand-grid">${minha.map(p => {
-      const det=(p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id||""}`)) || pontosMap.get(`nome:${normalizarTexto(p.membro||"")}::${p.event_id||""}`) || {};
-      const real=resultados.get(String(p.event_id||""));
-      const cls=det.pontos != null ? pontosClasse(det.pontos) : "";
-      return `<div class="palpite-card ${cls}"><div class="pex-jogo">${escapeHtml(p.mandante)} <em>×</em> ${escapeHtml(p.visitante)}</div><div class="pex-resultado-real ${cls}"><span class="pex-score">${real ? `${real.placar_mandante} × ${real.placar_visitante}` : "—"}</span>${det.pontos != null ? `<span class="pex-veredito ${cls}">${escapeHtml(tipoLabel(det.tipo))} · ${det.pontos} pts</span>` : ""}</div><div class="pex-palpite-row"><span class="pex-pal-label">Palpite:</span><span class="pex-pal-score">${p.placar_mandante} × ${p.placar_visitante}</span></div></div>`;
+      const det = (p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`))
+        || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`)
+        || {};
+      const real = resultados.get(String(p.event_id || ""));
+      const cls = det.pontos != null ? pontosClasse(det.pontos) : "";
+      return `<div class="palpite-card ${cls}"><div class="pex-jogo">${escapeHtml(p.mandante || real?.mandante || "Mandante")} <em>×</em> ${escapeHtml(p.visitante || real?.visitante || "Visitante")}</div><div class="pex-resultado-real ${cls}"><span class="pex-score">${real ? `${real.placar_mandante} × ${real.placar_visitante}` : "—"}</span>${det.pontos != null ? `<span class="pex-veredito ${cls}">${escapeHtml(tipoLabel(det.tipo))} · ${det.pontos} pts</span>` : ""}</div><div class="pex-palpite-row"><span class="pex-pal-label">Palpite:</span><span class="pex-pal-score">${p.placar_mandante} × ${p.placar_visitante}</span></div></div>`;
     }).join("")}</div>`;
   }
 
@@ -1518,11 +1567,16 @@
     const lideres = new Set(opcoes.lideres || lideresDoRanking(ranking));
     const final = Boolean(opcoes.final);
     const rodadaDetalhe = opcoes.rodadaDetalhe;
+    const estiloRodada20 = Boolean(opcoes.estiloRodada20);
     const posIcons = ["", "🥇", "🥈", "🥉"];
     return (ranking || []).map((r, idx) => {
       const destaque = lideres.has(r.membro);
       const indice = Number(r.indice_aproveitamento || 0).toFixed(1).replace(".", ",");
-      return `<article class="rk-card${destaque ? " rk-vencedor" : ""}" id="rk-${idx}-${normalizarTexto(r.membro)}"><div class="rk-main"><div class="rk-pos">${posIcons[r.pos] || r.pos}</div><div class="rk-info"><div class="rk-nome">${escapeHtml(r.membro)}${destaque ? (final ? " 🏆" : " ⭐") : ""}</div><div class="rk-badges"><span class="rk-badge">✅ ${r.cravadas || 0} exato${Number(r.cravadas||0)!==1?"s":""}</span><span class="rk-badge">💧 ${r.saldos || 0} saldo${Number(r.saldos||0)!==1?"s":""}</span><span class="rk-badge">📊 ${r.resultados || 0} resultado${Number(r.resultados||0)!==1?"s":""}</span><span class="rk-badge rk-badge-err">❌ ${r.erros || 0} erro${Number(r.erros||0)!==1?"s":""}</span><span class="rk-badge rk-index">🎯 ${indice}%</span></div></div><div class="rk-pts"><strong>${r.pontos || 0}</strong><small>pts</small></div></div>${rodadaDetalhe ? `<details class="rk-palpites"><summary><span>Ver palpites da rodada</span><i aria-hidden="true"></i></summary><div class="rk-palpites-body">${palpitesParticipanteRodada(r.membro, r.participante_id, rodadaDetalhe)}</div></details>` : ""}</article>`;
+      const badges = estiloRodada20
+        ? `<span class="rk-badge">✅ ${r.cravadas || 0} cravada${Number(r.cravadas || 0) !== 1 ? "s" : ""}</span><span class="rk-badge">📊 ${r.resultados || 0} resultado${Number(r.resultados || 0) !== 1 ? "s" : ""}</span><span class="rk-badge">💧 saldo +${r.saldos || 0}</span><span class="rk-badge rk-badge-err">❌ ${r.erros || 0} erro${Number(r.erros || 0) !== 1 ? "s" : ""}</span>`
+        : `<span class="rk-badge">✅ ${r.cravadas || 0} exato${Number(r.cravadas||0)!==1?"s":""}</span><span class="rk-badge">💧 ${r.saldos || 0} saldo${Number(r.saldos||0)!==1?"s":""}</span><span class="rk-badge">📊 ${r.resultados || 0} resultado${Number(r.resultados||0)!==1?"s":""}</span><span class="rk-badge rk-badge-err">❌ ${r.erros || 0} erro${Number(r.erros||0)!==1?"s":""}</span><span class="rk-badge rk-index">🎯 ${indice}%</span>`;
+      const textoDetalhes = estiloRodada20 ? "Ver palpites" : "Ver palpites da rodada";
+      return `<article class="rk-card${destaque ? " rk-vencedor" : ""}" id="rk-${idx}-${normalizarTexto(r.membro)}"><div class="rk-main"><div class="rk-pos">${posIcons[r.pos] || r.pos}</div><div class="rk-info"><div class="rk-nome">${escapeHtml(r.membro)}${destaque ? (final ? " 🏆" : " ⭐") : ""}</div><div class="rk-badges">${badges}</div></div><div class="rk-pts"><strong>${r.pontos || 0}</strong><small>pts</small></div></div>${rodadaDetalhe ? `<details class="rk-palpites"><summary><span>${textoDetalhes}</span><i aria-hidden="true"></i></summary><div class="rk-palpites-body">${palpitesParticipanteRodada(r.membro, r.participante_id, rodadaDetalhe)}</div></details>` : ""}</article>`;
     }).join("");
   }
 
@@ -1540,25 +1594,47 @@
   }
 
   function conectarRankingNav() {
-    $$('[data-ranking-visao]').forEach(btn => btn.addEventListener('click', () => { state.rankingVisao=btn.dataset.rankingVisao; renderRanking(); }));
+    $$('[data-ranking-visao]').forEach(btn => btn.addEventListener('click', () => {
+      state.rankingVisaoInicialResolvida = true;
+      state.rankingVisao = btn.dataset.rankingVisao;
+      renderRanking();
+    }));
     $('#export-ranking')?.addEventListener('click', exportarRankingCsv);
+  }
+
+  function rodadasPublicadasComPontuacao() {
+    return (state.apuracao?.rodadas || [])
+      .filter(r => r && r.publicada && Number(r.jogos_apurados || 0) > 0)
+      .map(r => Number(r.rodada))
+      .filter(Number.isFinite)
+      .sort((a, b) => a - b);
   }
 
   function renderRankingGeral() {
     const ranking = rankingGeralConfiavel();
+    const rodadasPublicadas = rodadasPublicadasComPontuacao();
+    const rodadaDetalhe = rodadasPublicadas.length === 1 ? rodadasPublicadas[0] : null;
     const objeto = { estado_apuracao: state.rankingApostas?.resumo?.ranking_parcial ? 'parcial' : (ranking.length ? 'atualizado' : 'aguardando_resultados'), jogos_apurados: state.rankingApostas?.resumo?.jogos_apurados_publicados || 0 };
     state.rankingExportAtual={tipo:'geral',nome:'ranking-geral',ranking,jogos_apurados:objeto.jogos_apurados};
-    return `${rankingHeaderHtml({kicker:'Ranking geral',titulo:'Acumulado do Brasileirão',objeto,ranking})}${ranking.length ? `<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div><div class="rk-list">${rankingCardsHtml(ranking)}</div>` : '<div class="panel"><div class="panel-inner empty">O ranking geral aparecerá após o primeiro jogo publicado e apurado.</div></div>'}`;
+    return `${rankingHeaderHtml({kicker:'Ranking geral',titulo:'Acumulado do Brasileirão',objeto,ranking})}${ranking.length ? `<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div><div class="rk-list">${rankingCardsHtml(ranking,{rodadaDetalhe,estiloRodada20:rodadaDetalhe===20})}</div>` : '<div class="panel"><div class="panel-inner empty">O ranking geral aparecerá após o primeiro jogo publicado e apurado.</div></div>'}`;
   }
 
   function rodadasRankingContexto() {
-    if (contextoEhBloco()) { const b=blocoDaRodada(state.rodada); return [b.rodada_inicio,b.rodada_inicio+1,b.rodada_fim]; }
-    return [Number(state.rodada)];
+    const publicadas = rodadasPublicadasComPontuacao();
+    const contexto = contextoEhBloco()
+      ? (() => { const b = blocoDaRodada(state.rodada); return b ? [b.rodada_inicio, b.rodada_inicio + 1, b.rodada_fim] : []; })()
+      : [Number(state.rodada)];
+    return [...new Set([...publicadas, ...contexto])]
+      .filter(Number.isFinite)
+      .sort((a, b) => a - b);
   }
 
   function renderRankingRodada() {
     const opcoes=rodadasRankingContexto();
-    if (!opcoes.includes(Number(state.rankingRodadaSelecionada))) state.rankingRodadaSelecionada=Number(state.rodada);
+    if (!opcoes.includes(Number(state.rankingRodadaSelecionada))) {
+      const publicadas = rodadasPublicadasComPontuacao();
+      state.rankingRodadaSelecionada = publicadas.length ? publicadas[publicadas.length - 1] : Number(state.rodada);
+    }
     const rodada=Number(state.rankingRodadaSelecionada);
     const ap=apuracaoRodada(rodada);
     const ranking=ap && apuracaoRodadaConfiavel(ap) ? rankingRodadaPorLiga(ap,state.ligaAtual) : [];
@@ -1566,7 +1642,7 @@
     const seletor=opcoes.length>1?`<div class="ranking-context-tabs">${opcoes.map(r=>`<button type="button" data-ranking-rodada="${r}" class="${r===rodada?'active':''}">Rodada ${r}</button>`).join('')}</div>`:'';
     if (!ap || ap.sigilosa) return `${seletor}<div class="panel"><div class="panel-inner empty"><strong>Ranking da Rodada ${rodada} ainda sigiloso.</strong><p>A publicação ocorre automaticamente no fechamento do bloco.</p></div></div>`;
     const final=Boolean(ap.concluida);
-    return `${seletor}${rankingHeaderHtml({kicker:'Ranking por rodada',titulo:`Rodada ${rodada}`,objeto:ap,ranking,final})}${ranking.length?`<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div><div class="rk-list">${rankingCardsHtml(ranking,{final,rodadaDetalhe:rodada})}</div>`:`<div class="panel"><div class="panel-inner empty">Nenhum jogo apurado nesta rodada.</div></div>`}`;
+    return `${seletor}${rankingHeaderHtml({kicker:'Ranking por rodada',titulo:`Rodada ${rodada}`,objeto:ap,ranking,final})}${ranking.length?`<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div><div class="rk-list">${rankingCardsHtml(ranking,{final,rodadaDetalhe:rodada,estiloRodada20:rodada===20})}</div>`:`<div class="panel"><div class="panel-inner empty">Nenhum jogo apurado nesta rodada.</div></div>`}`;
   }
 
   function blocosRanking() { return (state.apuracao?.blocos || state.rankingApostas?.ranking_blocos || []); }
@@ -1603,6 +1679,16 @@
 
   function renderRanking() {
     const root=$("#conteudo");
+    if (!state.rankingVisaoInicialResolvida) {
+      const publicadas = rodadasPublicadasComPontuacao();
+      if (publicadas.length === 1) {
+        state.rankingVisao = "rodada";
+        state.rankingRodadaSelecionada = publicadas[0];
+        state.rankingVisaoInicialResolvida = true;
+      } else if (publicadas.length > 1) {
+        state.rankingVisaoInicialResolvida = true;
+      }
+    }
     const conteudo=state.rankingVisao==='rodada'?renderRankingRodada():state.rankingVisao==='blocos'?renderRankingBloco():state.rankingVisao==='parcial'?renderRankingParcial():renderRankingGeral();
     root.innerHTML=`<section class="ranking-rodada-section">${rankingNavHtml()}${conteudo}</section>`;
     conectarRankingNav();
