@@ -1,6 +1,6 @@
 /* ========================================================================== 
    br-apostas.js — Apostas logadas do Brasileirão 2026
-   Execução 15: pontuação defensiva apenas para partidas encerradas.
+   Execução 1 UX: navegação clara, rodada atual automática e administração orientada por etapas.
    ========================================================================== */
 (function (global, document) {
   "use strict";
@@ -37,7 +37,11 @@
     ligaAtual: null,
     ligasAdmin: [],
     ligaMembros: [],
-    adminLigaSelecionada: null
+    adminLigaSelecionada: null,
+    rodadaAutomatica: Number(CFG.rodadaInicialApostas || 20),
+    rodadaEscolhidaManualmente: false,
+    rodadaAutomaticaResolvida: false,
+    toastTimer: null
   };
 
 
@@ -56,6 +60,26 @@
     if (!el) return;
     el.textContent = msg;
     el.className = `status ${tipo}`;
+  }
+
+  function toast(msg, tipo = "ok") {
+    const region = $("#toast-region");
+    if (!region || !msg) return;
+    clearTimeout(state.toastTimer);
+    const item = document.createElement("div");
+    item.className = `toast ${tipo}`;
+    item.setAttribute("role", tipo === "err" ? "alert" : "status");
+    item.innerHTML = `<span class="toast-icon" aria-hidden="true">${tipo === "err" ? "⚠️" : tipo === "warn" ? "ℹ️" : "✅"}</span><span>${escapeHtml(msg)}</span>`;
+    region.replaceChildren(item);
+    requestAnimationFrame(() => item.classList.add("show"));
+    state.toastTimer = setTimeout(() => {
+      item.classList.remove("show");
+      setTimeout(() => { if (item.isConnected) item.remove(); }, 220);
+    }, 4200);
+  }
+
+  function confirmarAcao(mensagem) {
+    return global.confirm(mensagem);
   }
 
   function cacheBust(url) {
@@ -690,6 +714,63 @@
     return state.meusPalpites.find(p => String(p.event_id) === String(id));
   }
 
+  function jogoTemResultadoFinal(jogo) {
+    const id = jogoId(jogo);
+    if (!id) return false;
+    return Boolean(resultadoFinalLocal(id));
+  }
+
+  function rodadaConcluida(rodada) {
+    const jogos = jogosDaRodada(rodada);
+    return jogos.length > 0 && jogos.every(jogoTemResultadoFinal);
+  }
+
+  function intervaloRodada(rodada) {
+    const datas = jogosDaRodada(rodada)
+      .map(j => parseData(j.data_iso))
+      .filter(Boolean)
+      .sort((a, b) => a - b);
+    return {
+      inicio: datas[0] || null,
+      fim: datas[datas.length - 1] || null
+    };
+  }
+
+  function rodadaTemJogoEmAndamento(rodada) {
+    const ids = new Set(jogosDaRodada(rodada).map(j => String(jogoId(j))).filter(Boolean));
+    const eventos = (state.espnEventosJson && state.espnEventosJson.eventos) || [];
+    return eventos.some(e => ids.has(String(e.event_id || e.id || "")) && String(e.estado || e.state || "").toLowerCase() === "in");
+  }
+
+  function determinarRodadaAtual() {
+    const rodadas = (state.rodadas || []).slice().sort((a, b) => a - b);
+    if (!rodadas.length) return Number(CFG.rodadaInicialApostas || 20);
+    const abertas = rodadas.filter(r => !rodadaConcluida(r) && rodadaAberta(r));
+    if (abertas.length) return abertas[0];
+    const emAndamento = rodadas.find(r => rodadaTemJogoEmAndamento(r));
+    if (emAndamento) return emAndamento;
+    const agora = new Date();
+    const futuras = rodadas
+      .filter(r => !rodadaConcluida(r))
+      .map(r => ({ rodada: r, ...intervaloRodada(r) }))
+      .filter(x => x.inicio && x.inicio >= agora)
+      .sort((a, b) => a.inicio - b.inicio);
+    if (futuras.length) return futuras[0].rodada;
+    const incompletaComJogos = rodadas.find(r => jogosDaRodada(r).length > 0 && !rodadaConcluida(r));
+    if (incompletaComJogos) return incompletaComJogos;
+    const comJogos = rodadas.filter(r => jogosDaRodada(r).length > 0);
+    return comJogos[comJogos.length - 1] || rodadas[0];
+  }
+
+  function resolverRodadaAutomatica(force = false) {
+    const atual = determinarRodadaAtual();
+    state.rodadaAutomatica = atual;
+    if (force || !state.rodadaAutomaticaResolvida || !state.rodadaEscolhidaManualmente) {
+      state.rodada = atual;
+    }
+    state.rodadaAutomaticaResolvida = true;
+  }
+
   function renderResumo() {
     const jogos = jogosDaRodada(state.rodada);
     const st = statusJanela(state.rodada);
@@ -706,13 +787,27 @@
   }
 
   function renderRodadas() {
-    const sel = $("#rodada-select");
     const tabs = $("#rodadas");
-    if (!sel || !tabs) return;
-    sel.innerHTML = state.rodadas.map(r => `<option value="${r}" ${Number(r) === Number(state.rodada) ? "selected" : ""}>Rodada ${r}</option>`).join("");
-    tabs.innerHTML = state.rodadas.map(r => `<button type="button" class="${Number(r) === Number(state.rodada) ? "active" : ""}" data-rodada="${r}">R${r}</button>`).join("");
-    tabs.querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => trocarRodada(Number(btn.dataset.rodada))));
-    sel.onchange = () => trocarRodada(Number(sel.value));
+    const contexto = $("#rodada-contexto");
+    const voltar = $("#voltar-rodada-atual");
+    const titulo = $("#controle-titulo");
+    const descricao = $("#controle-descricao");
+    if (!tabs) return;
+    const manual = Number(state.rodada) !== Number(state.rodadaAutomatica);
+    tabs.innerHTML = state.rodadas.map(r => {
+      const active = Number(r) === Number(state.rodada);
+      const current = Number(r) === Number(state.rodadaAutomatica);
+      return `<button type="button" class="${active ? "active" : ""} ${current ? "current" : ""}" data-rodada="${r}" role="tab" aria-selected="${active}" aria-label="Rodada ${r}${current ? ", rodada atual" : ""}">R${r}${current ? `<span class="current-dot" aria-hidden="true"></span>` : ""}</button>`;
+    }).join("");
+    tabs.querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => trocarRodada(Number(btn.dataset.rodada), true)));
+    if (contexto) contexto.innerHTML = manual
+      ? `Consultando <strong>Rodada ${state.rodada}</strong> · atual automática: <strong>R${state.rodadaAutomatica}</strong>`
+      : `Rodada atual identificada automaticamente: <strong>R${state.rodadaAutomatica}</strong>`;
+    if (voltar) voltar.hidden = !manual;
+    if (titulo) titulo.textContent = manual ? `Consultando rodada ${state.rodada}` : `Rodada atual: ${state.rodadaAutomatica}`;
+    if (descricao) descricao.textContent = manual
+      ? "Você está consultando outra rodada. Use o botão ao lado para voltar ao contexto atual."
+      : "A rodada em andamento é escolhida automaticamente pelos jogos e resultados disponíveis.";
   }
 
   function renderUsuario() {
@@ -769,7 +864,12 @@
     <div class="actions"><button class="btn" type="submit" ${aberta ? "" : "disabled"}>💾 Salvar palpites da rodada</button><button class="btn secondary" type="button" id="limpar-campos" ${aberta ? "" : "disabled"}>limpar campos</button></div>
     </form>`;
     $("#form-palpites")?.addEventListener("submit", salvarPalpites);
-    $("#limpar-campos")?.addEventListener("click", () => { $$("#form-palpites input").forEach(i => { i.value = ""; }); status("🧹 Campos limpos. Nenhum palpite foi enviado ainda.", "ok"); });
+    $("#limpar-campos")?.addEventListener("click", () => {
+      if (!confirmarAcao("Limpar os placares preenchidos nesta tela? Nenhum dado já salvo será apagado.")) return;
+      $$("#form-palpites input").forEach(i => { i.value = ""; });
+      status("Campos da tela limpos. Nenhum palpite salvo foi apagado.", "ok");
+      toast("Campos limpos. Os palpites já salvos foram preservados.", "ok");
+    });
   }
 
   function coletarPalpitesFormulario() {
@@ -820,9 +920,11 @@
       const root = $("#conteudo");
       root.insertAdjacentHTML("afterbegin", `<div class="comprovante"><strong>🧾 Comprovante gerado</strong><p>Rodada ${state.rodada} · ${payload.length} palpites enviados.</p><p class="hash">${comprovante.hash_fechamento || comprovante.hash || "hash indisponível"}</p></div>`);
       status(`✅ PALPITES GRAVADOS COM SUCESSO! Comprovante da rodada ${state.rodada} gerado.`, "ok");
+      toast(`Palpites da rodada ${state.rodada} salvos com sucesso.`, "ok");
     } catch (err) {
       console.error(err);
       status(err.message || "Falha ao salvar palpites.", "err");
+      toast(err.message || "Falha ao salvar palpites.", "err");
     }
   }
 
@@ -1122,7 +1224,7 @@
       return;
     }
     await carregarAuditoria();
-    root.innerHTML = `<section class="panel"><div class="panel-inner">
+    root.innerHTML = `<div class="admin-child-back"><button class="btn ghost" type="button" id="voltar-admin">← Voltar ao Admin</button></div><section class="panel"><div class="panel-inner">
       <div class="kicker">Relatório de auditoria por liga</div><h2>Rodada ${state.rodada} · ${escapeHtml(nomeLigaRelatorio())}</h2>
       <p>Conferência administrativa filtrada pela liga selecionada: preenchimento, hashes, primeira/última gravação e quantidade de alterações. Os placares continuam preservados pelas regras de publicação.</p>
       <div class="export-row"><button class="btn secondary" type="button" id="export-auditoria">⬇️ Exportar auditoria CSV</button></div>
@@ -1134,6 +1236,7 @@
     <section class="panel"><div class="panel-inner"><div class="kicker">Eventos de auditoria</div><h2>Últimas alterações</h2>
       ${state.auditoriaEventos.length ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Quando</th><th>Participante</th><th>Jogo</th><th>Ação</th><th>Hash</th></tr></thead><tbody>${state.auditoriaEventos.map(e => `<tr><td>${fmtDataLonga(e.criado_em)}</td><td>${escapeHtml(e.membro)}</td><td>${escapeHtml(e.event_id)}</td><td>${escapeHtml(e.acao)}</td><td class="hash">${escapeHtml(e.hash_fechamento || "—")}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Ainda não há eventos de auditoria para esta rodada.</div>`}
     </div></section>`;
+    $("#voltar-admin")?.addEventListener("click", async () => { state.aba = "admin"; await refresh(); });
     $("#copiar-auditoria")?.addEventListener("click", copiarResumoAuditoria);
     $("#export-auditoria")?.addEventListener("click", exportarAuditoriaCsv);
   }
@@ -1155,6 +1258,7 @@
     a.remove();
     URL.revokeObjectURL(url);
     status(`✅ CSV GERADO COM SUCESSO! Arquivo ${nomeArquivo} baixado.`, "ok");
+    toast(`Arquivo ${nomeArquivo} gerado com sucesso.`, "ok");
   }
   function exportarRankingCsv() {
     const ap = apuracaoRodada(state.rodada);
@@ -1191,7 +1295,7 @@
   async function copiarResumoAuditoria() {
     const linhas = state.auditoria.map(r => `${r.nome}: ${r.total_palpites}/${r.total_jogos} (${Number(r.percentual || 0).toFixed(0)}%) · hash ${r.hash_fechamento || "—"}`);
     const texto = `Auditoria Rodada ${state.rodada}\n` + linhas.join("\n");
-    try { await navigator.clipboard.writeText(texto); status("Resumo de auditoria copiado.", "ok"); }
+    try { await navigator.clipboard.writeText(texto); status("Resumo de auditoria copiado.", "ok"); toast("Resumo de auditoria copiado.", "ok"); }
     catch (_) { status("Não consegui copiar automaticamente; selecione a tabela manualmente.", "warn"); }
   }
 
@@ -1264,6 +1368,33 @@
     </div></article>`;
   }
 
+  function adminEtapasHtml(cfg) {
+    const statusAtual = String(cfg.status || "programada").toLowerCase();
+    const publicada = rodadaPublica(state.rodada);
+    const apurada = statusAtual === "apurada";
+    const aberta = rodadaAberta(state.rodada);
+    const fechada = ["fechada", "publicada", "apurada", "bloqueada", "encerrada"].includes(statusAtual);
+    const etapas = [
+      ["Programação criada", Boolean(cfg.abre_em || cfg.fecha_em)],
+      ["Apostas abertas", aberta || fechada || publicada || apurada],
+      ["Palpites fechados", fechada || publicada || apurada],
+      ["Palpites públicos", publicada || apurada],
+      ["Apuração concluída", apurada]
+    ];
+    const primeiraPendente = etapas.findIndex(e => !e[1]);
+    return `<ol class="admin-steps">${etapas.map((e, i) => `<li class="${e[1] ? "done" : i === primeiraPendente ? "current" : "pending"}"><span aria-hidden="true">${e[1] ? "✓" : i === primeiraPendente ? "●" : "○"}</span><strong>${e[0]}</strong></li>`).join("")}</ol>`;
+  }
+
+  function adminAcaoContextualHtml(cfg) {
+    const statusAtual = String(cfg.status || "programada").toLowerCase();
+    const aberta = rodadaAberta(state.rodada);
+    if (statusAtual === "apurada") return `<div class="admin-next-action done"><strong>✅ Rodada concluída</strong><span>Palpites publicados e apuração marcada como concluída.</span></div>`;
+    if (rodadaPublica(state.rodada)) return `<div class="admin-next-action"><strong>🧮 Apuração em andamento</strong><span>O ranking é atualizado pelo workflow conforme os jogos terminam. Não é necessário marcar manualmente.</span></div>`;
+    if (aberta || statusAtual === "aberta") return `<div class="admin-next-action"><strong>Próxima ação recomendada</strong><span>Encerre as apostas somente quando quiser bloquear novos envios.</span><button class="btn danger" type="button" id="fechar-rodada">🔒 Encerrar apostas agora</button></div>`;
+    if (["fechada", "bloqueada", "encerrada"].includes(statusAtual)) return `<div class="admin-next-action"><strong>Próxima ação recomendada</strong><span>As apostas estão encerradas. Libere os palpites públicos quando o sigilo puder terminar.</span><button class="btn secondary" type="button" id="publicar-rodada">📣 Liberar palpites públicos</button></div>`;
+    return `<div class="admin-next-action"><strong>Próxima ação recomendada</strong><span>Salve a programação ou libere as apostas imediatamente.</span><button class="btn secondary" type="button" id="abrir-rodada">🔓 Abrir apostas agora</button></div>`;
+  }
+
   async function renderAdmin() {
     await carregarAdmin();
     const cfg = configEfetiva(state.rodada);
@@ -1273,61 +1404,72 @@
       return;
     }
     const globalAdmin = isAdminGlobal();
-    const painelAdministracaoAnual = globalAdmin ? `<article class="panel" style="grid-column:1/-1"><div class="panel-inner">
+    const painelAdministracaoAnual = globalAdmin ? `<article class="panel admin-section" id="admin-anual"><div class="panel-inner">
         <div class="kicker">Administração integrada</div><h2>Ranking anual e aniversários</h2>
-        <p>As ferramentas históricas de participantes, palpites anuais, membros e aniversários continuam protegidas e são abertas somente para administrador global autenticado.</p>
+        <p>As ferramentas históricas continuam em uma área separada e protegida.</p>
         <div class="actions"><a class="btn secondary" href="./?brasileirao=1&view=participantes&admin=1">⚙️ Abrir administração anual</a></div>
       </div></article>` : "";
-    const painelParticipantes = globalAdmin ? `<article class="panel"><div class="panel-inner">
-        <div class="kicker">Participantes</div><h2>Criar/alterar acesso</h2>
+    const painelParticipantes = globalAdmin ? `<article class="panel admin-section" id="admin-participantes"><div class="panel-inner">
+        <div class="kicker">Participantes</div><h2>Criar ou alterar acesso</h2>
         <form id="admin-participante" class="admin-form">
           <input type="hidden" id="admin-participante-id">
           <input type="hidden" id="admin-nome-atual">
           <label>Usuário/login <input id="admin-login" required placeholder="ex.: laercio" autocomplete="off"></label>
-          <div class="actions"><button class="btn" type="submit">salvar participante</button><button class="btn ghost" type="button" id="limpar-admin">limpar</button></div>
+          <div class="actions"><button class="btn" type="submit">Salvar participante</button><button class="btn ghost" type="button" id="limpar-admin">Limpar formulário</button></div>
           <div class="switch-row"><label><input type="checkbox" id="admin-e-admin"> administrador global</label><label><input type="checkbox" id="admin-ativo" checked> ativo</label></div>
-          <p class="muted-note">Ao salvar, o sistema gera automaticamente um PIN novo de 6 números e pergunta se você quer enviar o acesso por WhatsApp. Se o login já existir, o participante é alterado e o PIN é renovado. Para remover alguém sem apagar histórico, deixe inativo ou remova da liga.</p>
+          <p class="muted-note">Ao salvar, o sistema gera um PIN novo e oferece o envio por WhatsApp. Para preservar o histórico, inative o acesso ou remova o participante da liga.</p>
         </form>
-      </div></article>` : `<article class="panel"><div class="panel-inner empty"><strong>Perfil: admin de liga</strong><p>Você pode acompanhar e gerenciar participantes somente das suas ligas. Criar usuários, resetar PIN, inativar participantes globais e alterar janelas fica com o admin global.</p></div></article>`;
-    const painelRodada = globalAdmin ? `<article class="panel"><div class="panel-inner">
-        <div class="kicker">Janela da rodada</div><h2>Rodada ${state.rodada}</h2>
-        <form id="admin-rodada" class="admin-form">
+      </div></article>` : `<article class="panel admin-section" id="admin-participantes"><div class="panel-inner empty"><strong>Perfil: admin de liga</strong><p>Você acompanha os participantes das suas ligas. A criação de usuários e a janela global ficam com o administrador global.</p></div></article>`;
+    const painelRodada = globalAdmin ? `<article class="panel admin-section admin-window-panel" id="admin-janela"><div class="panel-inner">
+        <div class="kicker">1. Janela e publicação</div><div class="admin-window-title"><div><h2>Rodada ${state.rodada}</h2><p>Configure os horários e siga apenas a próxima ação indicada pelo sistema.</p></div><span class="badge ${statusJanela(state.rodada).classe}">${escapeHtml(statusJanela(state.rodada).texto)}</span></div>
+        ${adminEtapasHtml(cfg)}
+        <form id="admin-rodada" class="admin-form admin-window-form">
           <div class="two"><label>Abre em <input id="cfg-abre" type="datetime-local" value="${toDatetimeLocal(cfg.abre_em)}"></label><label>Fecha em <input id="cfg-fecha" type="datetime-local" value="${toDatetimeLocal(cfg.fecha_em)}"></label></div>
-          <div class="two"><label>Publica em <input id="cfg-publica" type="datetime-local" value="${toDatetimeLocal(cfg.publica_em)}"></label><label>Status <select id="cfg-status"><option value="programada">programada</option><option value="aberta">aberta</option><option value="fechada">fechada</option><option value="apurada">apurada</option><option value="publicada">publicada</option><option value="bloqueada">bloqueada</option></select></label></div>
-          <label>Observação <input id="cfg-obs" value="${escapeAttr(cfg.observacao || "")}"></label>
-          <div class="actions"><button class="btn" type="submit">salvar janela</button><button class="btn secondary" type="button" id="abrir-rodada">🔓 abrir agora</button><button class="btn secondary" type="button" id="publicar-rodada">publicar agora</button><button class="btn secondary" type="button" id="apurar-rodada">marcar apurada</button><button class="btn danger" type="button" id="fechar-rodada">fechar rodada</button></div><p class="muted-note">"Abrir agora" libera as apostas imediatamente, mesmo antes do horário de abertura. Depois dos jogos, rode o workflow <strong>Apurar Apostas Brasileirão</strong>. Em seguida, marque como apurada/publicada para liberar ranking e palpites públicos.</p>
+          <div class="two"><label>Publica em <input id="cfg-publica" type="datetime-local" value="${toDatetimeLocal(cfg.publica_em)}"></label><label>Observação <input id="cfg-obs" value="${escapeAttr(cfg.observacao || "")}" placeholder="Informação opcional para a administração"></label></div>
+          <div class="actions admin-save-row"><button class="btn" type="submit">💾 Salvar programação</button><span class="muted-note">Salva datas e observação sem executar uma mudança de etapa inesperada.</span></div>
+          ${adminAcaoContextualHtml(cfg)}
+          <details class="admin-advanced"><summary>Opções avançadas de emergência</summary><div class="admin-advanced-body"><p class="muted-note">Use apenas para corrigir um estado excepcional. O fluxo normal deve seguir a ação recomendada acima.</p><label>Status manual <select id="cfg-status"><option value="programada">programada</option><option value="aberta">aberta</option><option value="fechada">fechada</option><option value="publicada">publicada</option><option value="apurada">apurada</option><option value="bloqueada">bloqueada</option></select></label><button class="btn secondary" type="button" id="aplicar-status-manual">Aplicar status manual</button></div></details>
+          <div id="admin-inline-feedback" class="admin-inline-feedback" aria-live="polite">Última configuração carregada: ${escapeHtml(statusJanela(state.rodada).detalhe)}.</div>
         </form>
-      </div></article>` : `<article class="panel"><div class="panel-inner"><div class="kicker">Janela da rodada</div><h2>Rodada ${state.rodada}</h2><p class="muted-note">Janela e publicação são globais para todas as ligas e somente o admin global altera esses dados.</p><p><span class="badge ${statusJanela(state.rodada).classe}">${escapeHtml(statusJanela(state.rodada).detalhe)}</span></p></div></article>`;
-    root.innerHTML = `<section class="admin-grid">
-      ${painelAdministracaoAnual}
-      ${renderLigasAdminHtml()}
-      ${painelParticipantes}
-      ${painelRodada}
-      <article class="panel" style="grid-column:1/-1"><div class="panel-inner">
-        <div class="kicker">Percentual preenchido</div><h2>Admin vê percentual, não placares</h2>
-        <p>O percentual abaixo considera a liga selecionada. O admin acompanha preenchimento por liga sem ver placares antes da publicação.</p>
+      </div></article>` : `<article class="panel admin-section admin-window-panel" id="admin-janela"><div class="panel-inner"><div class="kicker">1. Janela e publicação</div><h2>Rodada ${state.rodada}</h2><p class="muted-note">A janela é global e somente o administrador global pode alterá-la.</p><p><span class="badge ${statusJanela(state.rodada).classe}">${escapeHtml(statusJanela(state.rodada).detalhe)}</span></p></div></article>`;
+    const painelProgresso = `<article class="panel admin-section" id="admin-preenchimento"><div class="panel-inner">
+        <div class="kicker">2. Preenchimento</div><h2>Progresso sem revelar placares</h2>
+        <p>O percentual considera a liga selecionada. Antes da publicação, o administrador acompanha apenas a quantidade preenchida.</p>
         <div class="export-row"><button class="btn secondary" type="button" id="export-progresso">⬇️ Exportar progresso CSV</button></div>
         <div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Participante</th><th>Login</th><th>Status</th><th>Ligas</th><th>Preenchido</th><th>%</th><th>Ações</th></tr></thead><tbody>
           ${state.progresso.map(p => `<tr><td>${escapeHtml(p.nome)}</td><td>${escapeHtml(p.login)}</td><td>${p.ativo ? "ativo" : "inativo"}${p.admin ? " · admin" : ""}</td><td>${ligasDoParticipante(p.participante_id).map(escapeHtml).join(", ") || "—"}</td><td>${p.total_palpites}/${p.total_jogos}</td><td><div class="progress-wrap"><div class="progress-bar" style="width:${Math.max(0, Math.min(100, Number(p.percentual || 0)))}%"></div></div></td><td class="action-cell">${globalAdmin ? `<button class="btn secondary" type="button" data-edit="${escapeAttr(p.participante_id)}">editar</button>${p.ativo ? `<button class="btn danger" type="button" data-inativar="${escapeAttr(p.participante_id)}">inativar</button>` : `<button class="btn secondary" type="button" data-reativar="${escapeAttr(p.participante_id)}">reativar</button>`}` : `<span class="muted-note">gerencie pela liga</span>`}</td></tr>`).join("")}
         </tbody></table></div>
-      </div></article>
+      </div></article>`;
+    const painelAuditoria = `<article class="panel admin-section" id="admin-auditoria"><div class="panel-inner"><div class="kicker">4. Auditoria</div><h2>Conferir registros da rodada</h2><p>Visualize hashes, horários e alterações sem expor palpites antes da publicação.</p><div class="actions"><button class="btn secondary" type="button" id="abrir-auditoria-admin">🧾 Abrir auditoria detalhada</button></div></div></article>`;
+    const painelLigas = `<div class="admin-section admin-ligas-last" id="admin-ligas"><div class="admin-section-label"><span>5. Ligas</span><small>Área de uso menos frequente, mantida por último.</small></div>${renderLigasAdminHtml()}</div>`;
+    root.innerHTML = `<section class="admin-workspace">
+      <nav class="admin-section-nav" aria-label="Seções administrativas"><a href="#admin-janela">1. Janela</a><a href="#admin-preenchimento">2. Preenchimento</a><a href="#admin-participantes">3. Participantes</a><a href="#admin-auditoria">4. Auditoria</a><a href="#admin-ligas">5. Ligas</a></nav>
+      <section class="admin-grid">
+        ${painelRodada}
+        ${painelProgresso}
+        ${painelParticipantes}
+        ${painelAdministracaoAnual}
+        ${painelAuditoria}
+        ${painelLigas}
+      </section>
     </section>`;
     if (globalAdmin) {
       $("#cfg-status").value = cfg.status || "programada";
-      $("#limpar-admin")?.addEventListener("click", () => { limparFormParticipante(); status("🧹 Formulário de participante limpo.", "ok"); });
+      $("#limpar-admin")?.addEventListener("click", () => { limparFormParticipante(); status("Formulário de participante limpo.", "ok"); toast("Formulário limpo.", "ok"); });
       $("#admin-participante")?.addEventListener("submit", salvarParticipanteAdmin);
       $("#admin-rodada")?.addEventListener("submit", salvarRodadaAdmin);
-      $("#abrir-rodada")?.addEventListener("click", abrirRodadaAgora);
-      $("#publicar-rodada")?.addEventListener("click", () => alterarStatusRodada("publicada"));
-      $("#apurar-rodada")?.addEventListener("click", () => alterarStatusRodada("apurada"));
-      $("#fechar-rodada")?.addEventListener("click", () => alterarStatusRodada("fechada"));
+      $("#abrir-rodada")?.addEventListener("click", async () => { if (!confirmarAcao(`Abrir as apostas da rodada ${state.rodada} agora?`)) return; await abrirRodadaAgora(); });
+      $("#publicar-rodada")?.addEventListener("click", async () => { if (!confirmarAcao(`Liberar os palpites públicos da rodada ${state.rodada}?`)) return; await alterarStatusRodada("publicada"); });
+      $("#fechar-rodada")?.addEventListener("click", async () => { if (!confirmarAcao(`Encerrar as apostas da rodada ${state.rodada} agora? Depois disso, ninguém poderá alterar palpites.`)) return; await alterarStatusRodada("fechada"); });
+      $("#aplicar-status-manual")?.addEventListener("click", async () => { const novo = $("#cfg-status").value; if (!confirmarAcao(`Aplicar manualmente o status “${novo}” à rodada ${state.rodada}?`)) return; await alterarStatusRodada(novo); });
       $$('[data-edit]').forEach(btn => btn.addEventListener("click", () => preencherParticipante(btn.dataset.edit)));
       $$('[data-inativar]').forEach(btn => btn.addEventListener("click", () => alterarAtivoParticipante(btn.dataset.inativar, false)));
       $$('[data-reativar]').forEach(btn => btn.addEventListener("click", () => alterarAtivoParticipante(btn.dataset.reativar, true)));
       $("#admin-liga-form")?.addEventListener("submit", salvarLigaAdmin);
-      $("#limpar-liga")?.addEventListener("click", () => { limparFormLiga(); $("#admin-liga-nome")?.focus(); status("🧹 Formulário de liga limpo.", "ok"); });
+      $("#limpar-liga")?.addEventListener("click", () => { limparFormLiga(); $("#admin-liga-nome")?.focus(); status("Formulário de liga limpo.", "ok"); toast("Formulário de liga limpo.", "ok"); });
       $$('[data-edit-liga]').forEach(btn => btn.addEventListener("click", () => preencherLiga(btn.dataset.editLiga)));
     }
+    $("#abrir-auditoria-admin")?.addEventListener("click", async () => { state.aba = "auditoria"; await refresh(); });
     $("#export-progresso")?.addEventListener("click", exportarProgressoCsv);
     $("#admin-liga-selecionada")?.addEventListener("change", async ev => { state.adminLigaSelecionada = ev.target.value; await renderAdmin(); });
     $("#admin-add-membro")?.addEventListener("submit", adicionarParticipanteLiga);
@@ -1377,8 +1519,9 @@
       await carregarLigas();
       renderLigaBox();
       status("✅ LIGA GRAVADA COM SUCESSO! Agora adicione os participantes abaixo.", "ok");
+      toast("Liga salva com sucesso.", "ok");
       await renderAdmin();
-    } catch (err) { status(err.message || "Falha ao salvar liga.", "err"); }
+    } catch (err) { status(err.message || "Falha ao salvar liga.", "err"); toast(err.message || "Falha ao salvar liga.", "err"); }
   }
 
   async function adicionarParticipanteLiga(ev) {
@@ -1396,8 +1539,9 @@
         p_ativo: true
       });
       status("✅ PARTICIPANTE ADICIONADO À LIGA COM SUCESSO!", "ok");
+      toast("Participante adicionado à liga.", "ok");
       await renderAdmin();
-    } catch (err) { status(err.message || "Falha ao adicionar participante à liga.", "err"); }
+    } catch (err) { status(err.message || "Falha ao adicionar participante à liga.", "err"); toast(err.message || "Falha ao adicionar participante à liga.", "err"); }
   }
 
   async function removerParticipanteLiga(ligaId, participanteId, reativar) {
@@ -1413,8 +1557,9 @@
         p_ativo: Boolean(reativar)
       });
       status(reativar ? "✅ REATIVADO NA LIGA COM SUCESSO!" : "✅ REMOVIDO DA LIGA COM SUCESSO! Histórico preservado.", "ok");
+      toast(reativar ? "Participante reativado na liga." : "Participante removido da liga. Histórico preservado.", "ok");
       await renderAdmin();
-    } catch (err) { status(err.message || "Falha ao alterar participante na liga.", "err"); }
+    } catch (err) { status(err.message || "Falha ao alterar participante na liga.", "err"); toast(err.message || "Falha ao alterar participante na liga.", "err"); }
   }
 
   async function alterarAtivoParticipante(participanteId, ativo) {
@@ -1428,8 +1573,9 @@
         p_ativo: Boolean(ativo)
       });
       status(ativo ? "✅ PARTICIPANTE REATIVADO COM SUCESSO!" : "✅ PARTICIPANTE INATIVADO COM SUCESSO! Histórico preservado.", "ok");
+      toast(ativo ? "Participante reativado." : "Participante inativado. Histórico preservado.", "ok");
       await renderAdmin();
-    } catch (err) { status(err.message || "Falha ao alterar status do participante.", "err"); }
+    } catch (err) { status(err.message || "Falha ao alterar status do participante.", "err"); toast(err.message || "Falha ao alterar status do participante.", "err"); }
   }
 
   function toDatetimeLocal(iso) {
@@ -1548,6 +1694,7 @@
       limparFormParticipante();
       await renderAdmin();
       status(`✅ PARTICIPANTE ${atualizado ? "ALTERADO" : "CRIADO"} COM SUCESSO! Usuário: ${login} · PIN: ${pin}. Envie apenas para a pessoa.`, "ok");
+      toast(`Participante ${atualizado ? "alterado" : "criado"} com sucesso.`, "ok");
 
       const enviarWhats = confirm(
         `PARTICIPANTE ${atualizado ? "ALTERADO" : "CRIADO"}!\n` +
@@ -1555,7 +1702,7 @@
         "Deseja mandar msg pra ele pelo WhatsApp?"
       );
       if (enviarWhats) abrirWhatsappComMensagem(mensagemWhatsappAcesso(nome, login, pin));
-    } catch (err) { status(mensagemErroParticipante(err), "err"); }
+    } catch (err) { const msg = mensagemErroParticipante(err); status(msg, "err"); toast(msg, "err"); }
   }
 
   async function salvarRodadaAdmin(ev) {
@@ -1607,14 +1754,18 @@
         p_observacao: $("#cfg-obs").value || null
       });
       await carregarConfigsSupabase();
-      status(mensagemStatusRodada(statusNovo), "ok");
+      const mensagem = mensagemStatusRodada(statusNovo);
+      status(mensagem, "ok");
+      toast(mensagem.replace(/^[^A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9]+/i, ""), "ok");
       await refresh();
     } catch (err) {
       const msg = String(err?.message || err || "");
       if (/ambiguous|ambígua|42702/i.test(msg)) {
         status("O banco ainda está com a função antiga da janela. Rode supabase/brasileirao_apostas_exec17_janela_rodada.sql no SQL Editor do Supabase e tente de novo.", "err");
+        toast("Não foi possível salvar a janela. Atualize a função do banco.", "err");
       } else {
         status(msg || "Falha ao salvar janela.", "err");
+        toast(msg || "Falha ao salvar janela.", "err");
       }
     }
   }
@@ -1622,7 +1773,11 @@
   function renderConteudo() {
     renderResumo();
     renderRodadas();
-    $$("[data-aba]").forEach(btn => btn.classList.toggle("active", btn.dataset.aba === state.aba));
+    $$("[data-aba]").forEach(btn => {
+      const ativo = btn.dataset.aba === state.aba || (btn.dataset.aba === "admin" && state.aba === "auditoria");
+      btn.classList.toggle("active", ativo);
+      btn.setAttribute("aria-selected", String(ativo));
+    });
     if (state.aba === "meus") return renderMeus();
     if (state.aba === "ranking") { carregarPublicos().then(() => renderRanking()); return; }
     if (state.aba === "publico") return renderPublico();
@@ -1633,18 +1788,27 @@
 
   async function refresh() {
     await carregarConfigsSupabase();
+    resolverRodadaAutomatica(false);
     if (state.usuario) {
       await carregarLigas();
       await carregarMeusPalpites();
     }
     renderLogin();
-    renderLigaBox();
     renderConteudo();
+    renderLigaBox();
   }
 
-  async function trocarRodada(rodada) {
+  async function trocarRodada(rodada, manual = true) {
     state.rodada = Number(rodada);
+    state.rodadaEscolhidaManualmente = Boolean(manual && Number(state.rodada) !== Number(state.rodadaAutomatica));
     await refresh();
+  }
+
+  async function voltarRodadaAtual() {
+    state.rodadaEscolhidaManualmente = false;
+    resolverRodadaAutomatica(true);
+    await refresh();
+    toast(`Você voltou para a rodada atual: R${state.rodadaAutomatica}.`, "ok");
   }
 
   async function onLogin(ev) {
@@ -1665,7 +1829,8 @@
         return;
       }
       await carregarLigas();
-      state.aba = canAdminAny() ? "admin" : "apostas";
+      state.aba = "apostas";
+      state.rodadaEscolhidaManualmente = false;
       await refresh();
     } catch (err) {
       console.error(err);
@@ -1677,6 +1842,7 @@
 
   function bindBaseEvents() {
     $("#form-login")?.addEventListener("submit", onLogin);
+    $("#voltar-rodada-atual")?.addEventListener("click", voltarRodadaAtual);
     $$("[data-aba]").forEach(btn => btn.addEventListener("click", async () => {
       state.aba = btn.dataset.aba;
       await refresh();
@@ -1703,7 +1869,8 @@
     }
     if (state.usuario && !abaUrl) {
       await carregarLigas();
-      if (canAdminAny()) state.aba = "admin";
+      state.aba = "apostas";
+      state.rodadaEscolhidaManualmente = false;
     }
     if (!state.usuario && state.supabase) {
       status("Entre com usuário e PIN para acessar a área restrita.", "warn");

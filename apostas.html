@@ -9,7 +9,7 @@
 <meta name="description" content="Acesso reservado aos participantes autorizados do site Brasileirão 2026 — Almoço de Sexta.">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<link rel="stylesheet" href="css/br-apostas.css?v=20260726-ligas-mobile-v2">
+<link rel="stylesheet" href="css/br-apostas.css?v=20260727-ux-exec1-v1">
 <link rel="stylesheet" href="css/br-global.css?v=20260724-status-dot-v2">
 </head>
 <body>
@@ -73,14 +73,41 @@
     </section>
 
     <section id="app-area" hidden>
-      <section class="grid-head" aria-label="Resumo da rodada">
+      <section class="panel control-panel" aria-label="Navegação da área de apostas"><div class="panel-inner">
+        <div class="control-heading">
+          <div>
+            <div class="kicker">Controle da rodada</div>
+            <h2 id="controle-titulo">Rodada atual</h2>
+            <p id="controle-descricao">A rodada em andamento é escolhida automaticamente. Você pode consultar outras rodadas pelos atalhos abaixo.</p>
+          </div>
+          <button type="button" class="btn ghost current-round-button" id="voltar-rodada-atual" hidden>↩️ Voltar à rodada atual</button>
+        </div>
+        <div class="actions tab-actions" role="tablist" aria-label="Ações de apostas">
+          <button type="button" class="btn secondary active" data-aba="apostas" role="tab" aria-selected="true">🎯 Apostar</button>
+          <button type="button" class="btn secondary" data-aba="meus" role="tab" aria-selected="false">👤 Meus comprovantes</button>
+          <button type="button" class="btn secondary" data-aba="ranking" role="tab" aria-selected="false">🏆 Ranking</button>
+          <button type="button" class="btn secondary" data-aba="publico" role="tab" aria-selected="false">👀 Palpites públicos</button>
+          <button type="button" class="btn secondary admin-only" data-aba="admin" role="tab" aria-selected="false" hidden>🛠️ Admin</button>
+        </div>
+        <div class="round-nav" aria-label="Selecionar rodada">
+          <div class="round-nav-head">
+            <span id="rodada-contexto">Selecionando rodada atual…</span>
+            <small>Consulte uma rodada anterior sem alterar a rodada atual automática.</small>
+          </div>
+          <div class="round-tabs" id="rodadas" role="tablist" aria-label="Rodadas do Brasileirão"></div>
+        </div>
+      </div></section>
+
+      <section id="conteudo" aria-live="polite"></section>
+
+      <section class="grid-head support-summary" aria-label="Resumo da rodada">
         <article class="panel"><div class="panel-inner">
           <div class="kicker">Rodada selecionada</div>
           <div class="big-number" id="numero-rodada">—</div>
           <p><span id="total-jogos">0</span> jogos encontrados.</p>
         </div></article>
         <article class="panel"><div class="panel-inner">
-          <div class="kicker">Janela</div>
+          <div class="kicker">Janela da rodada</div>
           <h2 id="texto-janela">—</h2>
           <p><span id="badge-janela" class="badge">verificando</span></p>
         </div></article>
@@ -91,27 +118,10 @@
         </div></article>
       </section>
 
-      <section class="panel control-panel"><div class="panel-inner">
-        <div class="kicker">Controle da rodada</div>
-        <div class="form-line wide">
-          <label>Rodada
-            <select id="rodada-select" aria-label="Selecionar rodada"></select>
-          </label>
-          <div class="actions tab-actions" role="tablist" aria-label="Ações de apostas">
-            <button type="button" class="btn secondary active" data-aba="apostas">🎯 Apostar</button>
-            <button type="button" class="btn secondary" data-aba="meus">👤 Meus comprovantes</button>
-            <button type="button" class="btn secondary" data-aba="ranking">🏆 Ranking</button>
-            <button type="button" class="btn secondary" data-aba="publico">👀 Palpites públicos</button>
-            <button type="button" class="btn secondary admin-only" data-aba="auditoria" hidden>🧾 Auditoria</button>
-            <button type="button" class="btn secondary admin-only" data-aba="admin" hidden>🛠️ Admin</button>
-          </div>
-        </div>
-      </div></section>
-
-      <div id="liga-box" class="liga-box" aria-label="Selecionar liga"></div>
-      <div class="round-tabs" id="rodadas" aria-label="Selecionar rodada por atalho"></div>
-      <section id="conteudo" aria-live="polite"></section>
+      <div id="liga-box" class="liga-box supporting-section" aria-label="Selecionar liga"></div>
     </section>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
 
     <footer class="site-footer br-disclaimer">
       <div><span class="footer-title">Brasileirão 2026 — Almoço de Sexta.</span> Área de acesso reservado. O site é independente, informativo e sem fins lucrativos. Nomes, escudos e marcas pertencem aos respectivos titulares.</div>
@@ -122,7 +132,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/br-config.js?v=20260712-menu-publico-login-v1"></script>
   <script src="js/br-pontuacao.js?v=20260707-ajustes-finais-v1"></script>
-  <script src="js/br-apostas.js?v=20260726-layout-vertical-v1"></script>
+  <script src="js/br-apostas.js?v=20260727-ux-exec1-v1"></script>
   <script>
     document.querySelectorAll('[data-br-view]').forEach(function(a){
       a.addEventListener('click', function(){ sessionStorage.setItem('brViewInicial', a.getAttribute('data-br-view')); });
