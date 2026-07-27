@@ -1,15 +1,42 @@
 {
+  "schema_version": 4,
   "temporada": 2026,
-  "atualizado_em": "2026-07-27T15:44:27.860447-03:00",
+  "atualizado_em": "2026-07-27T16:11:07.036060-03:00",
   "fonte": "Supabase br_palpites + resultados finais auditados dos JSONs locais",
-  "politica_sigilo": "Rodadas não publicadas não expõem palpites nem ranking no JSON público.",
+  "politica_sigilo": "Rodadas e blocos não publicados não expõem palpites nem rankings no JSON público.",
+  "regra_pontuacao": {
+    "placar_exato": 5,
+    "saldo_exato": 3,
+    "resultado": 2,
+    "erro": 0,
+    "desempate": [
+      "pontos",
+      "placares exatos",
+      "saldos",
+      "resultados",
+      "menor quantidade de erros",
+      "nome"
+    ],
+    "indice_aproveitamento": "pontos / (5 × jogos apurados) × 100"
+  },
   "validacao_resultados": {
-    "versao": 2,
+    "versao": 4,
     "somente_finalizados": true,
     "criterios": [
-      "estado final (post/final/finished/complete/completed/encerrado)",
-      "ou concluido=true"
-    ]
+      "placar presente",
+      "estado final ou concluido=true",
+      "kickoff não futuro",
+      "resultado presente em resultados.json"
+    ],
+    "conclusao_rodada": "10 de 10 jogos finalizados",
+    "conclusao_bloco": "30 de 30 jogos finalizados",
+    "adiamentos": "mantêm a apuração parcial e impedem a conclusão até o resultado final"
+  },
+  "resumo": {
+    "jogos_apurados_publicados": 0,
+    "rodadas_concluidas": 0,
+    "blocos_concluidos": 0,
+    "ranking_parcial": false
   },
   "ligas": [
     {
@@ -31,5 +58,289 @@
     "almoco-de-sexta": [],
     "d42fd0f4-b035-4243-bf3e-50719e342b20": [],
     "liga-geral": []
-  }
+  },
+  "rankings_por_rodada": {
+    "20": {
+      "rodada": 20,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "21": {
+      "rodada": 21,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "22": {
+      "rodada": 22,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "23": {
+      "rodada": 23,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "24": {
+      "rodada": 24,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "25": {
+      "rodada": 25,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "26": {
+      "rodada": 26,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "27": {
+      "rodada": 27,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "28": {
+      "rodada": 28,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "29": {
+      "rodada": 29,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "30": {
+      "rodada": 30,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "31": {
+      "rodada": 31,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "32": {
+      "rodada": 32,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "33": {
+      "rodada": 33,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "34": {
+      "rodada": 34,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "35": {
+      "rodada": 35,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "36": {
+      "rodada": 36,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "37": {
+      "rodada": 37,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    },
+    "38": {
+      "rodada": 38,
+      "publicada": false,
+      "concluida": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 10,
+      "ranking": [],
+      "rankings_por_liga": {}
+    }
+  },
+  "ranking_blocos": [
+    {
+      "bloco_id": "4031042b-7554-4c42-81c0-f2e0217613a8",
+      "nome": "Bloco 21–23",
+      "rodada_inicio": 21,
+      "rodada_fim": 23,
+      "publicada": false,
+      "concluido": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 30,
+      "ranking": [],
+      "rankings_por_liga": {},
+      "lideres_parciais": [],
+      "vencedores": []
+    },
+    {
+      "bloco_id": "b451de10-82a1-4981-ada3-a0da854eb5a7",
+      "nome": "Bloco 24–26",
+      "rodada_inicio": 24,
+      "rodada_fim": 26,
+      "publicada": false,
+      "concluido": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 30,
+      "ranking": [],
+      "rankings_por_liga": {},
+      "lideres_parciais": [],
+      "vencedores": []
+    },
+    {
+      "bloco_id": "f5ec6b73-3cab-4a78-91f9-ee8497954ecf",
+      "nome": "Bloco 27–29",
+      "rodada_inicio": 27,
+      "rodada_fim": 29,
+      "publicada": false,
+      "concluido": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 30,
+      "ranking": [],
+      "rankings_por_liga": {},
+      "lideres_parciais": [],
+      "vencedores": []
+    },
+    {
+      "bloco_id": "96330308-be36-4347-95a2-a87ef8c808bf",
+      "nome": "Bloco 30–32",
+      "rodada_inicio": 30,
+      "rodada_fim": 32,
+      "publicada": false,
+      "concluido": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 30,
+      "ranking": [],
+      "rankings_por_liga": {},
+      "lideres_parciais": [],
+      "vencedores": []
+    },
+    {
+      "bloco_id": "e4916979-9a92-4312-93d8-9672dfc01f93",
+      "nome": "Bloco 33–35",
+      "rodada_inicio": 33,
+      "rodada_fim": 35,
+      "publicada": false,
+      "concluido": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 30,
+      "ranking": [],
+      "rankings_por_liga": {},
+      "lideres_parciais": [],
+      "vencedores": []
+    },
+    {
+      "bloco_id": "c3baa9e4-8afc-49be-a65e-8e2493f16105",
+      "nome": "Bloco 36–38",
+      "rodada_inicio": 36,
+      "rodada_fim": 38,
+      "publicada": false,
+      "concluido": false,
+      "estado_apuracao": "sigilosa",
+      "jogos_apurados": 0,
+      "jogos_pendentes": 30,
+      "ranking": [],
+      "rankings_por_liga": {},
+      "lideres_parciais": [],
+      "vencedores": []
+    }
+  ]
 }
