@@ -70,7 +70,8 @@ jobs:
             scripts/atualizar_competicoes_af_previsao.py \
             scripts/gerar_probabilidades_brasileirao.py \
             scripts/gerar_probabilidades_jogos.py \
-            scripts/avaliar_af_previsao.py
+            scripts/avaliar_af_previsao.py \
+            scripts/apurar_rodada.py
           python atualizar_espn.py --selftest
           python fontes_brasileirao.py --selftest
           python scripts/atualizar_transmissoes_tv_brasileirao.py --selftest
@@ -82,6 +83,7 @@ jobs:
           python scripts/gerar_probabilidades_brasileirao.py --self-test
           python scripts/gerar_probabilidades_jogos.py --self-test
           python scripts/avaliar_af_previsao.py --self-test
+          python scripts/apurar_rodada.py --self-test
           python -m json.tool dados-br/config-transmissoes-tv.json > /dev/null
           python -m json.tool dados-br/auditoria-transmissoes-tv.json > /dev/null
 
@@ -344,6 +346,38 @@ jobs:
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
           EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
         run: python scripts/gerenciar_status_brasileirao.py --from-env --notify
+
+      - name: Apurar apostas, blocos e rankings no mesmo snapshot
+        if: steps.espn.outputs.sincronizado == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BRASILEIRAO_TEMPORADA: '2026'
+        run: python scripts/apurar_rodada.py
+
+      - name: Validar artefatos da apuração
+        if: steps.espn.outputs.sincronizado == 'true'
+        run: |
+          python -m json.tool dados-br/apuracao.json > /dev/null
+          python -m json.tool dados-br/ranking-apostas.json > /dev/null
+          python - <<'PY'
+          import json
+          ap = json.load(open('dados-br/apuracao.json', encoding='utf-8'))
+          rk = json.load(open('dados-br/ranking-apostas.json', encoding='utf-8'))
+          assert ap.get('schema_version') == 4
+          assert rk.get('schema_version') == 4
+          assert (ap.get('validacao_resultados') or {}).get('somente_finalizados') is True
+          assert len(ap.get('blocos') or []) == 6
+          for rodada in ap.get('rodadas') or []:
+              assert 0 <= int(rodada.get('jogos_apurados') or 0) <= 10
+              if rodada.get('concluida'):
+                  assert int(rodada.get('jogos_apurados') or 0) == 10
+          for bloco in ap.get('blocos') or []:
+              assert 0 <= int(bloco.get('jogos_apurados') or 0) <= 30
+              if bloco.get('concluido'):
+                  assert int(bloco.get('jogos_apurados') or 0) == 30
+          print('Apuração e rankings da Execução 4 validados.')
+          PY
 
       - name: Conferir e validar JSONs gerados
         if: steps.espn.outputs.sincronizado == 'true'
@@ -672,6 +706,8 @@ jobs:
             "dados-br/transmissoes-tv.json"
             "dados-br/auditoria-transmissoes-tv.json"
             "dados-br/status-atualizacao.json"
+            "dados-br/apuracao.json"
+            "dados-br/ranking-apostas.json"
             "dados-br/estatisticas.json"
             "dados-br/ranking-desempenho.json"
             "dados-br/historico-ranking-desempenho.json"

@@ -1,16 +1,14 @@
 name: Apurar Apostas Brasileirão
 
 on:
-  # Execução apenas por workflow_dispatch. O cron-job.org chama este gatilho
-  # somente na janela de jogos definida pelo administrador.
+  # O fluxo normal da Execução 4 já roda dentro de Atualizar Brasileirao
+  # (ESPN), no mesmo snapshot e no mesmo commit. Este workflow permanece como
+  # recuperação manual para reprocessar a apuração sem refazer toda a coleta.
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# Serializa com todos os outros workflows que fazem git push em main.
-# Sem isso, Apurar e Atualizar BR podem colidir se o cron-job.org
-# disparar ambos quase ao mesmo tempo (:16/:22 ou :44/:59).
 concurrency:
   group: repo-write-main
   cancel-in-progress: false
@@ -18,33 +16,85 @@ concurrency:
 jobs:
   apurar:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Validar regras de apuração
-        run: python scripts/apurar_rodada.py --self-test
+      - name: Validar regras da Execução 4
+        run: |
+          python -m py_compile scripts/apurar_rodada.py
+          python scripts/apurar_rodada.py --self-test
 
-      - name: Apurar apostas com sigilo
+      - name: Apurar rodadas, blocos e rankings
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           BRASILEIRAO_TEMPORADA: '2026'
         run: python scripts/apurar_rodada.py
 
-      - name: Commit apuração
+      - name: Validar JSONs gerados
         run: |
+          python -m json.tool dados-br/apuracao.json > /dev/null
+          python -m json.tool dados-br/ranking-apostas.json > /dev/null
+          python - <<'PY'
+          import json
+          ap = json.load(open('dados-br/apuracao.json', encoding='utf-8'))
+          rk = json.load(open('dados-br/ranking-apostas.json', encoding='utf-8'))
+          assert ap.get('schema_version') == 4
+          assert rk.get('schema_version') == 4
+          assert len(ap.get('blocos') or []) == 6
+          assert (ap.get('validacao_resultados') or {}).get('somente_finalizados') is True
+          assert all(not b.get('concluido') or int(b.get('jogos_apurados') or 0) == 30 for b in ap.get('blocos') or [])
+          print('JSONs de apuração validados.')
+          PY
+
+      - name: Publicar apuração com push robusto
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dados-br/apuracao.json dados-br/ranking-apostas.json
-          if git diff --cached --quiet; then
+
+          FILES=("dados-br/apuracao.json" "dados-br/ranking-apostas.json")
+          if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
             echo "Nenhuma alteração de apuração."
-          else
-            git commit -m "Apura apostas do Brasileirão com sigilo"
-            git push
+            exit 0
           fi
+
+          TMP_DIR="$(mktemp -d)"
+          mkdir -p "$TMP_DIR/dados-br"
+          cp -a dados-br/apuracao.json "$TMP_DIR/dados-br/apuracao.json"
+          cp -a dados-br/ranking-apostas.json "$TMP_DIR/dados-br/ranking-apostas.json"
+
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            mkdir -p dados-br
+            cp -a "$TMP_DIR/dados-br/apuracao.json" dados-br/apuracao.json
+            cp -a "$TMP_DIR/dados-br/ranking-apostas.json" dados-br/ranking-apostas.json
+
+            if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
+              echo "Outro fluxo já publicou a mesma apuração."
+              exit 0
+            fi
+
+            git add -- "${FILES[@]}"
+            git commit -m "Atualizar apuração e rankings do Brasileirão - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "ERRO: não foi possível publicar a apuração após 5 tentativas."
+          exit 1
