@@ -417,9 +417,13 @@
     const fecha = parseData(cfg.fecha_em);
     const status = String(cfg.status || "programada").toLowerCase();
     if (Number(rodada) < Number(CFG.rodadaInicialApostas || 20)) return false;
-    if (["futura", "fechada", "apurada", "publicada", "bloqueada", "encerrada"].includes(status)) return false;
-    if (status === "aberta") return true; // abertura manual pelo admin ignora o horário
+    if (["fechada", "apurada", "publicada", "bloqueada", "encerrada"].includes(status)) return false;
     if (!abre || !fecha) return false;
+
+    // "futura" e "programada" são estados de programação, não travas permanentes.
+    // Assim que a abertura chega, o relógio passa a comandar a janela. Isso também
+    // protege a interface caso exista um registro antigo com datas completas e status
+    // ainda igual a "futura".
     return agora >= abre && agora < fecha;
   }
 
@@ -438,13 +442,11 @@
     const agora = new Date();
     const status = String(cfg.status || "programada").toLowerCase();
     if (rodadaPublica(rodada)) return { classe: "done", texto: "Palpites publicados", detalhe: `Rodada ${rodada} publicada` };
-    if (status === "futura" && (!abre || !fecha)) return { classe: "warn", texto: "Aguardando programação", detalhe: `Rodada ${rodada} ainda sem janela liberada` };
-    if (status === "futura") return { classe: "warn", texto: "Programação futura", detalhe: abre ? `Prevista para abrir em ${fmtDataLonga(abre)}` : `Rodada ${rodada} ainda não liberada` };
-    if (status === "aberta") return { classe: "open", texto: "Apostas abertas", detalhe: fecha ? `Aberta pelo admin · até ${fmtDataLonga(fecha)}` : "Aberta pelo admin" };
-    if (["fechada", "apurada", "bloqueada", "encerrada"].includes(status)) return { classe: "lock", texto: "Rodada fechada", detalhe: `Fechada em ${fmtDataLonga(fecha)}` };
-    if (abre && agora < abre) return { classe: "warn", texto: "Aguardando abertura", detalhe: `Abre em ${fmtDataLonga(abre)}` };
-    if (fecha && agora >= fecha) return { classe: "lock", texto: "Janela encerrada", detalhe: `Fechou em ${fmtDataLonga(fecha)}` };
-    return { classe: "open", texto: "Apostas abertas", detalhe: `Até ${fmtDataLonga(fecha)}` };
+    if (["fechada", "apurada", "bloqueada", "encerrada"].includes(status)) return { classe: "lock", texto: "Rodada fechada", detalhe: fecha ? `Fechada em ${fmtDataLonga(fecha)}` : `Rodada ${rodada} bloqueada` };
+    if (!abre || !fecha) return { classe: "warn", texto: "Aguardando programação", detalhe: `Rodada ${rodada} ainda sem janela completa` };
+    if (agora < abre) return { classe: "warn", texto: "Aguardando abertura", detalhe: `Abre em ${fmtDataLonga(abre)}` };
+    if (agora >= fecha) return { classe: "lock", texto: "Janela encerrada", detalhe: `Fechou em ${fmtDataLonga(fecha)}` };
+    return { classe: "open", texto: "Apostas abertas", detalhe: status === "aberta" ? `Aberta pelo admin · até ${fmtDataLonga(fecha)}` : `Até ${fmtDataLonga(fecha)}` };
   }
 
   function sessionPayload() {
@@ -2312,8 +2314,12 @@
       const primeiro = $("#bloco-primeiro-jogo")?.value ? new Date($("#bloco-primeiro-jogo").value) : null;
       const abre = $("#bloco-abre")?.value ? new Date($("#bloco-abre").value) : null;
       const fecha = $("#bloco-fecha")?.value ? new Date($("#bloco-fecha").value) : null;
-      const statusNovo = $("#bloco-status")?.value || "futura";
+      let statusNovo = $("#bloco-status")?.value || "futura";
       const observacao = String($("#bloco-observacao")?.value || "").trim();
+
+      // Uma janela completa nunca deve permanecer em "futura": o estado correto é
+      // "programada" e a abertura ocorrerá automaticamente pelo relógio.
+      if (statusNovo === "futura" && primeiro && abre && fecha) statusNovo = "programada";
 
       if (statusNovo !== "futura" && (!primeiro || !abre || !fecha)) throw new Error("Informe primeiro jogo, abertura e fechamento antes de programar o bloco.");
       if (abre && fecha && abre >= fecha) throw new Error("A abertura deve ser anterior ao fechamento.");
