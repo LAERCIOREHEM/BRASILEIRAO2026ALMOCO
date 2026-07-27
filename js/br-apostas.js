@@ -1,6 +1,6 @@
 /* ========================================================================== 
    br-apostas.js — Apostas logadas do Brasileirão 2026
-   Execução 1 UX: navegação clara, rodada atual automática e administração orientada por etapas.
+   Execuções 1–3: UX, blocos de três rodadas e apostas progressivas de 30 partidas.
    ========================================================================== */
 (function (global, document) {
   "use strict";
@@ -9,6 +9,14 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
   const STORAGE_KEY = "brApostasSessaoV2";
+  const BLOCOS_3_RODADAS = [
+    { inicio: 21, fim: 23, nome: "Bloco 21–23" },
+    { inicio: 24, fim: 26, nome: "Bloco 24–26" },
+    { inicio: 27, fim: 29, nome: "Bloco 27–29" },
+    { inicio: 30, fim: 32, nome: "Bloco 30–32" },
+    { inicio: 33, fim: 35, nome: "Bloco 33–35" },
+    { inicio: 36, fim: 38, nome: "Bloco 36–38" }
+  ];
 
   const state = {
     supabase: null,
@@ -44,6 +52,14 @@
     blocosApostas: [],
     blocosInfraDisponivel: false,
     blocoAdminSelecionado: null,
+    comprovanteBloco: null,
+    progressoBloco: null,
+    exec3InfraDisponivel: false,
+    filtroRodadaBloco: "todos",
+    publicoFiltro: "bloco",
+    draftDirty: false,
+    draftRestaurado: false,
+    salvandoPalpites: false,
     toastTimer: null
   };
 
@@ -242,6 +258,38 @@
     return state.jogos.filter(j => Number(j.rodada) === Number(rodada));
   }
 
+  function blocoEstaticoDaRodada(rodada) {
+    const r = Number(rodada);
+    const base = BLOCOS_3_RODADAS.find(b => r >= b.inicio && r <= b.fim);
+    return base ? { rodada_inicio: base.inicio, rodada_fim: base.fim, nome: base.nome, bloco_id: null } : null;
+  }
+
+  function contextoEhBloco() {
+    return Number(state.rodada) >= 21;
+  }
+
+  function jogosDoBloco(bloco) {
+    if (!bloco) return [];
+    return state.jogos.filter(j => Number(j.rodada) >= Number(bloco.rodada_inicio) && Number(j.rodada) <= Number(bloco.rodada_fim));
+  }
+
+  function jogosDoContexto() {
+    const bloco = blocoDaRodada(state.rodada);
+    return bloco ? jogosDoBloco(bloco) : jogosDaRodada(state.rodada);
+  }
+
+  function contextoLabel(rodada = state.rodada) {
+    const bloco = blocoDaRodada(rodada);
+    return bloco ? `Bloco ${bloco.rodada_inicio}–${bloco.rodada_fim}` : `Rodada ${Number(rodada)}`;
+  }
+
+  function mesmoContextoRodadas(a, b) {
+    if (Number(a) === 20 || Number(b) === 20) return Number(a) === Number(b);
+    const ba = blocoEstaticoDaRodada(a);
+    const bb = blocoEstaticoDaRodada(b);
+    return Boolean(ba && bb && Number(ba.rodada_inicio) === Number(bb.rodada_inicio));
+  }
+
   function configDaRodada(rodada) {
     const supa = state.configSupabase.find(c => Number(c.rodada) === Number(rodada));
     if (supa) return supa;
@@ -308,7 +356,23 @@
 
   function blocoDaRodada(rodada) {
     const r = Number(rodada);
-    return (state.blocosApostas || []).find(b => r >= Number(b.rodada_inicio) && r <= Number(b.rodada_fim)) || null;
+    const admin = (state.blocosApostas || []).find(b => r >= Number(b.rodada_inicio) && r <= Number(b.rodada_fim));
+    if (admin) return admin;
+    const cfg = configDaRodada(r);
+    if (cfg && cfg.bloco_id) {
+      return {
+        bloco_id: cfg.bloco_id,
+        rodada_inicio: Number(cfg.bloco_rodada_inicio),
+        rodada_fim: Number(cfg.bloco_rodada_fim),
+        nome: cfg.bloco_nome || `Bloco ${cfg.bloco_rodada_inicio}–${cfg.bloco_rodada_fim}`,
+        primeiro_jogo_em: cfg.bloco_primeiro_jogo_em || null,
+        abre_em: cfg.abre_em || null,
+        fecha_em: cfg.fecha_em || null,
+        status: cfg.status || "futura",
+        versao: cfg.bloco_versao || null
+      };
+    }
+    return blocoEstaticoDaRodada(r);
   }
 
   function blocoAdminAtual() {
@@ -565,16 +629,61 @@
 
   async function carregarMeusPalpites() {
     if (!state.usuario) return;
-    try {
-      state.meusPalpites = await rpcRows("br_listar_meus_palpites", {
-        p_participante_id: state.usuario.id,
-        p_token: state.token,
-        p_rodada: state.rodada,
-        p_temporada: CFG.temporada || 2026
-      });
-    } catch (err) {
-      console.warn("Meus palpites indisponíveis", err);
+    state.comprovanteBloco = null;
+    state.progressoBloco = null;
+    if (!contextoEhBloco()) {
+      state.exec3InfraDisponivel = false;
+      try {
+        state.meusPalpites = await rpcRows("br_listar_meus_palpites", {
+          p_participante_id: state.usuario.id,
+          p_token: state.token,
+          p_rodada: state.rodada,
+          p_temporada: CFG.temporada || 2026
+        });
+      } catch (err) {
+        console.warn("Meus palpites indisponíveis", err);
+        state.meusPalpites = [];
+      }
+      return;
+    }
+
+    const bloco = blocoDaRodada(state.rodada);
+    if (!bloco?.bloco_id) {
       state.meusPalpites = [];
+      state.exec3InfraDisponivel = false;
+      return;
+    }
+    try {
+      const [palpites, comprovantes, progressos] = await Promise.all([
+        rpcRows("br_listar_meus_palpites_bloco_v1", {
+          p_participante_id: state.usuario.id,
+          p_token: state.token,
+          p_bloco_id: bloco.bloco_id,
+          p_temporada: CFG.temporada || 2026
+        }),
+        rpcRows("br_listar_comprovante_bloco_v1", {
+          p_participante_id: state.usuario.id,
+          p_token: state.token,
+          p_bloco_id: bloco.bloco_id,
+          p_temporada: CFG.temporada || 2026
+        }),
+        rpcRows("br_progresso_bloco_v1", {
+          p_participante_id: state.usuario.id,
+          p_token: state.token,
+          p_bloco_id: bloco.bloco_id,
+          p_temporada: CFG.temporada || 2026
+        })
+      ]);
+      state.meusPalpites = Array.isArray(palpites) ? palpites : [];
+      state.comprovanteBloco = (comprovantes || [])[0] || null;
+      state.progressoBloco = (progressos || [])[0] || null;
+      state.exec3InfraDisponivel = true;
+    } catch (err) {
+      console.warn("Infraestrutura da Execução 3 indisponível", err);
+      state.meusPalpites = [];
+      state.comprovanteBloco = null;
+      state.progressoBloco = null;
+      state.exec3InfraDisponivel = false;
     }
   }
 
@@ -788,6 +897,18 @@
 
   async function carregarPublicos() {
     try {
+      if (contextoEhBloco()) {
+        const bloco = blocoDaRodada(state.rodada);
+        if (!bloco?.bloco_id || !state.usuario) { state.publicos = []; return; }
+        state.publicos = await rpcRows("br_listar_palpites_publicos_bloco_v1", {
+          p_participante_id: state.usuario.id,
+          p_token: state.token,
+          p_bloco_id: bloco.bloco_id,
+          p_liga_id: state.ligaAtual || null,
+          p_temporada: CFG.temporada || 2026
+        });
+        return;
+      }
       if (state.usuario && state.ligaAtual) {
         state.publicos = await rpcRows("br_listar_palpites_publicos_liga", {
           p_participante_id: state.usuario.id,
@@ -803,7 +924,7 @@
         });
       }
     } catch (err) {
-      console.warn("Palpites públicos por liga indisponíveis", err);
+      console.warn("Palpites públicos indisponíveis", err);
       state.publicos = [];
     }
   }
@@ -815,6 +936,114 @@
 
   function palpiteSalvoPara(id) {
     return state.meusPalpites.find(p => String(p.event_id) === String(id));
+  }
+
+
+  function hashServidorAtual() {
+    return state.comprovanteBloco?.hash_bloco || state.meusPalpites.find(p => p.hash_bloco)?.hash_bloco || "";
+  }
+
+  function chaveRascunhoBloco() {
+    if (!state.usuario || !contextoEhBloco()) return "";
+    const bloco = blocoDaRodada(state.rodada);
+    if (!bloco) return "";
+    return `brApostasRascunhoV1:${CFG.temporada || 2026}:${state.usuario.id}:${bloco.rodada_inicio}-${bloco.rodada_fim}`;
+  }
+
+  function lerRascunhoBloco() {
+    const chave = chaveRascunhoBloco();
+    if (!chave) return null;
+    try {
+      const valor = JSON.parse(localStorage.getItem(chave) || "null");
+      if (!valor || typeof valor !== "object" || !valor.valores) return null;
+      const hashAtual = hashServidorAtual();
+      if (valor.hashServidor && hashAtual && valor.hashServidor !== hashAtual) {
+        localStorage.removeItem(chave);
+        return null;
+      }
+      return valor;
+    } catch (err) {
+      console.warn("Rascunho local inválido", err);
+      return null;
+    }
+  }
+
+  function salvarRascunhoBloco() {
+    const form = $("#form-palpites-bloco");
+    const chave = chaveRascunhoBloco();
+    if (!form || !chave) return;
+    const valores = {};
+    $$('input[data-event-id]', form).forEach(input => {
+      const id = input.dataset.eventId;
+      if (!valores[id]) valores[id] = { pm: "", pv: "" };
+      valores[id][input.dataset.lado] = input.value;
+    });
+    localStorage.setItem(chave, JSON.stringify({
+      versao: 1,
+      hashServidor: hashServidorAtual(),
+      atualizadoEm: new Date().toISOString(),
+      valores
+    }));
+    state.draftDirty = true;
+  }
+
+  function limparRascunhoBloco() {
+    const chave = chaveRascunhoBloco();
+    if (chave) localStorage.removeItem(chave);
+    state.draftDirty = false;
+    state.draftRestaurado = false;
+  }
+
+  function confirmarDescarteRascunho() {
+    if (!state.draftDirty) return true;
+    return confirmarAcao("Existem alterações locais ainda não salvas. Deseja descartá-las e continuar?");
+  }
+
+  function valoresAtuaisFormularioBloco() {
+    const valores = {};
+    const form = $("#form-palpites-bloco");
+    if (!form) return valores;
+    $$('input[data-event-id]', form).forEach(input => {
+      const id = input.dataset.eventId;
+      if (!valores[id]) valores[id] = { pm: "", pv: "" };
+      valores[id][input.dataset.lado] = input.value;
+    });
+    return valores;
+  }
+
+  function contarPreenchidosBloco() {
+    const valores = valoresAtuaisFormularioBloco();
+    const preenchidos = new Set(
+      (state.meusPalpites || []).map(p => String(p.event_id || "")).filter(Boolean)
+    );
+    Object.entries(valores).forEach(([eventId, valor]) => {
+      if (valor.pm !== "" && valor.pv !== "") preenchidos.add(String(eventId));
+    });
+    return Math.min(30, preenchidos.size);
+  }
+
+  function atualizarProgressoFormularioBloco() {
+    const preenchidos = contarPreenchidosBloco();
+    const faltantes = Math.max(0, 30 - preenchidos);
+    $$("[data-progresso-bloco]").forEach(el => { el.textContent = `${preenchidos}/30 preenchidos`; });
+    $$("[data-faltantes-bloco]").forEach(el => { el.textContent = faltantes ? `Faltam ${faltantes}` : "Bloco completo"; });
+    const barra = $("#barra-progresso-bloco");
+    if (barra) barra.style.width = `${Math.min(100, (preenchidos / 30) * 100)}%`;
+    const btn = $("#salvar-palpites-bloco");
+    const btnFixo = $("#salvar-palpites-bloco-fixo");
+    [btn, btnFixo].filter(Boolean).forEach(b => { b.disabled = state.salvandoPalpites || !rodadaAberta(state.rodada) || preenchidos === 0; });
+  }
+
+  function restaurarValoresServidorBloco() {
+    const form = $("#form-palpites-bloco");
+    if (!form) return;
+    $$('input[data-event-id]', form).forEach(input => {
+      const salvo = palpiteSalvoPara(input.dataset.eventId);
+      input.value = input.dataset.lado === "pm" ? (salvo?.placar_mandante ?? "") : (salvo?.placar_visitante ?? "");
+    });
+    limparRascunhoBloco();
+    atualizarProgressoFormularioBloco();
+    toast("Alterações locais descartadas. Os palpites salvos foram restaurados.", "ok");
   }
 
   function jogoTemResultadoFinal(jogo) {
@@ -875,11 +1104,12 @@
   }
 
   function renderResumo() {
-    const jogos = jogosDaRodada(state.rodada);
+    const jogos = jogosDoContexto();
     const st = statusJanela(state.rodada);
     const salvos = state.meusPalpites.length;
-    const pct = jogos.length ? Math.round((salvos / jogos.length) * 100) : 0;
-    $("#numero-rodada").textContent = state.rodada;
+    const totalEsperado = contextoEhBloco() ? 30 : jogos.length;
+    const pct = totalEsperado ? Math.round((salvos / totalEsperado) * 100) : 0;
+    $("#numero-rodada").textContent = contextoEhBloco() ? contextoLabel().replace("Bloco ", "") : state.rodada;
     $("#total-jogos").textContent = jogos.length;
     $("#texto-janela").textContent = st.texto;
     const badge = $("#badge-janela");
@@ -887,6 +1117,12 @@
     badge.className = `badge ${st.classe}`;
     $("#meu-percentual").textContent = `${pct}%`;
     $("#meu-total-salvo").textContent = salvos;
+    const labelRodada = $("#resumo-contexto-label");
+    if (labelRodada) labelRodada.textContent = contextoEhBloco() ? "Bloco selecionado" : "Rodada selecionada";
+    const labelJanela = $("#resumo-janela-label");
+    if (labelJanela) labelJanela.textContent = contextoEhBloco() ? "Janela do bloco" : "Janela da rodada";
+    const labelPreenchimento = $("#resumo-preenchimento-texto");
+    if (labelPreenchimento) labelPreenchimento.textContent = contextoEhBloco() ? "palpites salvos neste bloco." : "palpites salvos nesta rodada.";
   }
 
   function renderRodadas() {
@@ -896,21 +1132,24 @@
     const titulo = $("#controle-titulo");
     const descricao = $("#controle-descricao");
     if (!tabs) return;
-    const manual = Number(state.rodada) !== Number(state.rodadaAutomatica);
-    tabs.innerHTML = state.rodadas.map(r => {
-      const active = Number(r) === Number(state.rodada);
-      const current = Number(r) === Number(state.rodadaAutomatica);
-      return `<button type="button" class="${active ? "active" : ""} ${current ? "current" : ""}" data-rodada="${r}" role="tab" aria-selected="${active}" aria-label="Rodada ${r}${current ? ", rodada atual" : ""}">R${r}${current ? `<span class="current-dot" aria-hidden="true"></span>` : ""}</button>`;
+    const manual = !mesmoContextoRodadas(state.rodada, state.rodadaAutomatica);
+    const itens = [{ inicio: 20, fim: 20, nome: "R20" }, ...BLOCOS_3_RODADAS];
+    tabs.innerHTML = itens.map(item => {
+      const active = item.inicio === 20 ? Number(state.rodada) === 20 : Number(state.rodada) >= item.inicio && Number(state.rodada) <= item.fim;
+      const current = item.inicio === 20 ? Number(state.rodadaAutomatica) === 20 : Number(state.rodadaAutomatica) >= item.inicio && Number(state.rodadaAutomatica) <= item.fim;
+      const label = item.inicio === 20 ? "R20" : `${item.inicio}–${item.fim}`;
+      return `<button type="button" class="${active ? "active" : ""} ${current ? "current" : ""}" data-rodada="${item.inicio}" role="tab" aria-selected="${active}" aria-label="${item.inicio === 20 ? "Rodada 20" : `Bloco das rodadas ${item.inicio} a ${item.fim}`}${current ? ", contexto atual" : ""}">${label}${current ? `<span class="current-dot" aria-hidden="true"></span>` : ""}</button>`;
     }).join("");
     tabs.querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => trocarRodada(Number(btn.dataset.rodada), true)));
+    const atualLabel = contextoLabel(state.rodadaAutomatica);
     if (contexto) contexto.innerHTML = manual
-      ? `Consultando <strong>Rodada ${state.rodada}</strong> · atual automática: <strong>R${state.rodadaAutomatica}</strong>`
-      : `Rodada atual identificada automaticamente: <strong>R${state.rodadaAutomatica}</strong>`;
+      ? `Consultando <strong>${contextoLabel()}</strong> · atual automático: <strong>${atualLabel}</strong>`
+      : `Contexto atual identificado automaticamente: <strong>${atualLabel}</strong>`;
     if (voltar) voltar.hidden = !manual;
-    if (titulo) titulo.textContent = manual ? `Consultando rodada ${state.rodada}` : `Rodada atual: ${state.rodadaAutomatica}`;
+    if (titulo) titulo.textContent = manual ? `Consultando ${contextoLabel().toLowerCase()}` : `Atual: ${atualLabel}`;
     if (descricao) descricao.textContent = manual
-      ? "Você está consultando outra rodada. Use o botão ao lado para voltar ao contexto atual."
-      : "A rodada em andamento é escolhida automaticamente pelos jogos e resultados disponíveis.";
+      ? "Você está consultando outro contexto. Use o botão ao lado para voltar ao bloco atual."
+      : "O sistema escolhe automaticamente a rodada 20 ou o bloco de três rodadas adequado.";
   }
 
   function renderUsuario() {
@@ -918,7 +1157,10 @@
     if (!state.usuario) { chip.hidden = true; return; }
     chip.hidden = false;
     chip.innerHTML = `${canAdminAny() ? "🛠️ " : "👤 "}${escapeHtml(state.usuario.nome)}<br><small>${escapeHtml(nomeLigaAtual())} · ${escapeHtml(adminPerfilTexto())}</small><br><button class="btn ghost" type="button" id="sair">sair</button>`;
-    $("#sair")?.addEventListener("click", () => { clearSession(); renderLogin(); status("Sessão encerrada.", "warn"); });
+    $("#sair")?.addEventListener("click", () => {
+      if (!confirmarDescarteRascunho()) return;
+      clearSession(); renderLogin(); status("Sessão encerrada.", "warn");
+    });
     $$(".admin-only").forEach(el => { el.hidden = !canAdminAny(); });
   }
 
@@ -932,120 +1174,203 @@
     renderUsuario();
   }
 
-  function renderApostas() {
+  function renderApostasRodadaLegado() {
     const root = $("#conteudo");
     const jogos = jogosDaRodada(state.rodada);
     const aberta = rodadaAberta(state.rodada);
     const st = statusJanela(state.rodada);
     if (!jogos.length) {
-      root.innerHTML = `<section class="panel"><div class="panel-inner empty"><strong>Rodada ${state.rodada} ainda sem jogos no JSON.</strong><p>Quando o workflow ESPN trouxer a tabela da rodada, os confrontos aparecem aqui. O admin já pode configurar a janela.</p></div></section>`;
+      root.innerHTML = `<section class="panel"><div class="panel-inner empty"><strong>Rodada ${state.rodada} ainda sem jogos no JSON.</strong><p>Quando o workflow ESPN trouxer a tabela da rodada, os confrontos aparecem aqui.</p></div></section>`;
       return;
     }
-    const aviso = aberta ?
-      `<div class="status ok">Janela aberta. Você pode salvar ou alterar seus palpites até o fechamento.</div>` :
-      `<div class="status warn">${st.texto}. ${st.detalhe}. Os campos ficam bloqueados fora da janela.</div>`;
+    const aviso = aberta
+      ? `<div class="status ok">Janela aberta. Você pode salvar ou alterar seus palpites até o fechamento.</div>`
+      : `<div class="status warn">${st.texto}. ${st.detalhe}. Os campos ficam bloqueados fora da janela.</div>`;
     root.innerHTML = `${aviso}<form id="form-palpites" class="matches">${jogos.map(j => {
       const id = jogoId(j);
       const salvo = palpiteSalvoPara(id);
-      return `<article class="match-card" data-event-id="${id}">
+      return `<article class="match-card" data-event-id="${escapeAttr(id)}">
         <div class="match-top"><span>Rodada ${j.rodada} · ${fmtData(j.data_iso)}</span><span class="badge ${aberta ? "open" : "lock"}">${aberta ? "aberto" : "travado"}</span></div>
-        <div class="match-body">
-          ${htmlTeam(j.mandante, "home")}
-          <div class="score-inputs">
-            <input name="pm-${id}" type="number" inputmode="numeric" min="0" max="30" value="${salvo?.placar_mandante ?? ""}" ${aberta ? "" : "disabled"} aria-label="Placar ${timeNome(j.mandante)}">
-            <span>x</span>
-            <input name="pv-${id}" type="number" inputmode="numeric" min="0" max="30" value="${salvo?.placar_visitante ?? ""}" ${aberta ? "" : "disabled"} aria-label="Placar ${timeNome(j.visitante)}">
-          </div>
-          ${htmlTeam(j.visitante, "away")}
-        </div>
-        <div class="match-extra">
-          <span class="badge info">${j.estadio || "estádio a confirmar"}</span>
-          ${salvo ? `<span class="badge open saved-pill">salvo ${fmtDataLonga(salvo.atualizado_em || salvo.criado_em)}</span>` : `<span class="badge">não salvo</span>`}
-        </div>
+        <div class="match-body">${htmlTeam(j.mandante, "home")}<div class="score-inputs">
+          <input name="pm-${escapeAttr(id)}" type="number" inputmode="numeric" min="0" max="30" value="${salvo?.placar_mandante ?? ""}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.mandante))}"><span>x</span>
+          <input name="pv-${escapeAttr(id)}" type="number" inputmode="numeric" min="0" max="30" value="${salvo?.placar_visitante ?? ""}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.visitante))}">
+        </div>${htmlTeam(j.visitante, "away")}</div>
+        <div class="match-extra"><span class="badge info">${escapeHtml(j.estadio || "estádio a confirmar")}</span>${salvo ? `<span class="badge open saved-pill">salvo ${fmtDataLonga(salvo.atualizado_em || salvo.criado_em)}</span>` : `<span class="badge">não salvo</span>`}</div>
       </article>`;
-    }).join("")}
-    <div class="actions"><button class="btn" type="submit" ${aberta ? "" : "disabled"}>💾 Salvar palpites da rodada</button><button class="btn secondary" type="button" id="limpar-campos" ${aberta ? "" : "disabled"}>limpar campos</button></div>
-    </form>`;
-    $("#form-palpites")?.addEventListener("submit", salvarPalpites);
+    }).join("")}<div class="actions"><button class="btn" type="submit" ${aberta ? "" : "disabled"}>💾 Salvar palpites da rodada</button><button class="btn secondary" type="button" id="limpar-campos" ${aberta ? "" : "disabled"}>limpar campos</button></div></form>`;
+    $("#form-palpites")?.addEventListener("submit", salvarPalpitesRodadaLegado);
     $("#limpar-campos")?.addEventListener("click", () => {
       if (!confirmarAcao("Limpar os placares preenchidos nesta tela? Nenhum dado já salvo será apagado.")) return;
       $$("#form-palpites input").forEach(i => { i.value = ""; });
-      status("Campos da tela limpos. Nenhum palpite salvo foi apagado.", "ok");
       toast("Campos limpos. Os palpites já salvos foram preservados.", "ok");
     });
   }
 
-  function coletarPalpitesFormulario() {
-    const jogos = jogosDaRodada(state.rodada);
+  function coletarPalpitesRodadaLegado() {
     const payload = [];
-    for (const j of jogos) {
+    for (const j of jogosDaRodada(state.rodada)) {
       const id = jogoId(j);
       const pmEl = $(`[name="pm-${CSS.escape(id)}"]`);
       const pvEl = $(`[name="pv-${CSS.escape(id)}"]`);
       const pm = pmEl?.value === "" ? null : Number(pmEl?.value);
       const pv = pvEl?.value === "" ? null : Number(pvEl?.value);
       if (pm === null && pv === null) continue;
-      if (!Number.isInteger(pm) || !Number.isInteger(pv) || pm < 0 || pv < 0 || pm > 30 || pv > 30) {
-        throw new Error(`Placar inválido em ${timeNome(j.mandante)} x ${timeNome(j.visitante)}.`);
-      }
-      payload.push({
-        event_id: id,
-        jogo_chave: jogoChave(j),
-        mandante: timeNome(j.mandante),
-        visitante: timeNome(j.visitante),
-        placar_mandante: pm,
-        placar_visitante: pv,
-        kickoff: j.data_iso || null,
-        fecha_em: configEfetiva(state.rodada).fecha_em
-      });
+      if (!Number.isInteger(pm) || !Number.isInteger(pv) || pm < 0 || pv < 0 || pm > 30 || pv > 30) throw new Error(`Placar inválido em ${timeNome(j.mandante)} x ${timeNome(j.visitante)}.`);
+      payload.push({ event_id: id, jogo_chave: jogoChave(j), mandante: timeNome(j.mandante), visitante: timeNome(j.visitante), placar_mandante: pm, placar_visitante: pv, kickoff: j.data_iso || null, fecha_em: configEfetiva(state.rodada).fecha_em });
     }
     return payload;
   }
 
-  async function salvarPalpites(ev) {
+  async function salvarPalpitesRodadaLegado(ev) {
     ev.preventDefault();
     try {
       if (!rodadaAberta(state.rodada)) throw new Error("Rodada fora da janela de apostas.");
-      const payload = coletarPalpitesFormulario();
+      const payload = coletarPalpitesRodadaLegado();
       if (!payload.length) throw new Error("Preencha ao menos um placar antes de salvar.");
       status("Salvando palpites com hash de comprovante...", "warn");
-      const rows = await rpcRows("br_salvar_palpites", {
-        p_participante_id: state.usuario.id,
-        p_token: state.token,
-        p_temporada: CFG.temporada || 2026,
-        p_rodada: state.rodada,
-        p_palpites: payload
-      });
+      const rows = await rpcRows("br_salvar_palpites", { p_participante_id: state.usuario.id, p_token: state.token, p_temporada: CFG.temporada || 2026, p_rodada: state.rodada, p_palpites: payload });
       const comprovante = rows[0] || {};
       await carregarMeusPalpites();
       renderResumo();
-      renderApostas();
-      const root = $("#conteudo");
-      root.insertAdjacentHTML("afterbegin", `<div class="comprovante"><strong>🧾 Comprovante gerado</strong><p>Rodada ${state.rodada} · ${payload.length} palpites enviados.</p><p class="hash">${comprovante.hash_fechamento || comprovante.hash || "hash indisponível"}</p></div>`);
+      renderApostasRodadaLegado();
+      $("#conteudo")?.insertAdjacentHTML("afterbegin", `<div class="comprovante"><strong>🧾 Comprovante gerado</strong><p>Rodada ${state.rodada} · ${payload.length} palpites enviados.</p><p class="hash">${escapeHtml(comprovante.hash_fechamento || comprovante.hash || "hash indisponível")}</p></div>`);
       status(`✅ PALPITES GRAVADOS COM SUCESSO! Comprovante da rodada ${state.rodada} gerado.`, "ok");
       toast(`Palpites da rodada ${state.rodada} salvos com sucesso.`, "ok");
     } catch (err) {
-      console.error(err);
-      status(err.message || "Falha ao salvar palpites.", "err");
-      toast(err.message || "Falha ao salvar palpites.", "err");
+      console.error(err); status(err.message || "Falha ao salvar palpites.", "err"); toast(err.message || "Falha ao salvar palpites.", "err");
     }
   }
 
-  function renderMeus() {
+  function valorCampoBloco(id, lado, rascunho) {
+    const valorDraft = rascunho?.valores?.[id]?.[lado];
+    if (valorDraft !== undefined) return valorDraft;
+    const salvo = palpiteSalvoPara(id);
+    return lado === "pm" ? (salvo?.placar_mandante ?? "") : (salvo?.placar_visitante ?? "");
+  }
+
+  function renderApostasBloco() {
     const root = $("#conteudo");
-    if (!state.meusPalpites.length) {
-      root.innerHTML = `<section class="panel"><div class="panel-inner empty">Você ainda não tem palpites salvos na rodada ${state.rodada}.</div></section>`;
+    const bloco = blocoDaRodada(state.rodada);
+    const jogos = jogosDoBloco(bloco);
+    const aberta = rodadaAberta(state.rodada);
+    const st = statusJanela(state.rodada);
+    if (!bloco?.bloco_id || !state.exec3InfraDisponivel) {
+      root.innerHTML = `<section class="panel"><div class="panel-inner empty"><strong>A infraestrutura das 30 partidas ainda não está ativa.</strong><p>Execute <code>supabase/brasileirao_apostas_exec19_apostas_blocos_30_partidas.sql</code> depois da Execução 2. Nenhum dado da rodada 20 foi alterado.</p></div></section>`;
       return;
     }
+    if (!jogos.length) {
+      root.innerHTML = `<section class="panel"><div class="panel-inner empty"><strong>${escapeHtml(bloco.nome)} ainda sem jogos no calendário.</strong><p>Os cards aparecerão assim que o workflow carregar as três rodadas.</p></div></section>`;
+      return;
+    }
+
+    const rascunho = lerRascunhoBloco();
+    state.draftRestaurado = Boolean(rascunho);
+    state.draftDirty = Boolean(rascunho);
+    const mobile = global.matchMedia?.("(max-width: 720px)")?.matches;
+    const totalSalvo = state.meusPalpites.length;
+    const avisoJanela = aberta
+      ? `<div class="status ok">Janela única aberta para as 30 partidas. Salve quantas quiser e complete o restante depois.</div>`
+      : `<div class="status warn">${st.texto}. ${st.detalhe}. Os 30 palpites ficam bloqueados juntos.</div>`;
+    const avisoRascunho = rascunho ? `<div class="draft-banner" role="status"><strong>📝 Rascunho local restaurado</strong><span>Alterações não enviadas foram recuperadas neste navegador.</span><button type="button" class="btn ghost" id="descartar-rascunho-topo">Descartar</button></div>` : "";
+    const avisoCobertura = jogos.length === 30 ? "" : `<div class="status warn"><strong>Calendário incompleto:</strong> ${jogos.length} de 30 partidas estão disponíveis. O progresso continua calculado sobre 30 e o jogo ausente aparecerá automaticamente quando o workflow atualizar o calendário.</div>`;
+    const filtros = ["todos", ...Array.from({length: 3}, (_, i) => String(Number(bloco.rodada_inicio) + i))];
+
+    root.innerHTML = `<section class="panel block-bet-hero"><div class="panel-inner">
+      <div class="block-bet-heading"><div><div class="kicker">Apostas do bloco</div><h2>${escapeHtml(bloco.nome)}</h2><p>Uma única trava e um único comprovante para as três rodadas.</p></div><div class="block-deadline"><span>Prazo</span><strong>${escapeHtml(st.detalhe)}</strong></div></div>
+      <div class="block-progress-line"><div class="block-progress-track"><span id="barra-progresso-bloco" style="width:${Math.min(100, (totalSalvo / 30) * 100)}%"></span></div><strong data-progresso-bloco>${totalSalvo}/30 preenchidos</strong><small data-faltantes-bloco>${totalSalvo === 30 ? "Bloco completo" : `Faltam ${30-totalSalvo}`}</small></div>
+      <div class="block-round-filter" role="tablist" aria-label="Filtrar partidas do bloco">${filtros.map(f => `<button type="button" class="${state.filtroRodadaBloco === f ? "active" : ""}" data-filtro-bloco="${f}" role="tab" aria-selected="${state.filtroRodadaBloco === f}">${f === "todos" ? "Todos os 30 jogos" : `Rodada ${f}`}</button>`).join("")}</div>
+    </div></section>${avisoJanela}${avisoCobertura}${avisoRascunho}
+    <form id="form-palpites-bloco" class="block-matches-form">${Array.from({length: 3}, (_, idx) => Number(bloco.rodada_inicio) + idx).map((rodada, idx) => {
+      const jogosRodada = jogosDaRodada(rodada);
+      const salvosRodada = state.meusPalpites.filter(p => Number(p.rodada) === rodada).length;
+      const visivel = state.filtroRodadaBloco === "todos" || state.filtroRodadaBloco === String(rodada);
+      const open = !mobile || state.filtroRodadaBloco !== "todos" || idx === 0;
+      return `<details class="round-bet-section" data-rodada-section="${rodada}" ${visivel ? "" : "hidden"} ${open ? "open" : ""}><summary><span><strong>Rodada ${rodada}</strong><small>${salvosRodada}/10 salvos</small></span><span class="round-section-chevron" aria-hidden="true">⌄</span></summary><div class="round-bet-content"><div class="matches">${jogosRodada.map(j => {
+        const id = jogoId(j); const salvo = palpiteSalvoPara(id);
+        const pm = valorCampoBloco(id, "pm", rascunho); const pv = valorCampoBloco(id, "pv", rascunho);
+        return `<article class="match-card" data-event-id="${escapeAttr(id)}"><div class="match-top"><span>Rodada ${rodada} · ${fmtData(j.data_iso)}</span><span class="badge ${aberta ? "open" : "lock"}">${aberta ? "aberto" : "travado"}</span></div><div class="match-body">${htmlTeam(j.mandante, "home")}<div class="score-inputs"><input data-event-id="${escapeAttr(id)}" data-lado="pm" type="number" inputmode="numeric" min="0" max="30" value="${escapeAttr(pm)}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.mandante))}"><span>x</span><input data-event-id="${escapeAttr(id)}" data-lado="pv" type="number" inputmode="numeric" min="0" max="30" value="${escapeAttr(pv)}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.visitante))}"></div>${htmlTeam(j.visitante, "away")}</div><div class="match-extra"><span class="badge info">${escapeHtml(j.estadio || "estádio a confirmar")}</span>${salvo ? `<span class="badge open saved-pill">salvo ${fmtDataLonga(salvo.atualizado_em || salvo.criado_em)}</span>` : `<span class="badge">não salvo</span>`}</div></article>`;
+      }).join("") || `<div class="empty">Jogos da rodada ${rodada} ainda não carregados.</div>`}</div></div></details>`;
+    }).join("")}
+      <div class="block-form-actions"><button class="btn" type="submit" id="salvar-palpites-bloco" ${aberta ? "" : "disabled"}>💾 Salvar palpites preenchidos</button><button class="btn secondary" type="button" id="restaurar-servidor-bloco">Descartar alterações locais</button><span class="muted-note">O salvamento é progressivo: palpites omitidos permanecem como estavam.</span></div>
+    </form>
+    <div class="mobile-save-bar" id="mobile-save-bar"><div><strong data-progresso-bloco>${totalSalvo}/30 preenchidos</strong><small data-faltantes-bloco>${totalSalvo === 30 ? "Bloco completo" : `Faltam ${30-totalSalvo}`}</small></div><button class="btn" type="button" id="salvar-palpites-bloco-fixo" ${aberta ? "" : "disabled"}>Salvar palpites</button></div>`;
+
+    $$('[data-filtro-bloco]').forEach(btn => btn.addEventListener("click", () => {
+      state.filtroRodadaBloco = btn.dataset.filtroBloco;
+      renderApostasBloco();
+      global.scrollTo({ top: $("#conteudo")?.offsetTop || 0, behavior: "smooth" });
+    }));
+    const form = $("#form-palpites-bloco");
+    form?.addEventListener("submit", salvarPalpitesBloco);
+    $$('input[data-event-id]', form).forEach(input => input.addEventListener("input", () => { salvarRascunhoBloco(); atualizarProgressoFormularioBloco(); }));
+    $("#salvar-palpites-bloco-fixo")?.addEventListener("click", () => form?.requestSubmit());
+    $("#restaurar-servidor-bloco")?.addEventListener("click", () => { if (confirmarAcao("Descartar as alterações locais e restaurar os palpites já salvos?")) restaurarValoresServidorBloco(); });
+    $("#descartar-rascunho-topo")?.addEventListener("click", restaurarValoresServidorBloco);
+    atualizarProgressoFormularioBloco();
+  }
+
+  function coletarPalpitesBloco() {
+    const bloco = blocoDaRodada(state.rodada);
+    const valores = valoresAtuaisFormularioBloco();
+    const payload = [];
+    for (const j of jogosDoBloco(bloco)) {
+      const id = jogoId(j); const v = valores[id] || { pm: "", pv: "" };
+      if (v.pm === "" && v.pv === "") continue;
+      const pm = Number(v.pm), pv = Number(v.pv);
+      if (!Number.isInteger(pm) || !Number.isInteger(pv) || pm < 0 || pv < 0 || pm > 30 || pv > 30) throw new Error(`Placar inválido em ${timeNome(j.mandante)} x ${timeNome(j.visitante)}.`);
+      payload.push({ rodada: Number(j.rodada), event_id: id, jogo_chave: jogoChave(j), mandante: timeNome(j.mandante), visitante: timeNome(j.visitante), placar_mandante: pm, placar_visitante: pv, kickoff: j.data_iso || null });
+    }
+    return payload;
+  }
+
+  async function salvarPalpitesBloco(ev) {
+    ev.preventDefault();
+    if (state.salvandoPalpites) return;
+    const bloco = blocoDaRodada(state.rodada);
+    try {
+      if (!bloco?.bloco_id || !state.exec3InfraDisponivel) throw new Error("A infraestrutura da Execução 3 ainda não está ativa.");
+      if (!rodadaAberta(state.rodada)) throw new Error("Bloco fora da janela de apostas.");
+      const payload = coletarPalpitesBloco();
+      if (!payload.length) throw new Error("Preencha ao menos um placar antes de salvar.");
+      state.salvandoPalpites = true; atualizarProgressoFormularioBloco();
+      $$("#salvar-palpites-bloco, #salvar-palpites-bloco-fixo").forEach(b => { b.textContent = "Salvando…"; });
+      status(`Salvando ${payload.length} palpites e recalculando o comprovante do bloco...`, "warn");
+      const rows = await rpcRows("br_salvar_palpites_bloco_v1", { p_participante_id: state.usuario.id, p_token: state.token, p_temporada: CFG.temporada || 2026, p_bloco_id: bloco.bloco_id, p_palpites: payload });
+      const comprovante = rows[0] || {};
+      limparRascunhoBloco();
+      await carregarMeusPalpites();
+      renderResumo(); renderApostasBloco();
+      const faltantes = Number(comprovante.faltantes ?? Math.max(0, 30 - Number(comprovante.total_palpites || 0)));
+      $("#conteudo")?.insertAdjacentHTML("afterbegin", `<div class="comprovante block-receipt-inline"><strong>🧾 Comprovante do ${escapeHtml(bloco.nome)}</strong><p>${escapeHtml(String(comprovante.total_palpites || 0))} palpites persistidos${faltantes ? ` · ainda faltam ${faltantes}` : " · bloco completo"}.</p><p class="hash">${escapeHtml(comprovante.hash_bloco || "hash indisponível")}</p></div>`);
+      const msg = faltantes ? `${comprovante.total_palpites} palpites salvos. Ainda faltam ${faltantes} partidas.` : `Todos os 30 palpites do ${bloco.nome} foram salvos.`;
+      status(`✅ ${msg}`, "ok"); toast(msg, "ok");
+    } catch (err) {
+      console.error(err); status(err.message || "Falha ao salvar o bloco.", "err"); toast(err.message || "Falha ao salvar o bloco.", "err");
+    } finally {
+      state.salvandoPalpites = false; atualizarProgressoFormularioBloco();
+    }
+  }
+
+  function renderApostas() {
+    return contextoEhBloco() ? renderApostasBloco() : renderApostasRodadaLegado();
+  }
+
+  function renderMeusRodadaLegado() {
+    const root = $("#conteudo");
+    if (!state.meusPalpites.length) { root.innerHTML = `<section class="panel"><div class="panel-inner empty">Você ainda não tem palpites salvos na rodada ${state.rodada}.</div></section>`; return; }
     const hash = state.meusPalpites.find(p => p.hash_fechamento)?.hash_fechamento || "—";
-    root.innerHTML = `<section class="panel"><div class="panel-inner">
-      <div class="kicker">Meus palpites</div><h2>Rodada ${state.rodada}</h2>
-      <p>Você pode consultar seus próprios palpites a qualquer momento. Os palpites dos outros só aparecem após a publicação da rodada.</p>
-      <div class="comprovante"><strong>Hash atual da rodada</strong><p class="hash">${hash}</p></div>
-      <div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Jogo</th><th>Meu palpite</th><th>Atualizado</th></tr></thead><tbody>
-      ${state.meusPalpites.map(p => `<tr><td>${p.mandante} x ${p.visitante}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td>${fmtDataLonga(p.atualizado_em || p.criado_em)}</td></tr>`).join("")}
-      </tbody></table></div>
-    </div></section>`;
+    root.innerHTML = `<section class="panel"><div class="panel-inner"><div class="kicker">Meus palpites</div><h2>Rodada ${state.rodada}</h2><p>Você pode consultar seus próprios palpites a qualquer momento.</p><div class="comprovante"><strong>Hash atual da rodada</strong><p class="hash">${escapeHtml(hash)}</p></div><div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Jogo</th><th>Meu palpite</th><th>Atualizado</th></tr></thead><tbody>${state.meusPalpites.map(p => `<tr><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td>${fmtDataLonga(p.atualizado_em || p.criado_em)}</td></tr>`).join("")}</tbody></table></div></div></section>`;
+  }
+
+  function renderMeusBloco() {
+    const root = $("#conteudo"); const bloco = blocoDaRodada(state.rodada); const c = state.comprovanteBloco;
+    if (!state.exec3InfraDisponivel) { root.innerHTML = `<section class="panel"><div class="panel-inner empty">A consulta de comprovantes do bloco será liberada após a migração da Execução 3.</div></section>`; return; }
+    if (!state.meusPalpites.length) { root.innerHTML = `<section class="panel"><div class="panel-inner empty"><strong>Nenhum palpite salvo no ${escapeHtml(bloco.nome)}.</strong><p>O comprovante único será criado no primeiro salvamento.</p></div></section>`; return; }
+    root.innerHTML = `<section class="panel"><div class="panel-inner"><div class="kicker">Meu comprovante</div><h2>${escapeHtml(bloco.nome)}</h2><p>O hash representa o conjunto completo atualmente persistido nas três rodadas.</p><div class="receipt-grid"><div><span>Palpites</span><strong>${c?.total_palpites ?? state.meusPalpites.length}/30</strong></div><div><span>Última atualização</span><strong>${fmtDataLonga(c?.atualizado_em || state.meusPalpites[0]?.atualizado_em)}</strong></div><div class="receipt-hash"><span>SHA-256 do bloco</span><code>${escapeHtml(c?.hash_bloco || state.meusPalpites[0]?.hash_bloco || "—")}</code></div></div></div></section>${Array.from({length:3},(_,i)=>Number(bloco.rodada_inicio)+i).map(r => { const lista=state.meusPalpites.filter(p=>Number(p.rodada)===r); return `<details class="panel receipt-round" open><summary><strong>Rodada ${r}</strong><span>${lista.length}/10 palpites</span></summary><div class="panel-inner"><div class="table-wrap"><table class="data-table"><thead><tr><th>Jogo</th><th>Meu palpite</th><th>Atualizado</th></tr></thead><tbody>${lista.map(p=>`<tr><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td>${fmtDataLonga(p.atualizado_em || p.criado_em)}</td></tr>`).join("") || `<tr><td colspan="3">Nenhum palpite salvo nesta rodada.</td></tr>`}</tbody></table></div></div></details>`; }).join("")}`;
+  }
+
+  function renderMeus() {
+    return contextoEhBloco() ? renderMeusBloco() : renderMeusRodadaLegado();
   }
 
   function apuracaoRodada(rodada) {
@@ -1210,36 +1535,35 @@
     return "";
   }
 
-  async function renderPublico() {
-    await carregarPublicos();
+  function renderPublicoRodadaLegado() {
     const root = $("#conteudo");
     const ap = apuracaoRodada(state.rodada);
     const pontosMap = mapaPontosRodada(state.rodada);
     if (!rodadaPublica(state.rodada) && !state.publicos.length) {
-      root.innerHTML = `<section class="panel"><div class="panel-inner empty"><strong>Palpites ainda sigilosos.</strong><p>A rodada ${state.rodada} só abre para todos após o fechamento/publicação feita pelo administrador.</p></div></section>`;
+      root.innerHTML = `<section class="panel"><div class="panel-inner empty"><strong>Palpites ainda sigilosos.</strong><p>A rodada ${state.rodada} só abre para todos após o fechamento/publicação.</p></div></section>`;
       return;
     }
-    if (!state.publicos.length) {
-      root.innerHTML = `<section class="panel"><div class="panel-inner empty">Nenhum palpite público encontrado para a rodada ${state.rodada}.</div></section>`;
-      return;
-    }
+    if (!state.publicos.length) { root.innerHTML = `<section class="panel"><div class="panel-inner empty">Nenhum palpite público encontrado para a rodada ${state.rodada}.</div></section>`; return; }
     const apConfiavel = ap && !ap.sigilosa && apuracaoRodadaConfiavel(ap);
     const jogosApurados = apConfiavel ? Number(ap.jogos_apurados || 0) : 0;
-    root.innerHTML = `<section class="panel"><div class="panel-inner">
-      <div class="kicker">Palpites públicos</div><h2>Rodada ${state.rodada} · ${escapeHtml(nomeLigaAtual())}</h2>
-      <p>Lista aberta após publicação da rodada. Quando a apuração já estiver disponível, a tabela mostra pontos e tipo de acerto jogo a jogo.</p>
-      ${jogosApurados > 0 ? `<div class="status ok">Apuração publicada · ${jogosApurados} jogos encerrados e apurados.</div>` : `<div class="status warn">Palpites publicados; a pontuação aparecerá somente após o encerramento dos jogos.</div>`}
-      <div class="export-row"><button class="btn secondary" type="button" id="export-publicos">⬇️ Exportar palpites CSV</button></div>
-      <div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Participante</th><th>Jogo</th><th>Palpite</th><th>Pontos</th><th>Tipo</th><th>Hash</th></tr></thead><tbody>
-        ${state.publicos.map(p => {
-          const det = (p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`))
-            || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`)
-            || {};
-          return `<tr><td>${escapeHtml(p.membro)}</td><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td class="num ${pontosClasse(det.pontos)}">${det.pontos ?? "—"}</td><td>${escapeHtml(tipoLabel(det.tipo))}</td><td class="hash">${escapeHtml(p.hash_fechamento || "—")}</td></tr>`;
-        }).join("")}
-      </tbody></table></div>
-    </div></section>`;
+    root.innerHTML = `<section class="panel"><div class="panel-inner"><div class="kicker">Palpites públicos</div><h2>Rodada ${state.rodada} · ${escapeHtml(nomeLigaAtual())}</h2><p>Lista aberta após a publicação da rodada.</p>${jogosApurados > 0 ? `<div class="status ok">Apuração publicada · ${jogosApurados} jogos encerrados e apurados.</div>` : `<div class="status warn">Palpites publicados; a pontuação aparecerá após o encerramento dos jogos.</div>`}<div class="export-row"><button class="btn secondary" type="button" id="export-publicos">⬇️ Exportar palpites CSV</button></div><div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Participante</th><th>Jogo</th><th>Palpite</th><th>Pontos</th><th>Tipo</th><th>Hash</th></tr></thead><tbody>${state.publicos.map(p => { const det=(p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`)) || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`) || {}; return `<tr><td>${escapeHtml(p.membro)}</td><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td class="num ${pontosClasse(det.pontos)}">${det.pontos ?? "—"}</td><td>${escapeHtml(tipoLabel(det.tipo))}</td><td class="hash">${escapeHtml(p.hash_fechamento || "—")}</td></tr>`; }).join("")}</tbody></table></div></div></section>`;
     $("#export-publicos")?.addEventListener("click", exportarPublicosCsv);
+  }
+
+  function renderPublicoBloco() {
+    const root = $("#conteudo"); const bloco = blocoDaRodada(state.rodada);
+    if (!state.exec3InfraDisponivel) { root.innerHTML = `<section class="panel"><div class="panel-inner empty">A visualização pública por bloco será liberada após a migração da Execução 3.</div></section>`; return; }
+    const filtros = ["bloco", ...Array.from({length:3},(_,i)=>String(Number(bloco.rodada_inicio)+i))];
+    const lista = state.publicoFiltro === "bloco" ? state.publicos : state.publicos.filter(p => Number(p.rodada) === Number(state.publicoFiltro));
+    const rodadasPublicadas = Array.from(new Set(state.publicos.map(p => Number(p.rodada)))).sort((a,b)=>a-b);
+    root.innerHTML = `<section class="panel"><div class="panel-inner"><div class="kicker">Palpites públicos</div><h2>${escapeHtml(bloco.nome)} · ${escapeHtml(nomeLigaAtual())}</h2><p>Você pode consultar o bloco completo ou isolar uma das rodadas já publicadas. Rodadas ainda sigilosas não são retornadas pelo banco.</p><div class="block-round-filter public-filter" role="tablist">${filtros.map(f => `<button type="button" data-publico-filtro="${f}" class="${state.publicoFiltro===f ? "active" : ""}" role="tab" aria-selected="${state.publicoFiltro===f}">${f === "bloco" ? "Bloco completo" : `Rodada ${f}`}</button>`).join("")}</div>${rodadasPublicadas.length ? `<div class="status ok">Rodadas públicas neste bloco: ${rodadasPublicadas.join(", ")}.</div>` : `<div class="status warn">Os palpites continuam sigilosos. Nenhuma rodada do bloco foi publicada.</div>`}<div class="export-row"><button class="btn secondary" type="button" id="export-publicos" ${lista.length ? "" : "disabled"}>⬇️ Exportar visão atual CSV</button></div>${lista.length ? `<div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Rodada</th><th>Participante</th><th>Jogo</th><th>Palpite</th><th>Pontos</th><th>Tipo</th><th>Hash do bloco</th></tr></thead><tbody>${lista.map(p => { const pontosMap=mapaPontosRodada(p.rodada); const det=(p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`)) || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`) || {}; return `<tr><td>R${p.rodada}</td><td>${escapeHtml(p.membro)}</td><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td class="num ${pontosClasse(det.pontos)}">${det.pontos ?? "—"}</td><td>${escapeHtml(tipoLabel(det.tipo))}</td><td class="hash">${escapeHtml(p.hash_bloco || "—")}</td></tr>`; }).join("")}</tbody></table></div>` : `<div class="empty">Nenhum palpite disponível nesta visão.</div>`}</div></section>`;
+    $$('[data-publico-filtro]').forEach(btn => btn.addEventListener("click", () => { state.publicoFiltro=btn.dataset.publicoFiltro; renderPublicoBloco(); }));
+    $("#export-publicos")?.addEventListener("click", exportarPublicosCsv);
+  }
+
+  async function renderPublico() {
+    await carregarPublicos();
+    return contextoEhBloco() ? renderPublicoBloco() : renderPublicoRodadaLegado();
   }
 
   async function carregarAdmin() {
@@ -1375,13 +1699,16 @@
   }
 
   function exportarPublicosCsv() {
-    const pontosMap = mapaPontosRodada(state.rodada);
-    const linhas = [["liga", "rodada", "participante", "jogo", "palpite", "pontos", "tipo", "hash", "atualizado_em"]];
-    state.publicos.forEach(p => {
-      const det = pontosMap.get(`${p.membro || ""}::${p.event_id || ""}`) || {};
-      linhas.push([nomeLigaAtual(), state.rodada, p.membro, `${p.mandante} x ${p.visitante}`, `${p.placar_mandante} x ${p.placar_visitante}`, det.pontos ?? "", tipoLabel(det.tipo), p.hash_fechamento || "", p.atualizado_em || ""]);
+    const linhas = [["liga", "contexto", "rodada", "participante", "jogo", "palpite", "pontos", "tipo", "hash", "atualizado_em"]];
+    const lista = contextoEhBloco() && state.publicoFiltro !== "bloco" ? state.publicos.filter(p => Number(p.rodada) === Number(state.publicoFiltro)) : state.publicos;
+    lista.forEach(p => {
+      const rodada = Number(p.rodada || state.rodada);
+      const pontosMap = mapaPontosRodada(rodada);
+      const det = (p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`)) || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`) || {};
+      linhas.push([nomeLigaAtual(), contextoLabel(), rodada, p.membro, `${p.mandante} x ${p.visitante}`, `${p.placar_mandante} x ${p.placar_visitante}`, det.pontos ?? "", tipoLabel(det.tipo), p.hash_bloco || p.hash_fechamento || "", p.atualizado_em || ""]);
     });
-    baixarCsv(`palpites-publicos-${ligaSlugAtual()}-rodada-${state.rodada}.csv`, linhas);
+    const sufixo = contextoEhBloco() ? `${blocoDaRodada(state.rodada).rodada_inicio}-${blocoDaRodada(state.rodada).rodada_fim}-${state.publicoFiltro}` : `rodada-${state.rodada}`;
+    baixarCsv(`palpites-publicos-${ligaSlugAtual()}-${sufixo}.csv`, linhas);
   }
 
   function exportarAuditoriaCsv() {
@@ -2151,20 +2478,29 @@
   }
 
   async function trocarRodada(rodada, manual = true) {
-    state.rodada = Number(rodada);
+    const destino = Number(rodada);
+    if (!mesmoContextoRodadas(destino, state.rodada) && !confirmarDescarteRascunho()) return;
+    if (!mesmoContextoRodadas(destino, state.rodada)) limparRascunhoBloco();
+    state.rodada = destino;
+    state.filtroRodadaBloco = "todos";
+    state.publicoFiltro = "bloco";
     if (isAdminGlobal() && Number(state.rodada) >= 21) {
       const bloco = blocoDaRodada(state.rodada);
-      if (bloco) state.blocoAdminSelecionado = bloco.bloco_id;
+      if (bloco?.bloco_id) state.blocoAdminSelecionado = bloco.bloco_id;
     }
-    state.rodadaEscolhidaManualmente = Boolean(manual && Number(state.rodada) !== Number(state.rodadaAutomatica));
+    state.rodadaEscolhidaManualmente = Boolean(manual && !mesmoContextoRodadas(state.rodada, state.rodadaAutomatica));
     await refresh();
   }
 
   async function voltarRodadaAtual() {
+    if (!mesmoContextoRodadas(state.rodadaAutomatica, state.rodada) && !confirmarDescarteRascunho()) return;
+    if (!mesmoContextoRodadas(state.rodadaAutomatica, state.rodada)) limparRascunhoBloco();
     state.rodadaEscolhidaManualmente = false;
+    state.filtroRodadaBloco = "todos";
+    state.publicoFiltro = "bloco";
     resolverRodadaAutomatica(true);
     await refresh();
-    toast(`Você voltou para a rodada atual: R${state.rodadaAutomatica}.`, "ok");
+    toast(`Você voltou para ${contextoLabel(state.rodadaAutomatica)}.`, "ok");
   }
 
   async function onLogin(ev) {
@@ -2197,6 +2533,11 @@
   }
 
   function bindBaseEvents() {
+    global.addEventListener("beforeunload", ev => {
+      if (!state.draftDirty) return;
+      ev.preventDefault();
+      ev.returnValue = "";
+    });
     $("#form-login")?.addEventListener("submit", onLogin);
     $("#voltar-rodada-atual")?.addEventListener("click", voltarRodadaAtual);
     $$("[data-aba]").forEach(btn => btn.addEventListener("click", async () => {
