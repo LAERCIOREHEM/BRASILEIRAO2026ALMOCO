@@ -1538,3 +1538,149 @@ body > .container > section.hero > img {
   .block-progress-track { grid-row: auto; }
   .block-progress-line small { grid-column: auto; }
 }
+
+/* ========================================================================== 
+   Execução 4 — apuração parcial, rankings por rodada/bloco/geral e adiamentos
+   ========================================================================== */
+.ranking-view-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 6px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 15px;
+  background: rgba(15, 23, 42, .72);
+}
+.ranking-view-nav button,
+.ranking-context-tabs button {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 10px 12px;
+  color: #cbd5e1;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
+}
+.ranking-view-nav button:hover,
+.ranking-context-tabs button:hover {
+  color: #ecfdf5;
+  border-color: rgba(52, 211, 153, .32);
+}
+.ranking-view-nav button.active,
+.ranking-context-tabs button.active {
+  color: #ecfdf5;
+  border-color: rgba(52, 211, 153, .45);
+  background: rgba(5, 150, 105, .22);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, .06);
+}
+.ranking-context-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+.ranking-context-tabs button {
+  border-color: rgba(148, 163, 184, .18);
+  background: rgba(15, 23, 42, .68);
+}
+.rk-badge.rk-index {
+  color: #d9f99d;
+  border-color: rgba(163, 230, 53, .26);
+  background: rgba(77, 124, 15, .12);
+}
+.block-round-progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin: 12px 0 14px;
+}
+.block-round-progress > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, .72);
+}
+.block-round-progress span { color: var(--muted); font-size: 12px; }
+.block-round-progress strong { color: #f8fafc; font-size: 18px; }
+.block-round-progress small { grid-column: 1 / -1; color: var(--muted-2); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.partial-progress-card {
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid rgba(250, 204, 21, .25);
+  border-radius: 14px;
+  background: rgba(113, 63, 18, .13);
+}
+.partial-progress-card p { margin: 8px 0 0; color: #fde68a; font-size: 13px; }
+.partial-progress-bar {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, .18);
+}
+.partial-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #eab308, #84cc16);
+}
+.pending-games {
+  margin: 12px 0 14px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, .17);
+  border-radius: 13px;
+  background: rgba(15, 23, 42, .70);
+}
+.pending-games > summary {
+  padding: 12px 14px;
+  color: #e2e8f0;
+  font-weight: 800;
+  cursor: pointer;
+}
+.pending-games > div {
+  display: grid;
+  gap: 7px;
+  padding: 0 10px 10px;
+}
+.pending-games article {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 11px;
+  border: 1px solid rgba(148, 163, 184, .12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .025);
+}
+.pending-games article strong { color: #f8fafc; font-size: 12px; }
+.pending-games article span { color: var(--muted-2); font-size: 11px; text-align: right; }
+.block-metrics { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.block-metrics small { color: var(--muted-2); font-size: 10px; }
+
+@media (max-width: 720px) {
+  .ranking-view-nav {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .ranking-view-nav button { flex: 0 0 auto; min-width: 122px; }
+  .ranking-context-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; }
+  .ranking-context-tabs button { flex: 0 0 auto; }
+  .block-round-progress { grid-template-columns: 1fr; }
+  .pending-games article { display: grid; }
+  .pending-games article span { text-align: left; }
+}
+
+@media (max-width: 360px) {
+  .ranking-view-nav { margin-left: -2px; margin-right: -2px; }
+  .ranking-view-nav button { min-width: 112px; padding: 9px 10px; }
+  .rk-badges { gap: 4px; }
+  .rk-badge { padding: 3px 6px; }
+}
