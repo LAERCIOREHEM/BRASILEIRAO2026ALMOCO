@@ -619,6 +619,33 @@ def aplicar_ajustes_calendario(eventos: list[dict[str, Any]]) -> None:
     print(f"Ajustes de calendário aplicados: {aplicados}/{len(ajustes)}")
 
 
+def evento_futuro_post_inconsistente(
+    *,
+    estado: Any,
+    concluido: Any,
+    data: datetime | None,
+    status: Any,
+    referencia: datetime | None = None,
+) -> bool:
+    """Detecta o falso pós-jogo que a ESPN às vezes publica para evento futuro.
+
+    Padrão observado: state=post, completed=false, relógio 0' e um horário
+    artificial. Esse registro não é calendário confirmado e não pode abrir ou
+    fechar o bolão. A regra é deliberadamente conservadora e só atua quando a
+    data ainda está no futuro.
+    """
+    if not isinstance(data, datetime):
+        return False
+    agora = referencia or agora_brt()
+    relogio = str(status or "").strip().lower()
+    return (
+        str(estado or "").strip().lower() == "post"
+        and concluido is not True
+        and relogio in {"", "0", "0'", "0:00", "0’"}
+        and data > agora + timedelta(minutes=15)
+    )
+
+
 def normalizar_eventos_scoreboard(eventos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     legadas = carregar_rodadas_legadas()
     normalizados: list[dict[str, Any]] = []
@@ -638,30 +665,49 @@ def normalizar_eventos_scoreboard(eventos: list[dict[str, Any]]) -> list[dict[st
         comp = primeira_competicao(ev)
         st = tipo_status(ev)
         estado = str(st.get("state") or "pre").lower()
-        if st.get("completed") is True:
+        concluido = bool(st.get("completed") is True)
+        if concluido:
             estado = "post"
+        status_publico = status_evento(ev).get("displayClock") or st.get("shortDetail") or st.get("detail") or ""
 
         rodada = extrair_rodada_evento(ev)
         if not rodada:
             rodada = legadas.get((mand, vis, dt_brt.strftime("%Y-%m-%d")))
 
+        horario_inconsistente = evento_futuro_post_inconsistente(
+            estado=estado,
+            concluido=concluido,
+            data=dt_brt,
+            status=status_publico,
+        )
+        data_publica = None if horario_inconsistente else dt_brt
+        if horario_inconsistente:
+            print(
+                "::warning::Horário ESPN descartado por estado futuro inconsistente: "
+                f"{mand} x {vis} ({dt_brt.strftime('%d/%m/%Y %H:%M')}, event {ev.get('id')})"
+            )
+            estado = "pre"
+            status_publico = "Data a definir"
+
         normalizados.append({
             "event_id": str(ev.get("id") or ""),
             "rodada": rodada,
-            "data_dt": dt_brt,
-            "data_iso": dt_brt.strftime("%Y-%m-%dT%H:%M"),
+            "data_dt": data_publica,
+            "data_iso": data_publica.strftime("%Y-%m-%dT%H:%M") if data_publica else None,
             "mandante_nome": mand,
             "visitante_nome": vis,
             "mandante": info_time(mand),
             "visitante": info_time(vis),
             "estadio": ((comp.get("venue") or {}).get("fullName") or ""),
             "transmissao": transmissao_evento(ev),
-            "status": status_evento(ev).get("displayClock") or st.get("shortDetail") or st.get("detail") or "",
+            "status": status_publico,
             "estado": estado,
-            "concluido": bool(st.get("completed") is True),
+            "concluido": concluido,
             "placar_mandante": placar_competidor(casa),
             "placar_visitante": placar_competidor(fora),
-            "_sort": dt_brt.timestamp(),
+            "data_definir": horario_inconsistente,
+            "horario_descartado_inconsistente": horario_inconsistente,
+            "_sort": data_publica.timestamp() if data_publica else float("inf"),
         })
 
     if nao_mapeados:
@@ -1285,7 +1331,18 @@ def estimar_finalizado_em(e: dict[str, Any], agora: datetime, anterior: dict[str
 def aplicar_finalizados_em(eventos: list[dict[str, Any]], anteriores: dict[str, dict[str, Any]],
                             snapshot_anterior_em: datetime | None, agora: datetime) -> None:
     for e in eventos:
-        if not (e.get("estado") == "post" or e.get("concluido") is True):
+        dt = e.get("data_dt")
+        placar_presente = e.get("placar_mandante") is not None and e.get("placar_visitante") is not None
+        realmente_finalizado = bool(
+            e.get("concluido") is True
+            or (
+                str(e.get("estado") or "").lower() == "post"
+                and isinstance(dt, datetime)
+                and dt <= agora - timedelta(minutes=90)
+                and placar_presente
+            )
+        )
+        if not realmente_finalizado:
             e.pop("finalizado_em", None)
             continue
         event_id = str(e.get("event_id") or "")

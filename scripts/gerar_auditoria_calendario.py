@@ -55,6 +55,32 @@ def chave_evento(e: dict[str, Any]) -> tuple[int, str, str]:
     )
 
 
+def _data_iso_brt(valor: Any) -> datetime | None:
+    if not valor:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(valor).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=FUSO_BRASILIA)
+    return dt.astimezone(FUSO_BRASILIA)
+
+
+def _horario_futuro_inconsistente(fonte: dict[str, Any]) -> bool:
+    data = _data_iso_brt(fonte.get("data_iso"))
+    if not data:
+        return False
+    estado = str(fonte.get("estado") or "").strip().lower()
+    status = str(fonte.get("status") or "").strip().lower()
+    return (
+        estado == "post"
+        and fonte.get("concluido") is not True
+        and status in {"", "0", "0'", "0:00", "0’"}
+        and data > datetime.now(FUSO_BRASILIA) + timedelta(minutes=15)
+    )
+
+
 def item_calendario(
     rodada: int,
     mandante: str,
@@ -63,19 +89,21 @@ def item_calendario(
     origem: str,
 ) -> dict[str, Any]:
     fonte = fonte or {}
-    data_iso = fonte.get("data_iso")
+    inconsistente = _horario_futuro_inconsistente(fonte)
+    data_iso = None if inconsistente else fonte.get("data_iso")
     return {
         "rodada": rodada,
         "mandante": mandante,
         "visitante": visitante,
         "event_id": str(fonte.get("event_id") or ""),
         "data_iso": data_iso,
-        "estado": str(fonte.get("estado") or ""),
+        "estado": "pre" if inconsistente else str(fonte.get("estado") or ""),
         "concluido": bool(fonte.get("concluido") is True),
         "adiado": bool(fonte.get("adiado") is True),
-        "data_definir": bool(fonte.get("data_definir") is True or not data_iso),
+        "data_definir": bool(inconsistente or fonte.get("data_definir") is True or not data_iso),
         "estadio": str(fonte.get("estadio") or ""),
         "origem": origem,
+        "horario_descartado_inconsistente": inconsistente,
     }
 
 

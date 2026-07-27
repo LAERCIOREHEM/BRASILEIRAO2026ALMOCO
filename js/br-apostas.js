@@ -190,6 +190,55 @@
   function jogoId(j) { return String(j.event_id || j.id || j.jogo_chave || `${timeNome(j.mandante)}-${timeNome(j.visitante)}-${j.data_iso || ""}`); }
   function jogoChave(j) { return `${normalizarTexto(timeNome(j.mandante))}-${normalizarTexto(timeNome(j.visitante))}-${String(j.data_iso || "").slice(0, 10)}`; }
 
+  function jogoComHorarioInconsistente(j) {
+    if (!j) return false;
+    const data = parseData(j.data_iso);
+    if (!data) return false;
+    const estado = String(j.estado || j.state || "").trim().toLowerCase();
+    const statusFonte = String(j.status || "").trim().toLowerCase();
+    const concluido = j.concluido === true || j.completed === true;
+    const relogioZerado = ["", "0", "0'", "0:00", "0’"].includes(statusFonte);
+    return estado === "post" && !concluido && relogioZerado && data.getTime() > Date.now() + 15 * 60 * 1000;
+  }
+
+  function jogoTemHorarioConfiavel(j) {
+    if (!j || j.data_definir === true) return false;
+    if (!parseData(j.data_iso)) return false;
+    return !jogoComHorarioInconsistente(j);
+  }
+
+  function normalizarHorarioJogo(j) {
+    if (!j || !jogoComHorarioInconsistente(j)) return j;
+    // A ESPN às vezes devolve um evento FUTURO como state=post, completed=false,
+    // relógio 0' e um horário artificial. Esse horário não pode comandar a
+    // abertura/fechamento do bolão nem aparecer como programação confirmada.
+    return {
+      ...j,
+      data_iso: null,
+      data_definir: true,
+      estado: "pre",
+      status: "Data a definir",
+      finalizado_em: null,
+      horario_descartado_inconsistente: true
+    };
+  }
+
+  function compararJogosPorData(a, b) {
+    const da = jogoTemHorarioConfiavel(a) ? parseData(a.data_iso) : null;
+    const db = jogoTemHorarioConfiavel(b) ? parseData(b.data_iso) : null;
+    if (da && db && da.getTime() !== db.getTime()) return da - db;
+    if (da && !db) return -1;
+    if (!da && db) return 1;
+    const ra = Number(a && a.rodada || 0);
+    const rb = Number(b && b.rodada || 0);
+    if (ra !== rb) return ra - rb;
+    return `${timeNome(a && a.mandante)}-${timeNome(a && a.visitante)}`.localeCompare(`${timeNome(b && b.mandante)}-${timeNome(b && b.visitante)}`, "pt-BR");
+  }
+
+  function fmtDataJogo(j) {
+    return jogoTemHorarioConfiavel(j) ? fmtData(j.data_iso) : "data a definir";
+  }
+
 
   function prefixoEventoBrasileirao(eventId) {
     const s = String(eventId || "");
@@ -206,7 +255,7 @@
     }
     const saida = [];
     for (const [rodada, jogos] of Array.from(grupos.entries()).sort((a, b) => a[0] - b[0])) {
-      let arr = jogos.slice().sort((a, b) => String(a.data_iso || "").localeCompare(String(b.data_iso || "")));
+      let arr = jogos.slice().sort(compararJogosPorData);
       if (arr.length > 10) {
         const cont = {};
         arr.forEach(j => { const p = prefixoEventoBrasileirao(j.event_id || j.id); if (p) cont[p] = (cont[p] || 0) + 1; });
@@ -231,7 +280,7 @@
       if (jogos.length > 10 && arr.length > 10) console.warn(`Rodada ${rodada} veio com ${jogos.length} jogos; exibindo os 10 primeiros saneados.`);
       saida.push(...arr.slice(0, 10));
     }
-    return saida.sort((x, y) => String(x.data_iso || "").localeCompare(String(y.data_iso || "")));
+    return saida.sort(compararJogosPorData);
   }
 
   function todosJogos() {
@@ -250,12 +299,13 @@
       placar_visitante: e.placar_visitante
     }));
     const map = new Map();
-    [...a, ...b, ...c].forEach(j => {
+    [...a, ...b, ...c].forEach(item => {
+      const j = normalizarHorarioJogo(item);
       if (!j) return;
       const id = jogoId(j);
       if (!map.has(id)) map.set(id, j);
     });
-    return sanearJogosPorRodada(Array.from(map.values()).sort((x, y) => String(x.data_iso || "").localeCompare(String(y.data_iso || ""))));
+    return sanearJogosPorRodada(Array.from(map.values()).sort(compararJogosPorData));
   }
 
   function jogosDaRodada(rodada) {
@@ -304,7 +354,7 @@
 
   function janelaPadrao(rodada) {
     const jogos = jogosDaRodada(rodada);
-    const datas = jogos.map(j => parseData(j.data_iso)).filter(Boolean).sort((a, b) => a - b);
+    const datas = jogos.filter(jogoTemHorarioConfiavel).map(j => parseData(j.data_iso)).filter(Boolean).sort((a, b) => a - b);
     const primeira = datas[0] || new Date();
     const js = CFG.janelaPadrao || {};
     let sabado;
@@ -391,6 +441,7 @@
   function primeiroJogoDetectadoBloco(bloco) {
     if (!bloco) return null;
     const datas = jogosDaRodada(Number(bloco.rodada_inicio))
+      .filter(jogoTemHorarioConfiavel)
       .map(j => parseData(j.data_iso))
       .filter(Boolean)
       .sort((a, b) => a - b);
@@ -1082,6 +1133,7 @@
 
   function intervaloRodada(rodada) {
     const datas = jogosDaRodada(rodada)
+      .filter(jogoTemHorarioConfiavel)
       .map(j => parseData(j.data_iso))
       .filter(Boolean)
       .sort((a, b) => a - b);
@@ -1213,7 +1265,7 @@
       const id = jogoId(j);
       const salvo = palpiteSalvoPara(id);
       return `<article class="match-card" data-event-id="${escapeAttr(id)}">
-        <div class="match-top"><span>Rodada ${j.rodada} · ${fmtData(j.data_iso)}</span><span class="badge ${aberta ? "open" : "lock"}">${aberta ? "aberto" : "travado"}</span></div>
+        <div class="match-top"><span>Rodada ${j.rodada} · ${fmtDataJogo(j)}</span><span class="badge ${aberta ? "open" : "lock"}">${aberta ? "aberto" : "travado"}</span></div>
         <div class="match-body">${htmlTeam(j.mandante, "home")}<div class="score-inputs">
           <input name="pm-${escapeAttr(id)}" type="number" inputmode="numeric" min="0" max="30" value="${salvo?.placar_mandante ?? ""}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.mandante))}"><span>x</span>
           <input name="pv-${escapeAttr(id)}" type="number" inputmode="numeric" min="0" max="30" value="${salvo?.placar_visitante ?? ""}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.visitante))}">
