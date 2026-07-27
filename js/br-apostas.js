@@ -41,6 +41,9 @@
     rodadaAutomatica: Number(CFG.rodadaInicialApostas || 20),
     rodadaEscolhidaManualmente: false,
     rodadaAutomaticaResolvida: false,
+    blocosApostas: [],
+    blocosInfraDisponivel: false,
+    blocoAdminSelecionado: null,
     toastTimer: null
   };
 
@@ -262,15 +265,81 @@
   }
 
   function configEfetiva(rodada) {
-    const cfg = configDaRodada(rodada) || janelaPadrao(rodada);
+    const existente = configDaRodada(rodada);
+    if (Number(rodada) >= 21 && !isAdminGlobal() && (!existente || !existente.bloco_id)) {
+      return {
+        rodada: Number(rodada),
+        abre_em: null,
+        fecha_em: null,
+        publica_em: null,
+        status: "futura",
+        observacao: "Aguardando configuração administrativa do bloco.",
+        bloco_id: null,
+        bloco_nome: null,
+        bloco_rodada_inicio: null,
+        bloco_rodada_fim: null,
+        bloco_primeiro_jogo_em: null,
+        bloco_versao: null
+      };
+    }
+    if (!existente && Number(rodada) >= 21 && state.blocosInfraDisponivel) {
+      return {
+        rodada: Number(rodada), abre_em: null, fecha_em: null, publica_em: null, status: "futura",
+        observacao: "Aguardando configuração administrativa do bloco.", bloco_id: null, bloco_nome: null,
+        bloco_rodada_inicio: null, bloco_rodada_fim: null, bloco_primeiro_jogo_em: null, bloco_versao: null
+      };
+    }
+    const cfg = existente || janelaPadrao(rodada);
     return {
       rodada: Number(rodada),
       abre_em: cfg.abre_em,
       fecha_em: cfg.fecha_em,
       publica_em: cfg.publica_em || null,
       status: cfg.status || "programada",
-      observacao: cfg.observacao || ""
+      observacao: cfg.observacao || "",
+      bloco_id: cfg.bloco_id || null,
+      bloco_nome: cfg.bloco_nome || null,
+      bloco_rodada_inicio: cfg.bloco_rodada_inicio == null ? null : Number(cfg.bloco_rodada_inicio),
+      bloco_rodada_fim: cfg.bloco_rodada_fim == null ? null : Number(cfg.bloco_rodada_fim),
+      bloco_primeiro_jogo_em: cfg.bloco_primeiro_jogo_em || null,
+      bloco_versao: cfg.bloco_versao == null ? null : Number(cfg.bloco_versao)
     };
+  }
+
+  function blocoDaRodada(rodada) {
+    const r = Number(rodada);
+    return (state.blocosApostas || []).find(b => r >= Number(b.rodada_inicio) && r <= Number(b.rodada_fim)) || null;
+  }
+
+  function blocoAdminAtual() {
+    const lista = state.blocosApostas || [];
+    if (!lista.length) return null;
+    const escolhido = lista.find(b => String(b.bloco_id) === String(state.blocoAdminSelecionado));
+    if (escolhido) return escolhido;
+    const daRodada = blocoDaRodada(state.rodada);
+    return daRodada || lista[0];
+  }
+
+  function primeiroJogoDetectadoBloco(bloco) {
+    if (!bloco) return null;
+    const datas = jogosDaRodada(Number(bloco.rodada_inicio))
+      .map(j => parseData(j.data_iso))
+      .filter(Boolean)
+      .sort((a, b) => a - b);
+    return datas[0] || null;
+  }
+
+  function fechamentoRecomendado(primeiroJogo) {
+    const d = primeiroJogo instanceof Date ? primeiroJogo : parseData(primeiroJogo);
+    return d ? new Date(d.getTime() - 60 * 60 * 1000) : null;
+  }
+
+  function datasIguais(a, b) {
+    const da = a instanceof Date ? a : parseData(a);
+    const db = b instanceof Date ? b : parseData(b);
+    if (!da && !db) return true;
+    if (!da || !db) return false;
+    return Math.abs(da.getTime() - db.getTime()) < 1000;
   }
 
   function rodadaAberta(rodada) {
@@ -280,7 +349,7 @@
     const fecha = parseData(cfg.fecha_em);
     const status = String(cfg.status || "programada").toLowerCase();
     if (Number(rodada) < Number(CFG.rodadaInicialApostas || 20)) return false;
-    if (["fechada", "apurada", "publicada", "bloqueada", "encerrada"].includes(status)) return false;
+    if (["futura", "fechada", "apurada", "publicada", "bloqueada", "encerrada"].includes(status)) return false;
     if (status === "aberta") return true; // abertura manual pelo admin ignora o horário
     if (!abre || !fecha) return false;
     return agora >= abre && agora < fecha;
@@ -301,6 +370,8 @@
     const agora = new Date();
     const status = String(cfg.status || "programada").toLowerCase();
     if (rodadaPublica(rodada)) return { classe: "done", texto: "Palpites publicados", detalhe: `Rodada ${rodada} publicada` };
+    if (status === "futura" && (!abre || !fecha)) return { classe: "warn", texto: "Aguardando programação", detalhe: `Rodada ${rodada} ainda sem janela liberada` };
+    if (status === "futura") return { classe: "warn", texto: "Programação futura", detalhe: abre ? `Prevista para abrir em ${fmtDataLonga(abre)}` : `Rodada ${rodada} ainda não liberada` };
     if (status === "aberta") return { classe: "open", texto: "Apostas abertas", detalhe: fecha ? `Aberta pelo admin · até ${fmtDataLonga(fecha)}` : "Aberta pelo admin" };
     if (["fechada", "apurada", "bloqueada", "encerrada"].includes(status)) return { classe: "lock", texto: "Rodada fechada", detalhe: `Fechada em ${fmtDataLonga(fecha)}` };
     if (abre && agora < abre) return { classe: "warn", texto: "Aguardando abertura", detalhe: `Abre em ${fmtDataLonga(abre)}` };
@@ -453,10 +524,42 @@
   async function carregarConfigsSupabase() {
     if (!state.supabase) return;
     try {
-      state.configSupabase = await rpcRows("br_listar_config_rodadas", { p_temporada: CFG.temporada || 2026 });
+      state.configSupabase = await rpcRows("br_listar_config_rodadas_v2", { p_temporada: CFG.temporada || 2026 });
+    } catch (errV2) {
+      try {
+        state.configSupabase = await rpcRows("br_listar_config_rodadas", { p_temporada: CFG.temporada || 2026 });
+      } catch (err) {
+        console.warn("Config Supabase indisponível", errV2, err);
+        state.configSupabase = [];
+      }
+    }
+  }
+
+  async function carregarBlocosApostasAdmin() {
+    if (!state.supabase || !isAdminGlobal()) {
+      state.blocosApostas = [];
+      state.blocosInfraDisponivel = false;
+      state.blocoAdminSelecionado = null;
+      return;
+    }
+    try {
+      const rows = await rpcRows("br_admin_listar_blocos_apostas_v1", {
+        p_admin_id: state.usuario.id,
+        p_token: state.token,
+        p_temporada: CFG.temporada || 2026
+      });
+      state.blocosApostas = Array.isArray(rows) ? rows : [];
+      state.blocosInfraDisponivel = true;
+      const selecionadoExiste = state.blocosApostas.some(b => String(b.bloco_id) === String(state.blocoAdminSelecionado));
+      if (!selecionadoExiste) {
+        const daRodada = blocoDaRodada(state.rodada);
+        state.blocoAdminSelecionado = (daRodada || state.blocosApostas[0] || {}).bloco_id || null;
+      }
     } catch (err) {
-      console.warn("Config Supabase indisponível", err);
-      state.configSupabase = [];
+      console.warn("Infraestrutura de blocos ainda indisponível", err);
+      state.blocosApostas = [];
+      state.blocosInfraDisponivel = false;
+      state.blocoAdminSelecionado = null;
     }
   }
 
@@ -1141,6 +1244,7 @@
 
   async function carregarAdmin() {
     if (!canAdminAny()) return;
+    await carregarBlocosApostasAdmin();
     try {
       const total = jogosDaRodada(state.rodada).length;
       const [participantes, ligas] = await Promise.all([
@@ -1395,6 +1499,118 @@
     return `<div class="admin-next-action"><strong>Próxima ação recomendada</strong><span>Salve a programação ou libere as apostas imediatamente.</span><button class="btn secondary" type="button" id="abrir-rodada">🔓 Abrir apostas agora</button></div>`;
   }
 
+
+  function classeStatusBloco(bloco) {
+    const st = String(bloco?.status || "futura").toLowerCase();
+    if (["fechada", "bloqueada"].includes(st)) return "lock";
+    if (st === "aberta") return "open";
+    if (st === "programada") return "warn";
+    return "neutral";
+  }
+
+  function renderPainelBlocosAdminHtml() {
+    if (!isAdminGlobal()) return "";
+    if (!state.blocosInfraDisponivel) {
+      return `<article class="panel admin-section admin-block-panel" id="admin-blocos"><div class="panel-inner">
+        <div class="kicker">Execução 2 · infraestrutura</div><h2>Blocos de três rodadas</h2>
+        <div class="status warn"><strong>Migração ainda não aplicada no Supabase.</strong><br>Rode o arquivo <code>supabase/brasileirao_apostas_exec18_blocos_3_rodadas.sql</code>. Até lá, a Rodada 20 e toda a interface da Execução 1 continuam funcionando normalmente.</div>
+      </div></article>`;
+    }
+
+    const bloco = blocoAdminAtual();
+    if (!bloco) {
+      return `<article class="panel admin-section admin-block-panel" id="admin-blocos"><div class="panel-inner empty"><strong>Nenhum bloco cadastrado.</strong><p>Reexecute a migração idempotente da Execução 2.</p></div></article>`;
+    }
+
+    const detectado = primeiroJogoDetectadoBloco(bloco);
+    const recomendado = bloco.fechamento_recomendado_em || fechamentoRecomendado(bloco.primeiro_jogo_em);
+    const conforme = Boolean(bloco.fechamento_conforme_recomendacao);
+    const options = (state.blocosApostas || []).map(b => `<option value="${escapeAttr(b.bloco_id)}" ${String(b.bloco_id) === String(bloco.bloco_id) ? "selected" : ""}>${escapeHtml(b.nome)} · R${b.rodada_inicio}–R${b.rodada_fim}</option>`).join("");
+    const statusOptions = ["futura", "programada", "aberta", "fechada", "bloqueada"].map(st => `<option value="${st}" ${String(bloco.status) === st ? "selected" : ""}>${st}</option>`).join("");
+    const recomendacaoTexto = recomendado ? fmtDataLonga(recomendado) : "aguardando o primeiro jogo";
+    const divergencia = bloco.fecha_em && recomendado && !conforme
+      ? `<div class="block-warning">⚠️ O fechamento salvo difere da regra recomendada de 1 hora. Uma nova alteração exigirá confirmação e justificativa.</div>`
+      : `<div class="block-rule-ok">✓ Regra operacional: fechamento 1 hora antes do primeiro jogo da Rodada ${bloco.rodada_inicio}.</div>`;
+
+    return `<article class="panel admin-section admin-block-panel" id="admin-blocos"><div class="panel-inner">
+      <div class="kicker">Execução 2 · infraestrutura Supabase</div>
+      <div class="admin-window-title"><div><h2>Blocos de três rodadas</h2><p>Uma única abertura e um único fechamento valem para as três rodadas. A Rodada 20 não pertence a bloco algum.</p></div><span class="badge ${classeStatusBloco(bloco)}">${escapeHtml(bloco.status || "futura")}</span></div>
+      <div class="block-selector-row"><label>Bloco para configurar<select id="admin-bloco-selecionado">${options}</select></label><div class="block-version">Versão <strong>${Number(bloco.versao || 1)}</strong><span>controle contra sobrescrita</span></div></div>
+      <div class="block-metrics">
+        <div><span>Rodadas</span><strong>${bloco.rodada_inicio}–${bloco.rodada_fim}</strong></div>
+        <div><span>Configurações vinculadas</span><strong>${Number(bloco.rodadas_configuradas || 0)}/3</strong></div>
+        <div><span>Palpites vinculados</span><strong>${Number(bloco.total_palpites || 0)}</strong></div>
+        <div><span>Fechamento recomendado</span><strong>${escapeHtml(recomendacaoTexto)}</strong></div>
+      </div>
+      ${divergencia}
+      <form id="admin-bloco-form" class="admin-form admin-block-form">
+        <div class="two"><label>Primeiro jogo da Rodada ${bloco.rodada_inicio}<input id="bloco-primeiro-jogo" type="datetime-local" value="${toDatetimeLocal(bloco.primeiro_jogo_em)}"></label><label>Abertura do bloco<input id="bloco-abre" type="datetime-local" value="${toDatetimeLocal(bloco.abre_em)}"></label></div>
+        <div class="two"><label>Fechamento único<input id="bloco-fecha" type="datetime-local" value="${toDatetimeLocal(bloco.fecha_em)}"></label><label>Status do bloco<select id="bloco-status">${statusOptions}</select></label></div>
+        <label>Observação / justificativa<textarea id="bloco-observacao" rows="3" placeholder="Obrigatória para horário diferente da recomendação ou alteração sensível">${escapeHtml(bloco.observacao || "")}</textarea></label>
+        <div class="block-tools">
+          <button class="btn secondary" type="button" id="usar-primeiro-jogo-detectado" ${detectado ? "" : "disabled"}>⚽ Usar 1º jogo detectado${detectado ? ` · ${escapeHtml(fmtDataLonga(detectado))}` : ""}</button>
+          <button class="btn secondary" type="button" id="aplicar-fechamento-recomendado">⏱️ Aplicar fechamento de 1h</button>
+        </div>
+        <div class="actions admin-save-row"><button class="btn" type="submit">💾 Salvar bloco inteiro</button><span class="muted-note">A gravação materializa a mesma janela nas três rodadas e registra versão, administrador, antes/depois e justificativa.</span></div>
+        <div id="bloco-inline-feedback" class="admin-inline-feedback" aria-live="polite">Última atualização: ${escapeHtml(fmtDataLonga(bloco.atualizado_em))}.</div>
+      </form>
+    </div></article>`;
+  }
+
+  function renderPainelRodadaVinculadaHtml(cfg, bloco) {
+    const cfgPersistida = configDaRodada(state.rodada);
+    const materializada = Boolean(cfgPersistida && cfgPersistida.bloco_id && String(cfgPersistida.bloco_id) === String(bloco.bloco_id));
+    if (!materializada) {
+      return `<article class="panel admin-section admin-window-panel linked-round-panel" id="admin-janela"><div class="panel-inner">
+        <div class="kicker">2. Rodada vinculada · aguardando configuração</div>
+        <div class="admin-window-title"><div><h2>Rodada ${state.rodada} · ${escapeHtml(bloco.nome)}</h2><p>Esta rodada pertence ao bloco ${bloco.rodada_inicio}–${bloco.rodada_fim}, mas a janela ainda não foi materializada no Supabase.</p></div><span class="badge warn">Aguardando programação</span></div>
+        <div class="linked-window-summary"><div><span>Abre em</span><strong>${escapeHtml(fmtDataLonga(bloco.abre_em))}</strong></div><div><span>Fecha em</span><strong>${escapeHtml(fmtDataLonga(bloco.fecha_em))}</strong></div><div><span>Primeiro jogo-base</span><strong>${escapeHtml(fmtDataLonga(bloco.primeiro_jogo_em))}</strong></div></div>
+        <div class="status warn" style="margin-top:12px">Configure e salve o ${escapeHtml(bloco.nome)} no painel acima. Só depois disso a publicação e a apuração individual desta rodada serão habilitadas.</div>
+      </div></article>`;
+    }
+    const statusAtual = String(cfg.status || "programada").toLowerCase();
+    const blocoFechado = ["fechada", "bloqueada"].includes(String(bloco.status || "").toLowerCase()) || (parseData(bloco.fecha_em) && new Date() >= parseData(bloco.fecha_em));
+    let acao;
+    if (statusAtual === "apurada") {
+      acao = `<div class="admin-next-action done"><strong>✅ Rodada concluída</strong><span>Palpites publicados e apuração marcada como concluída.</span></div>`;
+    } else if (rodadaPublica(state.rodada)) {
+      acao = `<div class="admin-next-action done"><strong>📣 Palpites públicos</strong><span>A publicação desta rodada já foi liberada.</span><button class="btn secondary" type="button" id="marcar-rodada-apurada">🧮 Marcar apurada</button></div>`;
+    } else if (blocoFechado) {
+      acao = `<div class="admin-next-action"><strong>Próxima ação recomendada</strong><span>A janela do bloco está encerrada. Libere os palpites desta rodada quando o sigilo puder terminar.</span><button class="btn secondary" type="button" id="publicar-rodada-vinculada">📣 Liberar palpites públicos</button></div>`;
+    } else {
+      acao = `<div class="admin-next-action"><strong>Janela controlada pelo ${escapeHtml(bloco.nome)}</strong><span>A abertura e o fechamento não podem ser alterados isoladamente nesta rodada. Use o painel de blocos acima.</span></div>`;
+    }
+
+    return `<article class="panel admin-section admin-window-panel linked-round-panel" id="admin-janela"><div class="panel-inner">
+      <div class="kicker">2. Rodada vinculada · publicação individual</div><div class="admin-window-title"><div><h2>Rodada ${state.rodada} · ${escapeHtml(bloco.nome)}</h2><p>A janela é herdada do bloco ${bloco.rodada_inicio}–${bloco.rodada_fim}; a publicação e a apuração continuam por rodada.</p></div><span class="badge ${statusJanela(state.rodada).classe}">${escapeHtml(statusJanela(state.rodada).texto)}</span></div>
+      ${adminEtapasHtml(cfg)}
+      <div class="linked-window-summary"><div><span>Abre em</span><strong>${escapeHtml(fmtDataLonga(bloco.abre_em))}</strong></div><div><span>Fecha em</span><strong>${escapeHtml(fmtDataLonga(bloco.fecha_em))}</strong></div><div><span>Primeiro jogo-base</span><strong>${escapeHtml(fmtDataLonga(bloco.primeiro_jogo_em))}</strong></div></div>
+      <form id="admin-rodada-vinculada" class="admin-form admin-window-form">
+        <div class="two"><label>Publica em<input id="cfg-publica-vinculada" type="datetime-local" value="${toDatetimeLocal(cfg.publica_em)}"></label><label>Observação da rodada<input id="cfg-obs-vinculada" value="${escapeAttr(cfg.observacao || "")}" placeholder="Informação opcional desta rodada"></label></div>
+        <div class="actions admin-save-row"><button class="btn secondary" type="submit">💾 Salvar metadados da rodada</button><span class="muted-note">A janela permanece idêntica à do bloco.</span></div>
+        ${acao}
+        <details class="admin-advanced"><summary>Opções avançadas da rodada</summary><div class="admin-advanced-body"><p class="muted-note">Essas opções não alteram a janela do bloco.</p><label>Status manual<select id="cfg-status-vinculada"><option value="publicada">publicada</option><option value="apurada">apurada</option><option value="bloqueada">bloqueada</option></select></label><button class="btn secondary" type="button" id="aplicar-status-vinculada">Aplicar status manual</button></div></details>
+        <div class="admin-inline-feedback">Bloco versão ${Number(bloco.versao || 1)} · janela protegida contra alteração isolada.</div>
+      </form>
+    </div></article>`;
+  }
+
+  function renderPainelRodadaLegadoHtml(cfg, globalAdmin) {
+    if (!globalAdmin) return `<article class="panel admin-section admin-window-panel" id="admin-janela"><div class="panel-inner"><div class="kicker">1. Janela e publicação</div><h2>Rodada ${state.rodada}</h2><p class="muted-note">A janela é global e somente o administrador global pode alterá-la.</p><p><span class="badge ${statusJanela(state.rodada).classe}">${escapeHtml(statusJanela(state.rodada).detalhe)}</span></p></div></article>`;
+    return `<article class="panel admin-section admin-window-panel" id="admin-janela"><div class="panel-inner">
+      <div class="kicker">2. Janela e publicação</div><div class="admin-window-title"><div><h2>Rodada ${state.rodada}</h2><p>Configure os horários e siga apenas a próxima ação indicada pelo sistema.</p></div><span class="badge ${statusJanela(state.rodada).classe}">${escapeHtml(statusJanela(state.rodada).texto)}</span></div>
+      ${adminEtapasHtml(cfg)}
+      <form id="admin-rodada" class="admin-form admin-window-form">
+        <div class="two"><label>Abre em <input id="cfg-abre" type="datetime-local" value="${toDatetimeLocal(cfg.abre_em)}"></label><label>Fecha em <input id="cfg-fecha" type="datetime-local" value="${toDatetimeLocal(cfg.fecha_em)}"></label></div>
+        <div class="two"><label>Publica em <input id="cfg-publica" type="datetime-local" value="${toDatetimeLocal(cfg.publica_em)}"></label><label>Observação <input id="cfg-obs" value="${escapeAttr(cfg.observacao || "")}" placeholder="Informação opcional para a administração"></label></div>
+        <div class="actions admin-save-row"><button class="btn" type="submit">💾 Salvar programação</button><span class="muted-note">Salva datas e observação sem executar uma mudança de etapa inesperada.</span></div>
+        ${adminAcaoContextualHtml(cfg)}
+        <details class="admin-advanced"><summary>Opções avançadas de emergência</summary><div class="admin-advanced-body"><p class="muted-note">Use apenas para corrigir um estado excepcional. O fluxo normal deve seguir a ação recomendada acima.</p><label>Status manual <select id="cfg-status"><option value="programada">programada</option><option value="aberta">aberta</option><option value="fechada">fechada</option><option value="publicada">publicada</option><option value="apurada">apurada</option><option value="bloqueada">bloqueada</option></select></label><button class="btn secondary" type="button" id="aplicar-status-manual">Aplicar status manual</button></div></details>
+        <div id="admin-inline-feedback" class="admin-inline-feedback" aria-live="polite">Última configuração carregada: ${escapeHtml(statusJanela(state.rodada).detalhe)}.</div>
+      </form>
+    </div></article>`;
+  }
+
   async function renderAdmin() {
     await carregarAdmin();
     const cfg = configEfetiva(state.rodada);
@@ -1404,13 +1620,15 @@
       return;
     }
     const globalAdmin = isAdminGlobal();
+    const blocoRodada = globalAdmin && Number(state.rodada) >= 21 ? blocoDaRodada(state.rodada) : null;
+    const painelBlocos = globalAdmin ? renderPainelBlocosAdminHtml() : "";
     const painelAdministracaoAnual = globalAdmin ? `<article class="panel admin-section" id="admin-anual"><div class="panel-inner">
         <div class="kicker">Administração integrada</div><h2>Ranking anual e aniversários</h2>
         <p>As ferramentas históricas continuam em uma área separada e protegida.</p>
         <div class="actions"><a class="btn secondary" href="./?brasileirao=1&view=participantes&admin=1">⚙️ Abrir administração anual</a></div>
       </div></article>` : "";
     const painelParticipantes = globalAdmin ? `<article class="panel admin-section" id="admin-participantes"><div class="panel-inner">
-        <div class="kicker">Participantes</div><h2>Criar ou alterar acesso</h2>
+        <div class="kicker">${globalAdmin ? "4. " : "3. "}Participantes</div><h2>Criar ou alterar acesso</h2>
         <form id="admin-participante" class="admin-form">
           <input type="hidden" id="admin-participante-id">
           <input type="hidden" id="admin-nome-atual">
@@ -1420,31 +1638,23 @@
           <p class="muted-note">Ao salvar, o sistema gera um PIN novo e oferece o envio por WhatsApp. Para preservar o histórico, inative o acesso ou remova o participante da liga.</p>
         </form>
       </div></article>` : `<article class="panel admin-section" id="admin-participantes"><div class="panel-inner empty"><strong>Perfil: admin de liga</strong><p>Você acompanha os participantes das suas ligas. A criação de usuários e a janela global ficam com o administrador global.</p></div></article>`;
-    const painelRodada = globalAdmin ? `<article class="panel admin-section admin-window-panel" id="admin-janela"><div class="panel-inner">
-        <div class="kicker">1. Janela e publicação</div><div class="admin-window-title"><div><h2>Rodada ${state.rodada}</h2><p>Configure os horários e siga apenas a próxima ação indicada pelo sistema.</p></div><span class="badge ${statusJanela(state.rodada).classe}">${escapeHtml(statusJanela(state.rodada).texto)}</span></div>
-        ${adminEtapasHtml(cfg)}
-        <form id="admin-rodada" class="admin-form admin-window-form">
-          <div class="two"><label>Abre em <input id="cfg-abre" type="datetime-local" value="${toDatetimeLocal(cfg.abre_em)}"></label><label>Fecha em <input id="cfg-fecha" type="datetime-local" value="${toDatetimeLocal(cfg.fecha_em)}"></label></div>
-          <div class="two"><label>Publica em <input id="cfg-publica" type="datetime-local" value="${toDatetimeLocal(cfg.publica_em)}"></label><label>Observação <input id="cfg-obs" value="${escapeAttr(cfg.observacao || "")}" placeholder="Informação opcional para a administração"></label></div>
-          <div class="actions admin-save-row"><button class="btn" type="submit">💾 Salvar programação</button><span class="muted-note">Salva datas e observação sem executar uma mudança de etapa inesperada.</span></div>
-          ${adminAcaoContextualHtml(cfg)}
-          <details class="admin-advanced"><summary>Opções avançadas de emergência</summary><div class="admin-advanced-body"><p class="muted-note">Use apenas para corrigir um estado excepcional. O fluxo normal deve seguir a ação recomendada acima.</p><label>Status manual <select id="cfg-status"><option value="programada">programada</option><option value="aberta">aberta</option><option value="fechada">fechada</option><option value="publicada">publicada</option><option value="apurada">apurada</option><option value="bloqueada">bloqueada</option></select></label><button class="btn secondary" type="button" id="aplicar-status-manual">Aplicar status manual</button></div></details>
-          <div id="admin-inline-feedback" class="admin-inline-feedback" aria-live="polite">Última configuração carregada: ${escapeHtml(statusJanela(state.rodada).detalhe)}.</div>
-        </form>
-      </div></article>` : `<article class="panel admin-section admin-window-panel" id="admin-janela"><div class="panel-inner"><div class="kicker">1. Janela e publicação</div><h2>Rodada ${state.rodada}</h2><p class="muted-note">A janela é global e somente o administrador global pode alterá-la.</p><p><span class="badge ${statusJanela(state.rodada).classe}">${escapeHtml(statusJanela(state.rodada).detalhe)}</span></p></div></article>`;
+    const painelRodada = blocoRodada
+      ? renderPainelRodadaVinculadaHtml(cfg, blocoRodada)
+      : renderPainelRodadaLegadoHtml(cfg, globalAdmin);
     const painelProgresso = `<article class="panel admin-section" id="admin-preenchimento"><div class="panel-inner">
-        <div class="kicker">2. Preenchimento</div><h2>Progresso sem revelar placares</h2>
+        <div class="kicker">${globalAdmin ? "3" : "2"}. Preenchimento</div><h2>Progresso sem revelar placares</h2>
         <p>O percentual considera a liga selecionada. Antes da publicação, o administrador acompanha apenas a quantidade preenchida.</p>
         <div class="export-row"><button class="btn secondary" type="button" id="export-progresso">⬇️ Exportar progresso CSV</button></div>
         <div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Participante</th><th>Login</th><th>Status</th><th>Ligas</th><th>Preenchido</th><th>%</th><th>Ações</th></tr></thead><tbody>
           ${state.progresso.map(p => `<tr><td>${escapeHtml(p.nome)}</td><td>${escapeHtml(p.login)}</td><td>${p.ativo ? "ativo" : "inativo"}${p.admin ? " · admin" : ""}</td><td>${ligasDoParticipante(p.participante_id).map(escapeHtml).join(", ") || "—"}</td><td>${p.total_palpites}/${p.total_jogos}</td><td><div class="progress-wrap"><div class="progress-bar" style="width:${Math.max(0, Math.min(100, Number(p.percentual || 0)))}%"></div></div></td><td class="action-cell">${globalAdmin ? `<button class="btn secondary" type="button" data-edit="${escapeAttr(p.participante_id)}">editar</button>${p.ativo ? `<button class="btn danger" type="button" data-inativar="${escapeAttr(p.participante_id)}">inativar</button>` : `<button class="btn secondary" type="button" data-reativar="${escapeAttr(p.participante_id)}">reativar</button>`}` : `<span class="muted-note">gerencie pela liga</span>`}</td></tr>`).join("")}
         </tbody></table></div>
       </div></article>`;
-    const painelAuditoria = `<article class="panel admin-section" id="admin-auditoria"><div class="panel-inner"><div class="kicker">4. Auditoria</div><h2>Conferir registros da rodada</h2><p>Visualize hashes, horários e alterações sem expor palpites antes da publicação.</p><div class="actions"><button class="btn secondary" type="button" id="abrir-auditoria-admin">🧾 Abrir auditoria detalhada</button></div></div></article>`;
-    const painelLigas = `<div class="admin-section admin-ligas-last" id="admin-ligas"><div class="admin-section-label"><span>5. Ligas</span><small>Área de uso menos frequente, mantida por último.</small></div>${renderLigasAdminHtml()}</div>`;
+    const painelAuditoria = `<article class="panel admin-section" id="admin-auditoria"><div class="panel-inner"><div class="kicker">${globalAdmin ? "5" : "4"}. Auditoria</div><h2>Conferir registros da rodada</h2><p>Visualize hashes, horários e alterações sem expor palpites antes da publicação.</p><div class="actions"><button class="btn secondary" type="button" id="abrir-auditoria-admin">🧾 Abrir auditoria detalhada</button></div></div></article>`;
+    const painelLigas = `<div class="admin-section admin-ligas-last" id="admin-ligas"><div class="admin-section-label"><span>${globalAdmin ? "6" : "5"}. Ligas</span><small>Área de uso menos frequente, mantida por último.</small></div>${renderLigasAdminHtml()}</div>`;
     root.innerHTML = `<section class="admin-workspace">
-      <nav class="admin-section-nav" aria-label="Seções administrativas"><a href="#admin-janela">1. Janela</a><a href="#admin-preenchimento">2. Preenchimento</a><a href="#admin-participantes">3. Participantes</a><a href="#admin-auditoria">4. Auditoria</a><a href="#admin-ligas">5. Ligas</a></nav>
+      <nav class="admin-section-nav" aria-label="Seções administrativas">${globalAdmin ? '<a href="#admin-blocos">1. Blocos</a>' : ''}<a href="#admin-janela">${globalAdmin ? '2' : '1'}. Rodada</a><a href="#admin-preenchimento">${globalAdmin ? '3' : '2'}. Preenchimento</a><a href="#admin-participantes">${globalAdmin ? '4' : '3'}. Participantes</a><a href="#admin-auditoria">${globalAdmin ? '5' : '4'}. Auditoria</a><a href="#admin-ligas">${globalAdmin ? '6' : '5'}. Ligas</a></nav>
       <section class="admin-grid">
+        ${painelBlocos}
         ${painelRodada}
         ${painelProgresso}
         ${painelParticipantes}
@@ -1454,7 +1664,15 @@
       </section>
     </section>`;
     if (globalAdmin) {
-      $("#cfg-status").value = cfg.status || "programada";
+      if ($("#cfg-status")) $("#cfg-status").value = cfg.status || "programada";
+      $("#admin-bloco-selecionado")?.addEventListener("change", async ev => { state.blocoAdminSelecionado = ev.target.value; await renderAdmin(); });
+      $("#admin-bloco-form")?.addEventListener("submit", salvarBlocoAdmin);
+      $("#usar-primeiro-jogo-detectado")?.addEventListener("click", usarPrimeiroJogoDetectado);
+      $("#aplicar-fechamento-recomendado")?.addEventListener("click", aplicarFechamentoRecomendado);
+      $("#admin-rodada-vinculada")?.addEventListener("submit", salvarMetadadosRodadaVinculada);
+      $("#publicar-rodada-vinculada")?.addEventListener("click", async () => { if (!confirmarAcao(`Liberar os palpites públicos da rodada ${state.rodada}?`)) return; await salvarStatusRodadaVinculada("publicada"); });
+      $("#marcar-rodada-apurada")?.addEventListener("click", async () => { if (!confirmarAcao(`Marcar a rodada ${state.rodada} como apurada?`)) return; await salvarStatusRodadaVinculada("apurada"); });
+      $("#aplicar-status-vinculada")?.addEventListener("click", async () => { const novo = $("#cfg-status-vinculada").value; if (!confirmarAcao(`Aplicar o status “${novo}” à rodada ${state.rodada}, sem alterar a janela do bloco?`)) return; await salvarStatusRodadaVinculada(novo); });
       $("#limpar-admin")?.addEventListener("click", () => { limparFormParticipante(); status("Formulário de participante limpo.", "ok"); toast("Formulário limpo.", "ok"); });
       $("#admin-participante")?.addEventListener("submit", salvarParticipanteAdmin);
       $("#admin-rodada")?.addEventListener("submit", salvarRodadaAdmin);
@@ -1705,6 +1923,140 @@
     } catch (err) { const msg = mensagemErroParticipante(err); status(msg, "err"); toast(msg, "err"); }
   }
 
+  function usarPrimeiroJogoDetectado() {
+    const bloco = blocoAdminAtual();
+    const detectado = primeiroJogoDetectadoBloco(bloco);
+    if (!detectado) {
+      toast("O JSON ainda não possui o primeiro jogo da rodada inicial deste bloco.", "warn");
+      return;
+    }
+    const campo = $("#bloco-primeiro-jogo");
+    if (campo) campo.value = toDatetimeLocal(detectado);
+    aplicarFechamentoRecomendado();
+    toast(`Primeiro jogo detectado: ${fmtDataLonga(detectado)}.`, "ok");
+  }
+
+  function aplicarFechamentoRecomendado() {
+    const campoPrimeiro = $("#bloco-primeiro-jogo");
+    const campoFecha = $("#bloco-fecha");
+    if (!campoPrimeiro?.value || !campoFecha) {
+      toast("Informe primeiro o horário do primeiro jogo.", "warn");
+      return;
+    }
+    const recomendado = fechamentoRecomendado(new Date(campoPrimeiro.value));
+    if (!recomendado) {
+      toast("Horário do primeiro jogo inválido.", "err");
+      return;
+    }
+    campoFecha.value = toDatetimeLocal(recomendado);
+    const feedback = $("#bloco-inline-feedback");
+    if (feedback) feedback.textContent = `Fechamento recomendado aplicado: ${fmtDataLonga(recomendado)}.`;
+  }
+
+  async function salvarBlocoAdmin(ev) {
+    ev.preventDefault();
+    const bloco = blocoAdminAtual();
+    if (!bloco) return;
+    try {
+      const primeiro = $("#bloco-primeiro-jogo")?.value ? new Date($("#bloco-primeiro-jogo").value) : null;
+      const abre = $("#bloco-abre")?.value ? new Date($("#bloco-abre").value) : null;
+      const fecha = $("#bloco-fecha")?.value ? new Date($("#bloco-fecha").value) : null;
+      const statusNovo = $("#bloco-status")?.value || "futura";
+      const observacao = String($("#bloco-observacao")?.value || "").trim();
+
+      if (statusNovo !== "futura" && (!primeiro || !abre || !fecha)) throw new Error("Informe primeiro jogo, abertura e fechamento antes de programar o bloco.");
+      if (abre && fecha && abre >= fecha) throw new Error("A abertura deve ser anterior ao fechamento.");
+      if (primeiro && fecha && fecha >= primeiro) throw new Error("O fechamento deve ocorrer antes do primeiro jogo.");
+
+      const recomendado = fechamentoRecomendado(primeiro);
+      const fechamentoDiferente = Boolean(fecha && recomendado && !datasIguais(fecha, recomendado));
+      const alterouJanela = !datasIguais(bloco.primeiro_jogo_em, primeiro)
+        || !datasIguais(bloco.abre_em, abre)
+        || !datasIguais(bloco.fecha_em, fecha)
+        || String(bloco.status || "") !== String(statusNovo);
+      const reabertura = ["fechada", "bloqueada"].includes(String(bloco.status || "")) && ["programada", "aberta"].includes(statusNovo);
+      const alteracaoSensivel = (Number(bloco.total_palpites || 0) > 0 && alterouJanela) || reabertura;
+
+      if ((fechamentoDiferente || alteracaoSensivel) && !observacao) {
+        throw new Error("Informe uma justificativa na observação para esta alteração protegida.");
+      }
+      if (fechamentoDiferente && !confirmarAcao(`O fechamento informado não corresponde a 1 hora antes do primeiro jogo (${fmtDataLonga(recomendado)}). Confirmar a exceção?`)) return;
+      if (alteracaoSensivel && !confirmarAcao(`Este bloco possui ${Number(bloco.total_palpites || 0)} palpites vinculados ou está sendo reaberto. Confirmar a alteração sensível com registro em auditoria?`)) return;
+
+      status(`Salvando ${bloco.nome}...`, "warn");
+      await rpcRows("br_admin_salvar_bloco_apostas_v1", {
+        p_admin_id: state.usuario.id,
+        p_token: state.token,
+        p_bloco_id: bloco.bloco_id,
+        p_versao_esperada: Number(bloco.versao),
+        p_primeiro_jogo_em: primeiro ? primeiro.toISOString() : null,
+        p_abre_em: abre ? abre.toISOString() : null,
+        p_fecha_em: fecha ? fecha.toISOString() : null,
+        p_status: statusNovo,
+        p_observacao: observacao || null,
+        p_confirmar_alteracao_sensivel: alteracaoSensivel,
+        p_confirmar_fechamento_diferente: fechamentoDiferente
+      });
+      await carregarConfigsSupabase();
+      await carregarBlocosApostasAdmin();
+      status(`✅ ${bloco.nome} salvo com a mesma janela nas três rodadas.`, "ok");
+      toast(`${bloco.nome} salvo com sucesso.`, "ok");
+      await renderAdmin();
+    } catch (err) {
+      const msg = String(err?.message || err || "Falha ao salvar bloco.");
+      if (/outra sessão|Conflito de versão|versão/i.test(msg)) {
+        status("O bloco mudou em outra sessão. O painel foi recarregado; confira os dados antes de salvar novamente.", "err");
+        toast("Conflito de versão: confira o bloco recarregado.", "err");
+        await carregarBlocosApostasAdmin();
+        await renderAdmin();
+      } else if (/function.*does not exist|Could not find the function|PGRST202|PGRST/i.test(msg)) {
+        status("A infraestrutura de blocos ainda não existe no banco. Rode supabase/brasileirao_apostas_exec18_blocos_3_rodadas.sql.", "err");
+        toast("Aplique a migração da Execução 2 no Supabase.", "err");
+      } else {
+        status(msg, "err");
+        toast(msg, "err");
+      }
+    }
+  }
+
+  async function salvarStatusRodadaVinculada(statusNovo) {
+    const cfg = configDaRodada(state.rodada);
+    const bloco = blocoDaRodada(state.rodada);
+    if (!cfg || !bloco) {
+      toast("A rodada ainda não foi materializada pelo bloco.", "err");
+      return;
+    }
+    try {
+      status(`Atualizando a rodada ${state.rodada} sem alterar a janela do bloco...`, "warn");
+      await rpcRows("br_admin_definir_rodada", {
+        p_admin_id: state.usuario.id,
+        p_token: state.token,
+        p_temporada: CFG.temporada || 2026,
+        p_rodada: state.rodada,
+        p_abre_em: cfg.abre_em,
+        p_fecha_em: cfg.fecha_em,
+        p_publica_em: $("#cfg-publica-vinculada")?.value ? new Date($("#cfg-publica-vinculada").value).toISOString() : (cfg.publica_em || null),
+        p_status: statusNovo,
+        p_observacao: $("#cfg-obs-vinculada")?.value || cfg.observacao || null
+      });
+      await carregarConfigsSupabase();
+      const mensagem = mensagemStatusRodada(statusNovo);
+      status(mensagem, "ok");
+      toast(mensagem.replace(/^[^A-ZÁÉÍÓÚÂÊÔÃÕÇ0-9]+/i, ""), "ok");
+      await renderAdmin();
+    } catch (err) {
+      const msg = String(err?.message || err || "Falha ao atualizar a rodada.");
+      status(msg, "err");
+      toast(msg, "err");
+    }
+  }
+
+  async function salvarMetadadosRodadaVinculada(ev) {
+    ev.preventDefault();
+    const cfg = configDaRodada(state.rodada);
+    await salvarStatusRodadaVinculada(String(cfg?.status || "programada"));
+  }
+
   async function salvarRodadaAdmin(ev) {
     ev.preventDefault();
     await salvarConfigRodada($("#cfg-status").value);
@@ -1800,6 +2152,10 @@
 
   async function trocarRodada(rodada, manual = true) {
     state.rodada = Number(rodada);
+    if (isAdminGlobal() && Number(state.rodada) >= 21) {
+      const bloco = blocoDaRodada(state.rodada);
+      if (bloco) state.blocoAdminSelecionado = bloco.bloco_id;
+    }
     state.rodadaEscolhidaManualmente = Boolean(manual && Number(state.rodada) !== Number(state.rodadaAutomatica));
     await refresh();
   }
