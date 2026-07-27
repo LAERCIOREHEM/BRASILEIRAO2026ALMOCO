@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Validar regras da Execução 4
+      - name: Validar regras da Execução 4.1
         run: |
           python -m py_compile scripts/apurar_rodada.py
           python scripts/apurar_rodada.py --self-test
@@ -48,12 +48,20 @@ jobs:
           import json
           ap = json.load(open('dados-br/apuracao.json', encoding='utf-8'))
           rk = json.load(open('dados-br/ranking-apostas.json', encoding='utf-8'))
+          resultados = json.load(open('resultados.json', encoding='utf-8'))
           assert ap.get('schema_version') == 4
           assert rk.get('schema_version') == 4
           assert len(ap.get('blocos') or []) == 6
           assert (ap.get('validacao_resultados') or {}).get('somente_finalizados') is True
           assert all(not b.get('concluido') or int(b.get('jogos_apurados') or 0) == 30 for b in ap.get('blocos') or [])
-          print('JSONs de apuração validados.')
+
+          r20 = next((r for r in ap.get('rodadas') or [] if int(r.get('rodada') or 0) == 20), None)
+          finais_r20 = [r for r in resultados.get('resultados') or [] if int(r.get('rodada') or 0) == 20]
+          if r20 and int(r20.get('participantes') or 0) > 0 and len(finais_r20) >= 10:
+              assert r20.get('publicada') is True, 'Rodada 20 encerrada voltou a ficar sigilosa.'
+              assert int(r20.get('jogos_apurados') or 0) == 10, 'Rodada 20 não apurou os dez jogos.'
+              assert r20.get('ranking'), 'Ranking da Rodada 20 ficou vazio apesar dos palpites e resultados.'
+          print('JSONs de apuração e regressão da Rodada 20 validados.')
           PY
 
       - name: Publicar apuração com push robusto

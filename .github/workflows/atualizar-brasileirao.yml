@@ -364,6 +364,7 @@ jobs:
           import json
           ap = json.load(open('dados-br/apuracao.json', encoding='utf-8'))
           rk = json.load(open('dados-br/ranking-apostas.json', encoding='utf-8'))
+          resultados = json.load(open('resultados.json', encoding='utf-8'))
           assert ap.get('schema_version') == 4
           assert rk.get('schema_version') == 4
           assert (ap.get('validacao_resultados') or {}).get('somente_finalizados') is True
@@ -376,7 +377,14 @@ jobs:
               assert 0 <= int(bloco.get('jogos_apurados') or 0) <= 30
               if bloco.get('concluido'):
                   assert int(bloco.get('jogos_apurados') or 0) == 30
-          print('Apuração e rankings da Execução 4 validados.')
+
+          r20 = next((r for r in ap.get('rodadas') or [] if int(r.get('rodada') or 0) == 20), None)
+          finais_r20 = [r for r in resultados.get('resultados') or [] if int(r.get('rodada') or 0) == 20]
+          if r20 and int(r20.get('participantes') or 0) > 0 and len(finais_r20) >= 10:
+              assert r20.get('publicada') is True, 'Rodada 20 encerrada voltou a ficar sigilosa.'
+              assert int(r20.get('jogos_apurados') or 0) == 10, 'Rodada 20 não apurou os dez jogos.'
+              assert r20.get('ranking'), 'Ranking da Rodada 20 ficou vazio apesar dos palpites e resultados.'
+          print('Apuração, rankings e regressão da Rodada 20 validados.')
           PY
 
       - name: Conferir e validar JSONs gerados
