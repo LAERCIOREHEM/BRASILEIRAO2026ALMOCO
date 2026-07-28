@@ -267,6 +267,5 @@ jobs:
           BR_SITE: Brasileirão 2026 Almoço
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
-          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
         run: python scripts/gerenciar_status_brasileirao.py --error --notify
 

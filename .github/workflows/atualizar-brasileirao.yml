@@ -153,7 +153,7 @@ jobs:
           printf '::warning::%s\n' "${ESPN_MOTIVO:-Motivo não informado pelo coletor.}"
           echo "O workflow termina com sucesso sem publicar arquivos parciais ou contraditórios."
 
-      - name: Registrar alerta de snapshot preservado
+      - name: Registrar falha de atualização e alertar por e-mail
         if: steps.espn.outputs.sincronizado != 'true'
         env:
           BR_STATUS: ${{ steps.espn.outputs.status }}
@@ -165,7 +165,6 @@ jobs:
           BR_SITE: Brasileirão 2026 Almoço
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
-          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
         run: python scripts/gerenciar_status_brasileirao.py --from-env --notify
 
       - name: Publicar somente o status preservado
@@ -332,7 +331,7 @@ jobs:
         if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_auditoria_cobertura_resultados.py
 
-      - name: Registrar saúde da atualização e alertar em fallback
+      - name: Registrar saúde da atualização sem enviar e-mail
         if: steps.espn.outputs.sincronizado == 'true'
         env:
           BR_STATUS: ${{ steps.espn.outputs.status }}
@@ -342,10 +341,7 @@ jobs:
           BR_SINCRONIZADO: ${{ steps.espn.outputs.sincronizado }}
           BR_WORKFLOW: Atualizar Brasileirao (ESPN)
           BR_SITE: Brasileirão 2026 Almoço
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
-          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
-        run: python scripts/gerenciar_status_brasileirao.py --from-env --notify
+        run: python scripts/gerenciar_status_brasileirao.py --from-env
 
       - name: Apurar apostas, blocos e rankings no mesmo snapshot
         if: steps.espn.outputs.sincronizado == 'true'
@@ -813,7 +809,7 @@ jobs:
       - name: Enviar alerta de falha
         env:
           BR_STATUS: erro
-          BR_MOTIVO: "O workflow Atualizar Brasileirão terminou com falha. Verifique em ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BR_MOTIVO: "O workflow Atualizar Brasileirão terminou com falha. O último snapshot íntegro permanece publicado."
           BR_FALLBACKS: '[]'
           BR_TENTATIVAS: '0'
           BR_SINCRONIZADO: 'false'
@@ -823,5 +819,40 @@ jobs:
           BR_SOURCE_RUN_ID: "${{ github.run_id }}"
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
-          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
         run: python scripts/gerenciar_status_brasileirao.py --from-env --notify
+
+      - name: Persistir status da falha e controle de deduplicação
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          STATUS_FILE="dados-br/status-atualizacao.json"
+          TMP_DIR="$(mktemp -d)"
+          mkdir -p "$TMP_DIR/dados-br"
+          cp -a "$STATUS_FILE" "$TMP_DIR/$STATUS_FILE"
+
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            mkdir -p dados-br
+            cp -a "$TMP_DIR/$STATUS_FILE" "$STATUS_FILE"
+
+            if [[ -z "$(git status --porcelain -- "$STATUS_FILE")" ]]; then
+              echo "O mesmo status de falha já está publicado; nenhum commit necessário."
+              exit 0
+            fi
+
+            git add -- "$STATUS_FILE"
+            git commit -m "Registrar falha do Atualizar Brasileirao - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then
+              echo "Status de falha publicado e deduplicação persistida."
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "::warning::Não foi possível persistir o status da falha após 5 tentativas."
+          exit 0
