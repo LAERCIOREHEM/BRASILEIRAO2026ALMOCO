@@ -4128,7 +4128,8 @@ function jogosLiveAplicaveisNaTabela() {
   const vistos = new Set();
   const saida = [];
   for (const live of Object.values(state.espnLive || {})) {
-    if (!live || !['in','post'].includes(live.estado)) continue;
+    const finalReal = espnLiveEhFinalReal(live);
+    if (!live || !(live.estado === 'in' || finalReal)) continue;
     const m = nomeCanonico(live.mandante), v = nomeCanonico(live.visitante);
     const pm = numeroPlacarLive(live.placarMandante), pv = numeroPlacarLive(live.placarVisitante);
     if (!m || !v || pm === null || pv === null || !oficiais[m] || !oficiais[v]) continue;
@@ -4136,7 +4137,7 @@ function jogosLiveAplicaveisNaTabela() {
     if (vistos.has(chave)) continue;
     vistos.add(chave);
 
-    if (live.estado === 'post') {
+    if (finalReal) {
       const jaNoResultados = resultadoLiveJaEstaNoJson(live);
       const esperadoM = (contagem[m] || 0) + (jaNoResultados ? 0 : 1);
       const esperadoV = (contagem[v] || 0) + (jaNoResultados ? 0 : 1);
@@ -4160,7 +4161,7 @@ function tabelaComJogosAoVivo() {
     for (const t of [m, v]) {
       t.jogos = Number(t.jogos || 0) + 1;
       t._aoVivo = j.estado === 'in';
-      t._provisorioFinal = j.estado === 'post';
+      t._provisorioFinal = j.estado === 'post' && espnLiveEhFinalReal(j);
     }
     m.gp = Number(m.gp || 0) + pm; m.gc = Number(m.gc || 0) + pv;
     v.gp = Number(v.gp || 0) + pv; v.gc = Number(v.gc || 0) + pm;
@@ -4956,6 +4957,31 @@ function espnLiveDoJogo(j) {
   return k ? (state.espnLive || {})[k] : null;
 }
 
+function espnLiveTextoStatus(live) {
+  return [live && live.status, live && live.statusName, live && live.statusDescription]
+    .filter(Boolean).join(' ').trim().toLowerCase();
+}
+
+function espnLiveEhInterrompido(live) {
+  return /postpon|adiad|suspend|cancel/.test(espnLiveTextoStatus(live));
+}
+
+function espnLiveData(live) {
+  if (!live || !live.dataIso) return null;
+  const d = new Date(live.dataIso);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function espnLiveEhFinalReal(live, referencia = new Date()) {
+  if (!live || live.estado !== 'post' || espnLiveEhInterrompido(live)) return false;
+  const data = espnLiveData(live);
+  if (!data || data.getTime() > referencia.getTime() - 90 * 60 * 1000) return false;
+  const pm = numeroPlacarLive(live.placarMandante);
+  const pv = numeroPlacarLive(live.placarVisitante);
+  if (pm === null || pv === null) return false;
+  return live.completed === true || live.estado === 'post';
+}
+
 async function espnLiveBuscar() {
   // datas em UTC (ontem..amanhã) para cobrir jogos noturnos que viram o dia
   const fmt = d => d.toISOString().slice(0, 10).replace(/-/g, '');
@@ -4995,14 +5021,28 @@ async function espnLiveBuscar() {
         if (quem) gols.push(`${quem}${min ? ' ' + min : ''}${timeGol ? ' (' + timeGol + ')' : ''}`);
       }
 
+      const dataIso = ev.date || comp.date || null;
+      const dataEvento = dataIso ? new Date(dataIso) : null;
+      const completed = tipo.completed === true;
+      let estadoSeguro = String(tipo.state || (completed ? 'post' : 'pre')).toLowerCase();
+      // A ESPN às vezes publica state=post/completed=false para partidas futuras.
+      // No navegador, nunca aceitamos um pós-jogo antes de 90 minutos do início.
+      if (estadoSeguro === 'post' && !completed && dataEvento && !Number.isNaN(dataEvento.getTime()) &&
+          dataEvento.getTime() > Date.now() + 15 * 60 * 1000) {
+        estadoSeguro = 'pre';
+      }
+
       novo[k] = {
-        estado: tipo.state || 'pre',                       // pre | in | post
+        estado: estadoSeguro,                              // pre | in | post
+        completed: completed,
         status: st.displayClock || tipo.shortDetail || tipo.detail || '',
+        statusName: tipo.name || '',
+        statusDescription: tipo.description || tipo.detail || tipo.shortDetail || '',
         placarMandante: casa.score != null ? casa.score : '-',
         placarVisitante: fora.score != null ? fora.score : '-',
         mandante: nomeCanonico((casa.team || {}).displayName || (casa.team || {}).name),
         visitante: nomeCanonico((fora.team || {}).displayName || (fora.team || {}).name),
-        dataIso: ev.date || comp.date || null,
+        dataIso: dataIso,
         eventId: ev.id || comp.id || null,
         rodada: Number((((ev.seasonType || {}).name || '').match(/\d+/) || [])[0] || ((comp.notes || []).map(n => n && n.headline).join(' ').match(/\d+/) || [])[0] || 0),
         gols: gols
@@ -5125,7 +5165,7 @@ function resultadosComFinaisRecentesESPN(listaBase) {
   const lista = Array.isArray(listaBase) ? listaBase.slice() : [];
   const chaves = new Set(lista.map(r => espnChaveJogo((r.mandante || {}).nome, (r.visitante || {}).nome)));
   for (const live of Object.values(state.espnLive || {})) {
-    if (!live || live.estado !== 'post') continue;
+    if (!espnLiveEhFinalReal(live)) continue;
     const chave = espnChaveJogo(live.mandante, live.visitante);
     if (!chave || chaves.has(chave)) continue;
     const pm = numeroPlacarLive(live.placarMandante), pv = numeroPlacarLive(live.placarVisitante);
@@ -5251,7 +5291,7 @@ function renderResultados() {
       html += `<div class="resultado-card ${classeJogo}">
         <div class="resultado-meta">
           <span class="resultado-rodada">R${r.rodada}</span>
-          <span class="resultado-data">${dataFmt}${r._provisorioESPN ? ' · <strong style="color:var(--accent)">ESPN ao vivo</strong>' : ''}</span>
+          <span class="resultado-data">${dataFmt}${r._provisorioESPN ? ' · <strong style="color:var(--accent)">ESPN · resultado recém-finalizado</strong>' : ''}</span>
         </div>
         <div class="resultado-jogo">
           ${linkClubeBrasileirao(m.nome, `<span class="resultado-team-text"><span class="resultado-nome">${m.nome || '?'}</span></span><span class="resultado-escudo">${escudoMandante}</span>`, 'resultado-time mandante br-club-link')}

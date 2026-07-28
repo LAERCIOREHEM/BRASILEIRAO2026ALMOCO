@@ -139,6 +139,7 @@
   const state = {
     agenda: [],
     eventosLocais: [],
+    calendario: [],
     diretos: [],
     transmissoes: {},
     transmissoesTv: {},
@@ -319,19 +320,29 @@
     home.score = h.score == null || h.score === "" ? null : Number(h.score);
     away.score = a.score == null || a.score === "" ? null : Number(a.score);
     const date = parseDate(ev.date || comp.date);
+    const completed = type.completed === true;
+    const detail = type.shortDetail || type.detail || status.displayClock || (status.type && status.type.detail) || "";
+    const interrupted = /postpon|adiad|suspend|cancel/i.test([type.name, type.description, type.detail, type.shortDetail].join(" "));
+    let safeState = String(type.state || (completed ? "post" : "pre")).toLowerCase();
+    // A ESPN eventualmente devolve state=post/completed=false para evento futuro.
+    // Um jogo futuro não pode entrar como encerrado; preservamos a data e tratamos
+    // o evento como pré-jogo (ou como adiado, quando o texto assim indicar).
+    if (safeState === "post" && !completed && date && date.getTime() > Date.now() + 15 * 60000) {
+      safeState = "pre";
+    }
     return {
       id: String(ev.id || comp.id || ""),
       rodada: roundFromEvent(ev, comp),
       date,
       dataIso: date ? date.toISOString() : "",
-      state: String(type.state || (type.completed ? "post" : "pre")).toLowerCase(),
-      completed: type.completed === true,
-      detail: type.shortDetail || type.detail || status.displayClock || (status.type && status.type.detail) || "",
+      state: safeState,
+      completed,
+      detail,
       clock: status.displayClock || "",
       period: Number(status.period || comp.period || 0),
       venue: venueFromCompetition(comp),
       transmissao: broadcastNames(ev, comp).join(" / "),
-      adiado: /postpon|adiad|suspend|cancel/i.test([type.name, type.description, type.detail, type.shortDetail].join(" ")),
+      adiado: interrupted,
       dataDefinir: false,
       finalizadoEm: parseDate(ev.finalizado_em || ev.finalizedAt || ev.completedAt),
       home,
@@ -352,8 +363,42 @@
     return state.agenda.find((x) => teamKey(x.home.nome, x.away.nome) === key) || null;
   }
 
+  function findCalendar(game) {
+    if (!game || !game.home || !game.away) return null;
+    if (game.id) {
+      const byId = state.calendario.find((x) => String(x && x.event_id || '') === String(game.id));
+      if (byId) return byId;
+    }
+    const key = teamKey(game.home.nome, game.away.nome);
+    return state.calendario.find((x) => teamKey(x && x.mandante, x && x.visitante) === key) || null;
+  }
+
+  function calendarAsLocal(game) {
+    const item = findCalendar(game);
+    if (!item) return null;
+    return {
+      id: String(item.event_id || ''),
+      rodada: Number(item.rodada || 0),
+      date: item.data_definir === true ? null : parseDate(item.data_iso),
+      dataIso: item.data_definir === true ? '' : String(item.data_iso || ''),
+      state: String(item.estado || 'pre'),
+      completed: item.concluido === true,
+      detail: item.status || '',
+      clock: '',
+      venue: item.estadio || '',
+      transmissao: '',
+      adiado: item.adiado === true,
+      dataDefinir: item.data_definir === true,
+      finalizadoEm: null,
+      home: localTeam({ nome: item.mandante }),
+      away: localTeam({ nome: item.visitante }),
+      raw: null,
+      source: 'calendar'
+    };
+  }
+
   function mergeLocal(game) {
-    const loc = findLocal(game);
+    const loc = findLocal(game) || calendarAsLocal(game);
     if (!loc) return game;
     return {
       ...loc,
@@ -707,13 +752,15 @@
   }
 
   async function loadLocal() {
-    const [jogos, eventos, probabilidades] = await Promise.all([
+    const [jogos, eventos, calendario, probabilidades] = await Promise.all([
       fetchJson("jogos.json?t=" + Date.now()),
       fetchJson("espn_eventos.json?t=" + Date.now()).catch(() => ({ eventos: [] })),
+      fetchJson("dados-br/calendario-completo.json?t=" + Date.now()).catch(() => ({ jogos: [] })),
       loadProbabilityDataset()
     ]);
     state.agenda = localGamesFromJson(jogos).filter((g) => !g.dataDefinir && g.date);
     state.eventosLocais = (eventos.eventos || []).slice();
+    state.calendario = (calendario.jogos || []).slice();
     state.probabilidadesJogos = probabilidades;
     for (const item of state.eventosLocais) {
       const key = String(item && item.event_id || "");
@@ -758,7 +805,7 @@
       const key = String(game.id || teamKey(game.home && game.home.nome, game.away && game.away.nome));
       if (!key) continue;
       seen.add(key);
-      if (game.state === "post") {
+      if (gameReallyFinished(game)) {
         const stable = finalizadoLocalParaJogo(game);
         if (stable > 0) state.finalizadosEm[key] = stable;
         else if (!state.finalizadosEm[key]) state.finalizadosEm[key] = estimarFinalizadoEm(game, Date.now());
@@ -827,7 +874,17 @@
   }
 
   function isPostponed(g) {
-    return g.adiado && (!g.date || /adiad|postpon|data a definir/i.test(g.detail || ""));
+    return Boolean(g && g.adiado) && (!g.date || /adiad|postpon|suspend|cancel|data a definir/i.test(g.detail || ""));
+  }
+
+  function gameReallyFinished(g, reference) {
+    if (!g || isPostponed(g)) return false;
+    const now = Number(reference || Date.now());
+    const kickoff = g.date instanceof Date ? g.date.getTime() : NaN;
+    if (!Number.isFinite(kickoff) || kickoff > now - 90 * 60000) return false;
+    const hs = Number(g.home && g.home.score), as = Number(g.away && g.away.score);
+    if (!Number.isFinite(hs) || !Number.isFinite(as)) return false;
+    return g.completed === true || g.state === "post";
   }
 
   function priorityGames(games) {
@@ -838,7 +895,7 @@
     // Mantém jogos encerrados em destaque por quinze minutos contados da
     // primeira resposta em que a ESPN os marcou como post/finalizados.
     const recent = games.filter((g) => {
-      if (g.state !== "post") return false;
+      if (!gameReallyFinished(g, now)) return false;
       const key = String(g.id || teamKey(g.home && g.home.nome, g.away && g.away.nome));
       const endedAt = Number(state.finalizadosEm[key] || 0);
       return endedAt > 0 && now - endedAt <= 15 * 60000;
@@ -923,10 +980,12 @@
 
   // Detecta fim de jogo com precisão. type.completed é o sinal canônico da ESPN.
   function isFinished(g, statusType, shortDetail) {
-    if (g && (g.state === "post" || g.completed)) return true;
-    if (statusType && statusType.completed === true) return true;
+    if (gameReallyFinished(g)) return true;
+    // Nenhum rótulo textual da ESPN pode transformar evento futuro ou adiado
+    // em jogo encerrado. A data mínima e o placar são validados acima.
+    if (!g || isPostponed(g) || !(g.date instanceof Date) || g.date.getTime() > Date.now() - 90 * 60000) return false;
     const name = String((statusType && statusType.name) || "").toUpperCase();
-    if (name === "STATUS_FULL_TIME" || name === "STATUS_FINAL" || name === "STATUS_END_OF_PERIOD" && (g && g.state === "post")) return true;
+    if (name === "STATUS_FULL_TIME" || name === "STATUS_FINAL" || (name === "STATUS_END_OF_PERIOD" && g.state === "post")) return true;
     const sd = String(shortDetail || "").trim();
     if (/^FT$/i.test(sd)) return true;
     if (/^full\s*time$/i.test(sd)) return true;
@@ -1824,7 +1883,7 @@
 
   function renderNextList(all, selected) {
     const now = Date.now();
-    const next = all.filter((g) => g.date && g.date.getTime() > now && (!selected || !sameFixture(g, selected)))
+    const next = all.filter((g) => g.date && g.date.getTime() > now && !isPostponed(g) && !gameReallyFinished(g, now) && (!selected || !sameFixture(g, selected)))
       .sort((a, b) => a.date - b.date).slice(0, 6);
     if (!next.length) return "";
     return '<section class="panel live-subpanel"><div class="panel-inner"><div class="live-section-head"><h2>Próximos jogos</h2></div>' +
