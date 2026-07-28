@@ -5,8 +5,9 @@
 O arquivo público contém somente mensagens editoriais seguras. Detalhes técnicos,
 link do run e fontes de fallback são exibidos no painel administrativo.
 
-A notificação usa os mesmos secrets já adotados pelo repositório:
-RESEND_API_KEY, EMAIL_DESTINO e EMAIL_REMETENTE (opcional).
+A notificação usa RESEND_API_KEY e EMAIL_DESTINO. O remetente operacional
+é fixado em avisos@brasileirao2026almoco.com.br para não depender de secret
+de remetente e para impedir o uso acidental de endereços de outros projetos.
 """
 from __future__ import annotations
 
@@ -24,7 +25,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "dados-br" / "status-atualizacao.json"
 TZ = timezone(timedelta(hours=-3))
-ALERT_COOLDOWN = timedelta(hours=6)
+FAILURE_ALERT_COOLDOWN = timedelta(hours=6)
+DEFAULT_EMAIL_SENDER = "Avisos · Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>"
+FAILURE_STATUSES = frozenset({"preservado", "erro"})
 STATUS_REFRESH_INTERVAL = timedelta(hours=1)
 SNAPSHOT_FILES = (
     ROOT / "tabela.json",
@@ -175,6 +178,7 @@ def status_from_env(previous: dict[str, Any], *, force_error: bool = False) -> d
     }
     fingerprint_source = json.dumps(
         {
+            "workflow": workflow_name,
             "status": raw_status,
             "mensagem": admin,
             "fallbacks": [(x.get("event_id"), x.get("fonte"), x.get("placar")) for x in fallbacks],
@@ -204,20 +208,31 @@ def status_from_env(previous: dict[str, Any], *, force_error: bool = False) -> d
 
 
 def should_notify(payload: dict[str, Any]) -> bool:
-    if payload.get("status") == "ok":
-        return str(payload.get("status_anterior") or "") in {"aviso", "preservado", "erro"}
+    """Autoriza e-mail somente quando houve falha operacional real.
+
+    ``aviso`` representa atualização íntegra com fonte complementar auditada e
+    nunca gera e-mail. ``ok`` e recuperação também não geram e-mail.
+    ``preservado`` é tratado como falha de atualização, pois o sistema não
+    conseguiu publicar um snapshot novo com segurança. Alertas idênticos de
+    falha respeitam o cooldown para evitar enxurrada de mensagens.
+    """
+    status = str(payload.get("status") or "").strip().lower()
+    if status not in FAILURE_STATUSES:
+        return False
     previous_fp = str(payload.get("ultimo_alerta_fingerprint") or "")
     current_fp = str(payload.get("fingerprint") or "")
     if current_fp != previous_fp:
         return True
     last = parse_dt(payload.get("ultimo_alerta_em"))
-    return last is None or now_brt() - last >= ALERT_COOLDOWN
+    return last is None or now_brt() - last >= FAILURE_ALERT_COOLDOWN
+
+
+def failure_label(payload: dict[str, Any]) -> str:
+    return "SNAPSHOT PRESERVADO" if str(payload.get("status") or "").lower() == "preservado" else "ERRO"
 
 
 def email_html(payload: dict[str, Any]) -> str:
-    status = str(payload.get("status") or "erro").upper()
-    if status == "OK" and str(payload.get("status_anterior") or "") in {"aviso", "preservado", "erro"}:
-        status = "NORMALIZADO"
+    status = failure_label(payload)
     fallback_lines = "".join(
         "<li>"
         + html.escape(str(item.get("jogo") or item.get("event_id") or "Jogo"))
@@ -247,12 +262,10 @@ def email_html(payload: dict[str, Any]) -> str:
 def send_resend(payload: dict[str, Any]) -> tuple[bool, str]:
     key = os.environ.get("RESEND_API_KEY", "").strip()
     destination = os.environ.get("EMAIL_DESTINO", "").strip()
-    sender = os.environ.get("EMAIL_REMETENTE", "onboarding@resend.dev").strip()
+    sender = os.environ.get("EMAIL_REMETENTE", DEFAULT_EMAIL_SENDER).strip() or DEFAULT_EMAIL_SENDER
     if not key or not destination:
         return False, "secrets RESEND_API_KEY/EMAIL_DESTINO não configurados"
-    status_label = str(payload.get("status") or "erro").upper()
-    if status_label == "OK" and str(payload.get("status_anterior") or "") in {"aviso", "preservado", "erro"}:
-        status_label = "NORMALIZADO"
+    status_label = failure_label(payload)
     subject = f"[BR2026 Almoço] {str(payload.get('workflow') or 'Workflow')} — {status_label}"
     data = json.dumps({
         "from": sender,
@@ -299,7 +312,12 @@ def run(*, force_error: bool = False, notify: bool = False) -> dict[str, Any]:
             payload["alerta_email_detalhe"] = detail
             print(f"::warning::Alerta operacional não enviado: {detail}")
     elif notify:
-        payload["alerta_email"] = "dispensado por deduplicação"
+        status = str(payload.get("status") or "").lower()
+        payload["alerta_email"] = (
+            "dispensado: atualização sem falha"
+            if status not in FAILURE_STATUSES
+            else "dispensado por deduplicação/cooldown"
+        )
     atomic_write(OUTPUT, payload)
     print(
         f"Status operacional gravado: {payload['status']} | "
@@ -320,38 +338,66 @@ def selftest() -> None:
         SNAPSHOT_FILES = tuple(root / name for name in ("tabela.json", "resultados.json", "jogos.json", "espn_eventos.json"))
         for item in SNAPSHOT_FILES:
             item.write_text('{"fonte":"ESPN"}\n', encoding="utf-8")
+
         os.environ.update({
             "BR_STATUS": "ok",
             "BR_MOTIVO": "Tudo certo",
             "BR_SINCRONIZADO": "true",
             "BR_TENTATIVAS": "1",
             "BR_FALLBACKS": "[]",
+            "BR_WORKFLOW": "Atualizar Brasileirao (ESPN)",
         })
         ok = run()
         assert ok["status"] == "ok" and ok["ultimo_sucesso"] and not ok["mostrar_publico"]
+        assert not should_notify(ok), "status normal nunca deve enviar e-mail"
         unchanged = run()
         assert unchanged == ok, "status normal sem mudança deveria ser idempotente"
+
+        os.environ.update({
+            "BR_STATUS": "aviso",
+            "BR_MOTIVO": "Snapshot auditado com override manual conhecido",
+            "BR_SINCRONIZADO": "true",
+            "BR_FALLBACKS": '[{"event_id":"1","fonte":"override manual","placar":"2 x 0"}]',
+        })
+        warning = run()
+        assert warning["status"] == "aviso" and not warning["mostrar_publico"]
+        assert not should_notify(warning), "fallback auditado não pode enviar e-mail"
+
         os.environ.update({
             "BR_STATUS": "preservado",
             "BR_MOTIVO": "Fonte fora de sincronia",
             "BR_SINCRONIZADO": "false",
+            "BR_FALLBACKS": "[]",
         })
         preserved = run()
         assert preserved["status"] == "preservado" and preserved["mostrar_publico"]
-        assert preserved["ultimo_sucesso"] == ok["ultimo_sucesso"]
-        assert should_notify(preserved)
-        repeated_preserved = run()
-        assert repeated_preserved == preserved, "anomalia idêntica deveria respeitar o intervalo de atualização"
+        assert preserved["ultimo_sucesso"] == warning["ultimo_sucesso"]
+        assert should_notify(preserved), "snapshot preservado representa falha de atualização"
+        preserved["ultimo_alerta_em"] = now_brt().isoformat()
+        preserved["ultimo_alerta_fingerprint"] = preserved["fingerprint"]
+        assert not should_notify(preserved), "falha idêntica deve respeitar o cooldown"
+
+        os.environ.update({
+            "BR_STATUS": "erro",
+            "BR_MOTIVO": "Falha crítica",
+            "BR_SINCRONIZADO": "false",
+        })
+        error = status_from_env(preserved)
+        assert should_notify(error), "erro novo deve enviar e-mail"
+
         os.environ.update({
             "BR_STATUS": "ok",
             "BR_MOTIVO": "Fonte normalizada",
             "BR_SINCRONIZADO": "true",
         })
-        recovered = run()
-        assert recovered["status_anterior"] == "preservado" and should_notify(recovered)
+        recovered = status_from_env(error)
+        assert recovered["status_anterior"] == "erro"
+        assert not should_notify(recovered), "recuperação não deve enviar e-mail"
+        assert DEFAULT_EMAIL_SENDER == "Avisos · Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>"
+
     OUTPUT = original_output
     SNAPSHOT_FILES = original_files
-    print("Selftest do status operacional OK")
+    print("Selftest do status operacional OK: e-mail somente em falha real")
 
 
 def main() -> int:
