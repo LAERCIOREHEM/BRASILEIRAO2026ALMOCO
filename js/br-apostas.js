@@ -338,6 +338,78 @@
     return bloco ? `Bloco ${bloco.rodada_inicio}–${bloco.rodada_fim}` : `Rodada ${Number(rodada)}`;
   }
 
+  function contextoAdminAtual() {
+    const rodada = Number(state.rodada);
+    const bloco = contextoEhBloco() ? blocoDaRodada(rodada) : null;
+    if (bloco) {
+      const inicio = Number(bloco.rodada_inicio);
+      const fim = Number(bloco.rodada_fim);
+      return {
+        tipo: "bloco",
+        bloco,
+        rodadas: Array.from({ length: Math.max(0, fim - inicio + 1) }, (_, i) => inicio + i),
+        totalJogos: 30,
+        label: bloco.nome || `Bloco ${inicio}–${fim}`,
+        slug: `bloco-${inicio}-${fim}`
+      };
+    }
+    const cfg = configDaRodada(rodada);
+    const totalDetectado = jogosDaRodada(rodada).length;
+    const totalConfigurado = Number((cfg && cfg.total_jogos) || 0);
+    return {
+      tipo: "rodada",
+      bloco: null,
+      rodadas: [rodada],
+      totalJogos: Math.max(totalDetectado, totalConfigurado, 0),
+      label: `Rodada ${rodada}`,
+      slug: `rodada-${rodada}`
+    };
+  }
+
+  function agregarProgressoAdminPorContexto(lotes, totalJogos) {
+    const porParticipante = new Map();
+    for (const lote of lotes || []) {
+      for (const linha of lote || []) {
+        const chave = String(linha.participante_id || linha.login || linha.nome || "");
+        if (!chave) continue;
+        if (!porParticipante.has(chave)) {
+          porParticipante.set(chave, {
+            ...linha,
+            total_palpites: 0,
+            total_jogos: Number(totalJogos || 0),
+            percentual: 0
+          });
+        }
+        const acumulado = porParticipante.get(chave);
+        acumulado.total_palpites += Number(linha.total_palpites || 0);
+        acumulado.ativo = Boolean(linha.ativo);
+        acumulado.admin = Boolean(linha.admin);
+      }
+    }
+    const total = Number(totalJogos || 0);
+    return Array.from(porParticipante.values())
+      .map(linha => ({
+        ...linha,
+        total_jogos: total,
+        percentual: total > 0 ? Math.round((Number(linha.total_palpites || 0) / total) * 1000) / 10 : 0
+      }))
+      .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+  }
+
+  async function carregarProgressoAdminContexto(nomeRpc, parametrosExtras = {}) {
+    const contexto = contextoAdminAtual();
+    const totalPorRodada = contexto.tipo === "bloco" ? 10 : contexto.totalJogos;
+    const lotes = await Promise.all(contexto.rodadas.map(rodada => rpcRows(nomeRpc, {
+      p_admin_id: state.usuario.id,
+      p_token: state.token,
+      p_temporada: CFG.temporada || 2026,
+      p_rodada: rodada,
+      p_total_jogos: totalPorRodada,
+      ...parametrosExtras
+    })));
+    return agregarProgressoAdminPorContexto(lotes, contexto.totalJogos);
+  }
+
   function mesmoContextoRodadas(a, b) {
     if (Number(a) === 20 || Number(b) === 20) return Number(a) === Number(b);
     const ba = blocoEstaticoDaRodada(a);
@@ -1731,7 +1803,6 @@
     if (!canAdminAny()) return;
     await carregarBlocosApostasAdmin();
     try {
-      const total = jogosDaRodada(state.rodada).length;
       const [participantes, ligas] = await Promise.all([
         rpcRows("br_admin_listar_participantes", { p_admin_id: state.usuario.id, p_token: state.token }),
         rpcRows("br_admin_listar_ligas", { p_admin_id: state.usuario.id, p_token: state.token })
@@ -1740,12 +1811,7 @@
       state.ligasAdmin = ligas;
       if (!state.adminLigaSelecionada && ligas.length) state.adminLigaSelecionada = ligas[0].liga_id;
       const [progresso, ligaMembros] = await Promise.all([
-        rpcRows("br_admin_progresso_rodada_liga", {
-          p_admin_id: state.usuario.id,
-          p_token: state.token,
-          p_temporada: CFG.temporada || 2026,
-          p_rodada: state.rodada,
-          p_total_jogos: total,
+        carregarProgressoAdminContexto("br_admin_progresso_rodada_liga", {
           p_liga_id: state.adminLigaSelecionada || null
         }),
         rpcRows("br_admin_listar_liga_participantes", { p_admin_id: state.usuario.id, p_token: state.token, p_liga_id: null })
@@ -1755,8 +1821,7 @@
     } catch (err) {
       console.warn("Admin por liga indisponível; tentando fallback geral", err);
       try {
-        const total = jogosDaRodada(state.rodada).length;
-        state.progresso = await rpcRows("br_admin_progresso_rodada", { p_admin_id: state.usuario.id, p_token: state.token, p_temporada: CFG.temporada || 2026, p_rodada: state.rodada, p_total_jogos: total });
+        state.progresso = await carregarProgressoAdminContexto("br_admin_progresso_rodada");
       } catch (_) { state.progresso = []; }
       state.participantes = state.participantes || [];
       state.ligasAdmin = state.ligasAdmin || [];
@@ -1876,9 +1941,11 @@
   }
 
   function exportarProgressoCsv() {
-    const linhas = [["liga", "rodada", "participante", "login", "status", "preenchido", "total_jogos", "percentual"]];
-    state.progresso.forEach(p => linhas.push([nomeLigaRelatorio(), state.rodada, p.nome, p.login, p.ativo ? "ativo" : "inativo", p.total_palpites, p.total_jogos, p.percentual]));
-    baixarCsv(`progresso-${slugLigaRelatorio()}-rodada-${state.rodada}.csv`, linhas);
+    const contexto = contextoAdminAtual();
+    const rodadas = contexto.rodadas.join("-");
+    const linhas = [["liga", "contexto", "rodadas", "participante", "login", "status", "preenchido", "total_jogos", "percentual"]];
+    state.progresso.forEach(p => linhas.push([nomeLigaRelatorio(), contexto.label, rodadas, p.nome, p.login, p.ativo ? "ativo" : "inativo", p.total_palpites, p.total_jogos, p.percentual]));
+    baixarCsv(`progresso-${slugLigaRelatorio()}-${contexto.slug}.csv`, linhas);
   }
 
   async function copiarResumoAuditoria() {
@@ -2112,6 +2179,7 @@
       return;
     }
     const globalAdmin = isAdminGlobal();
+    const contextoAdmin = contextoAdminAtual();
     const blocoRodada = globalAdmin && Number(state.rodada) >= 21 ? blocoDaRodada(state.rodada) : null;
     const painelBlocos = globalAdmin ? renderPainelBlocosAdminHtml() : "";
     const painelAdministracaoAnual = globalAdmin ? `<article class="panel admin-section" id="admin-anual"><div class="panel-inner">
@@ -2134,8 +2202,8 @@
       ? renderPainelRodadaVinculadaHtml(cfg, blocoRodada)
       : renderPainelRodadaLegadoHtml(cfg, globalAdmin);
     const painelProgresso = `<article class="panel admin-section" id="admin-preenchimento"><div class="panel-inner">
-        <div class="kicker">${globalAdmin ? "3" : "2"}. Preenchimento</div><h2>Progresso sem revelar placares</h2>
-        <p>O percentual considera a liga selecionada. Antes da publicação, o administrador acompanha apenas a quantidade preenchida.</p>
+        <div class="kicker">${globalAdmin ? "3" : "2"}. Preenchimento</div><h2>Progresso do ${escapeHtml(contextoAdmin.label)} sem revelar placares</h2>
+        <p>O percentual considera a liga selecionada e ${contextoAdmin.tipo === "bloco" ? "os 30 jogos das três rodadas do bloco" : `os ${contextoAdmin.totalJogos} jogos da rodada`}. Antes da publicação, o administrador acompanha apenas a quantidade preenchida.</p>
         <div class="export-row"><button class="btn secondary" type="button" id="export-progresso">⬇️ Exportar progresso CSV</button></div>
         <div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Participante</th><th>Login</th><th>Status</th><th>Ligas</th><th>Preenchido</th><th>%</th><th>Ações</th></tr></thead><tbody>
           ${state.progresso.map(p => `<tr><td>${escapeHtml(p.nome)}</td><td>${escapeHtml(p.login)}</td><td>${p.ativo ? "ativo" : "inativo"}${p.admin ? " · admin" : ""}</td><td>${ligasDoParticipante(p.participante_id).map(escapeHtml).join(", ") || "—"}</td><td>${p.total_palpites}/${p.total_jogos}</td><td><div class="progress-wrap"><div class="progress-bar" style="width:${Math.max(0, Math.min(100, Number(p.percentual || 0)))}%"></div></div></td><td class="action-cell">${globalAdmin ? `<button class="btn secondary" type="button" data-edit="${escapeAttr(p.participante_id)}">editar</button>${p.ativo ? `<button class="btn danger" type="button" data-inativar="${escapeAttr(p.participante_id)}">inativar</button>` : `<button class="btn secondary" type="button" data-reativar="${escapeAttr(p.participante_id)}">reativar</button>`}` : `<span class="muted-note">gerencie pela liga</span>`}</td></tr>`).join("")}
