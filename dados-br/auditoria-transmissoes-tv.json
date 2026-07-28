@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 35,
     "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 3,
+    "registros_preservados": 2,
     "fontes_com_falha": 1
   },
   "fontes": {
@@ -15,21 +15,21 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 32,
-      "duracao_ms": 11078
+      "jogos_com_canal": 33,
+      "duracao_ms": 16633
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 6,
-      "jogos_com_canal": 8,
-      "duracao_ms": 63247
+      "artigos_consultados": 7,
+      "jogos_com_canal": 10,
+      "duracao_ms": 126047
     },
     "espn": {
       "ok": true,
       "eventos_na_janela": 36,
       "scoreboard_com_canal": 0,
       "summary_com_canal": 0,
-      "duracao_ms": 1075
+      "duracao_ms": 1364
     }
   },
   "sem_transmissao": [],
@@ -37,13 +37,6 @@
     {
       "event_id": "401841174",
       "jogo": "Corinthians x Athletico-PR",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841194",
-      "jogo": "Chapecoense x Bahia",
       "canais": [
         "Globo"
       ]
@@ -64,6 +57,7 @@
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: RuntimeError: falha ao buscar página oficial: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada :: curl_cffi=CertificateVerifyError: Failed to perform, curl: (60) SSL certificate problem: unable to get local issuer certificate. See https://curl.se/libcurl/c/libcurl-errors.html first for more details. | urllib=URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)> | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: RuntimeError: falha ao buscar página oficial: https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada :: curl_cffi=CertificateVerifyError: Failed to perform, curl: (60) SSL certificate problem: unable to get local issuer certificate. See https://curl.se/libcurl/c/libcurl-errors.html first for more details. | urllib=URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>"
   ],
   "artigos_ge_descobertos": [
+    "https://ge.globo.com/gato-mestre/noticia/2026/07/27/palpite-ge-2026-tropa-do-ge-e-gato-mestre-dividem-a-lideranca-veja-erros-e-acertos-da-20a-rodada-do-brasileiro.ghtml",
     "https://ge.globo.com/pa/futebol/times/remo/noticia/2026/07/27/remo-emplaca-tres-nomes-na-selecao-da-20a-rodada-da-serie-a.ghtml",
     "https://ge.globo.com/pa/futebol/times/remo/noticia/2026/07/27/em-jogo-de-seis-pontos-contra-o-mirassol-remo-pode-deixar-z-4-da-serie-a-apos-16-rodadas.ghtml",
     "https://ge.globo.com/pr/futebol/times/athletico-pr/noticia/2026/07/27/athletico-e-o-unico-do-g6-a-vencer-na-rodada-e-tem-melhor-sequencia-entre-times-da-serie-a-numeros.ghtml",
@@ -71,5 +65,5 @@
     "https://ge.globo.com/sp/campinas-e-regiao/futebol/brasileirao-serie-c/noticia/2026/07/27/guarani-x-inter-de-limeira-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/gato-mestre/noticia/2026/07/26/veja-os-publicos-da-20a-rodada-do-campeonato-brasileiro.ghtml"
   ],
-  "atualizado_em": "2026-07-27T20:49:34-03:00"
+  "atualizado_em": "2026-07-27T21:22:49-03:00"
 }
