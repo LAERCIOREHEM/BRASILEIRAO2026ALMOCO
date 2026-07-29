@@ -25,6 +25,7 @@
     jogosJson: null,
     resultadosJson: null,
     espnEventosJson: null,
+    calendarioCompletoJson: null,
     configLocal: null,
     configSupabase: [],
     jogos: [],
@@ -189,6 +190,22 @@
   function timeSigla(time) { return (time && time.sigla) || normalizarTexto(timeNome(time)).slice(0, 3).toUpperCase(); }
   function timeEscudo(time) { return (time && time.escudo) || ""; }
   function jogoId(j) { return String(j.event_id || j.id || j.jogo_chave || `${timeNome(j.mandante)}-${timeNome(j.visitante)}-${j.data_iso || ""}`); }
+  function chaveConfrontoTimes(j) {
+    const mandante = normalizarTexto(timeNome(j && j.mandante));
+    const visitante = normalizarTexto(timeNome(j && j.visitante));
+    return mandante && visitante ? `${mandante}|${visitante}` : "";
+  }
+  function chaveConfrontoRodada(j) {
+    const rodada = Number(j && j.rodada || 0);
+    const times = chaveConfrontoTimes(j);
+    return rodada && times ? `${rodada}|${times}` : "";
+  }
+  function idSinteticoJogo(j) {
+    const rodada = Number(j && j.rodada || 0);
+    const mandante = normalizarTexto(timeNome(j && j.mandante));
+    const visitante = normalizarTexto(timeNome(j && j.visitante));
+    return `fg-${Number(CFG.temporada || 2026)}-r${rodada}-${mandante}-${visitante}`;
+  }
   function jogoChave(j) { return `${normalizarTexto(timeNome(j.mandante))}-${normalizarTexto(timeNome(j.visitante))}-${String(j.data_iso || "").slice(0, 10)}`; }
 
   function jogoComHorarioInconsistente(j) {
@@ -284,6 +301,11 @@
     return saida.sort(compararJogosPorData);
   }
 
+  function timeCalendario(nome) {
+    const clube = (state.clubesPorNome && state.clubesPorNome[nome]) || {};
+    return { nome: String(nome || ""), escudo: clube.escudo || "", sigla: clube.sigla || "" };
+  }
+
   function todosJogos() {
     const a = (state.jogosJson && state.jogosJson.jogos) || [];
     const b = (state.resultadosJson && state.resultadosJson.resultados) || [];
@@ -291,21 +313,55 @@
       event_id: e.event_id,
       rodada: e.rodada,
       data_iso: e.data_iso,
-      mandante: { nome: e.mandante, escudo: (state.clubesPorNome && state.clubesPorNome[e.mandante] && state.clubesPorNome[e.mandante].escudo) || "", sigla: (state.clubesPorNome && state.clubesPorNome[e.mandante] && state.clubesPorNome[e.mandante].sigla) || "" },
-      visitante: { nome: e.visitante, escudo: (state.clubesPorNome && state.clubesPorNome[e.visitante] && state.clubesPorNome[e.visitante].escudo) || "", sigla: (state.clubesPorNome && state.clubesPorNome[e.visitante] && state.clubesPorNome[e.visitante].sigla) || "" },
+      mandante: timeCalendario(e.mandante),
+      visitante: timeCalendario(e.visitante),
       estadio: e.estadio || "",
       transmissao: e.transmissao || "",
       estado: e.estado || "pre",
+      concluido: e.concluido === true,
+      data_definir: e.data_definir === true,
       placar_mandante: e.placar_mandante,
       placar_visitante: e.placar_visitante
     }));
+    const calendario = ((state.calendarioCompletoJson && state.calendarioCompletoJson.jogos) || []).map(item => {
+      const base = {
+        ...item,
+        mandante: timeCalendario(item.mandante),
+        visitante: timeCalendario(item.visitante),
+        estado: item.estado || "pre",
+        data_definir: item.data_definir === true || !item.data_iso
+      };
+      return { ...base, event_id: String(item.event_id || idSinteticoJogo(base)) };
+    });
+    const calendarioPorTimes = new Map(calendario.map(j => [chaveConfrontoTimes(j), j]).filter(([chave]) => Boolean(chave)));
+    const aplicarRodadaCanonica = item => {
+      const canonico = calendarioPorTimes.get(chaveConfrontoTimes(item));
+      const rodadaFonte = Number(item && item.rodada || 0);
+      if (!canonico || Number(canonico.rodada) === rodadaFonte) return item;
+      return { ...item, rodada: Number(canonico.rodada), rodada_corrigida_calendario_de: rodadaFonte || null };
+    };
+
     const map = new Map();
     [...a, ...b, ...c].forEach(item => {
-      const j = normalizarHorarioJogo(item);
+      const j = normalizarHorarioJogo(aplicarRodadaCanonica(item));
       if (!j) return;
       const id = jogoId(j);
       if (!map.has(id)) map.set(id, j);
     });
+
+    // calendario-completo.json é a malha canônica de 380 partidas. Ele completa
+    // confrontos sem data/event_id que a ESPN ainda não publicou, sem duplicar
+    // os jogos mais ricos já presentes em jogos/resultados/eventos.
+    const confrontosExistentes = new Set(Array.from(map.values()).map(chaveConfrontoRodada).filter(Boolean));
+    calendario.forEach(item => {
+      const j = normalizarHorarioJogo(item);
+      if (!j) return;
+      const chave = chaveConfrontoRodada(j);
+      if (chave && confrontosExistentes.has(chave)) return;
+      map.set(jogoId(j), j);
+      if (chave) confrontosExistentes.add(chave);
+    });
+
     return sanearJogosPorRodada(Array.from(map.values()).sort(compararJogosPorData));
   }
 
@@ -688,10 +744,11 @@
 
   async function carregarBase() {
     const arq = CFG.arquivos || {};
-    const [jogosJson, resultadosJson, espnEventosJson, configLocal, apuracao, rankingApostas, clubesJson] = await Promise.all([
+    const [jogosJson, resultadosJson, espnEventosJson, calendarioCompletoJson, configLocal, apuracao, rankingApostas, clubesJson] = await Promise.all([
       fetchJson(arq.jogos || "jogos.json", { jogos: [] }),
       fetchJson(arq.resultados || "resultados.json", { resultados: [] }),
       fetchJson(arq.eventos || "espn_eventos.json", { eventos: [] }),
+      fetchJson(arq.calendarioCompleto || "dados-br/calendario-completo.json", { jogos: [] }),
       fetchJson(arq.configRodadas || "dados-br/apostas-config.json", { rodadas: [] }),
       fetchJson("dados-br/apuracao.json", { rodadas: [], ranking_geral: [] }),
       fetchJson("dados-br/ranking-apostas.json", { ranking_geral: [] }),
@@ -700,6 +757,7 @@
     state.jogosJson = jogosJson;
     state.resultadosJson = resultadosJson;
     state.espnEventosJson = espnEventosJson;
+    state.calendarioCompletoJson = calendarioCompletoJson;
     state.configLocal = configLocal;
     state.apuracao = apuracao || { rodadas: [], ranking_geral: [] };
     state.rankingApostas = rankingApostas || { ranking_geral: [] };
@@ -1081,8 +1139,17 @@
     return `<div class="team ${cls || ""}">${esc ? `<img src="${esc}" alt="">` : ""}<div><div class="team-name">${timeNome(time)}</div><div class="team-sigla">${timeSigla(time)}</div></div></div>`;
   }
 
-  function palpiteSalvoPara(id) {
-    return state.meusPalpites.find(p => String(p.event_id) === String(id));
+  function palpiteSalvoPara(ref) {
+    const id = typeof ref === "object" && ref ? jogoId(ref) : String(ref || "");
+    const exato = state.meusPalpites.find(p => String(p.event_id) === String(id));
+    if (exato || !ref || typeof ref !== "object") return exato;
+    const chave = chaveConfrontoRodada(ref);
+    return chave ? state.meusPalpites.find(p => chaveConfrontoRodada(p) === chave) : undefined;
+  }
+
+  function jogoIdAposta(j) {
+    const salvo = palpiteSalvoPara(j);
+    return String((salvo && salvo.event_id) || jogoId(j) || idSinteticoJogo(j));
   }
 
 
@@ -1434,9 +1501,9 @@
       const visivel = state.filtroRodadaBloco === "todos" || state.filtroRodadaBloco === String(rodada);
       const open = !mobile || state.filtroRodadaBloco !== "todos" || idx === 0;
       return `<details class="round-bet-section" data-rodada-section="${rodada}" ${visivel ? "" : "hidden"} ${open ? "open" : ""}><summary><span><strong>Rodada ${rodada}</strong><small>${salvosRodada}/10 salvos</small></span><span class="round-section-chevron" aria-hidden="true">⌄</span></summary><div class="round-bet-content"><div class="matches">${jogosRodada.map(j => {
-        const id = jogoId(j); const salvo = palpiteSalvoPara(id);
+        const id = jogoIdAposta(j); const salvo = palpiteSalvoPara(j);
         const pm = valorCampoBloco(id, "pm", rascunho); const pv = valorCampoBloco(id, "pv", rascunho);
-        return `<article class="match-card" data-event-id="${escapeAttr(id)}"><div class="match-top"><span>Rodada ${rodada} · ${fmtData(j.data_iso)}</span><span class="badge ${aberta ? "open" : "lock"}">${aberta ? "aberto" : "travado"}</span></div><div class="match-body">${htmlTeam(j.mandante, "home")}<div class="score-inputs"><input data-event-id="${escapeAttr(id)}" data-lado="pm" type="number" inputmode="numeric" min="0" max="30" value="${escapeAttr(pm)}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.mandante))}"><span>x</span><input data-event-id="${escapeAttr(id)}" data-lado="pv" type="number" inputmode="numeric" min="0" max="30" value="${escapeAttr(pv)}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.visitante))}"></div>${htmlTeam(j.visitante, "away")}</div><div class="match-extra"><span class="badge info">${escapeHtml(j.estadio || "estádio a confirmar")}</span>${salvo ? `<span class="badge open saved-pill">salvo ${fmtDataLonga(salvo.atualizado_em || salvo.criado_em)}</span>` : `<span class="badge">não salvo</span>`}</div></article>`;
+        return `<article class="match-card" data-event-id="${escapeAttr(id)}"><div class="match-top"><span>Rodada ${rodada} · ${fmtDataJogo(j)}</span><span class="badge ${aberta ? "open" : "lock"}">${aberta ? "aberto" : "travado"}</span></div><div class="match-body">${htmlTeam(j.mandante, "home")}<div class="score-inputs"><input data-event-id="${escapeAttr(id)}" data-lado="pm" type="number" inputmode="numeric" min="0" max="30" value="${escapeAttr(pm)}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.mandante))}"><span>x</span><input data-event-id="${escapeAttr(id)}" data-lado="pv" type="number" inputmode="numeric" min="0" max="30" value="${escapeAttr(pv)}" ${aberta ? "" : "disabled"} aria-label="Placar ${escapeAttr(timeNome(j.visitante))}"></div>${htmlTeam(j.visitante, "away")}</div><div class="match-extra"><span class="badge info">${escapeHtml(j.estadio || "estádio a confirmar")}</span>${salvo ? `<span class="badge open saved-pill">salvo ${fmtDataLonga(salvo.atualizado_em || salvo.criado_em)}</span>` : `<span class="badge">não salvo</span>`}</div></article>`;
       }).join("") || `<div class="empty">Jogos da rodada ${rodada} ainda não carregados.</div>`}</div></div></details>`;
     }).join("")}
       <div class="block-form-actions"><button class="btn" type="submit" id="salvar-palpites-bloco" ${aberta ? "" : "disabled"}>💾 Salvar palpites preenchidos</button><button class="btn secondary" type="button" id="restaurar-servidor-bloco">Descartar alterações locais</button><span class="muted-note">O salvamento é progressivo: palpites omitidos permanecem como estavam.</span></div>
@@ -1462,7 +1529,7 @@
     const valores = valoresAtuaisFormularioBloco();
     const payload = [];
     for (const j of jogosDoBloco(bloco)) {
-      const id = jogoId(j); const v = valores[id] || { pm: "", pv: "" };
+      const id = jogoIdAposta(j); const v = valores[id] || { pm: "", pv: "" };
       if (v.pm === "" && v.pv === "") continue;
       const pm = Number(v.pm), pv = Number(v.pv);
       if (!Number.isInteger(pm) || !Number.isInteger(pv) || pm < 0 || pv < 0 || pm > 30 || pv > 30) throw new Error(`Placar inválido em ${timeNome(j.mandante)} x ${timeNome(j.visitante)}.`);
@@ -2362,7 +2429,7 @@
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
-  function escapeAttr(s) { return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+  function escapeAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 
   function limparFormParticipante() {
     $("#admin-participante-id").value = "";

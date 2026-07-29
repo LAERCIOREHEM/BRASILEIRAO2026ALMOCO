@@ -105,6 +105,55 @@ def jogo_id(jogo: dict[str, Any]) -> str:
     return f"{jogo.get('rodada')}-{mandante}-{visitante}-{data}"
 
 
+def chave_times(jogo: dict[str, Any]) -> str:
+    mandante = normalizar(nome_time(jogo.get("mandante")))
+    visitante = normalizar(nome_time(jogo.get("visitante")))
+    if not mandante or not visitante:
+        return ""
+    return f"{mandante}|{visitante}"
+
+
+def chave_confronto(jogo: dict[str, Any]) -> str:
+    try:
+        rodada = int(jogo.get("rodada") or 0)
+    except (TypeError, ValueError):
+        rodada = 0
+    times = chave_times(jogo)
+    if rodada <= 0 or not times:
+        return ""
+    return f"{rodada}|{times}"
+
+
+def mapa_calendario_por_times() -> dict[str, dict[str, Any]]:
+    calendario = carregar_json("dados-br/calendario-completo.json", {}).get("jogos", []) or []
+    return {
+        chave_times(item): item
+        for item in calendario
+        if isinstance(item, dict) and chave_times(item)
+    }
+
+
+def aplicar_rodada_canonica(
+    jogo: dict[str, Any],
+    calendario_por_times: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    canonico = calendario_por_times.get(chave_times(jogo))
+    if not canonico:
+        return jogo
+    try:
+        rodada_canonica = int(canonico.get("rodada") or 0)
+        rodada_fonte = int(jogo.get("rodada") or 0)
+    except (TypeError, ValueError):
+        return jogo
+    if rodada_canonica <= 0 or rodada_canonica == rodada_fonte:
+        return jogo
+    return {
+        **jogo,
+        "rodada": rodada_canonica,
+        "rodada_corrigida_calendario_de": rodada_fonte or None,
+    }
+
+
 def placar_disponivel(jogo: dict[str, Any]) -> bool:
     return jogo.get("placar_mandante") is not None and jogo.get("placar_visitante") is not None
 
@@ -173,23 +222,33 @@ def escolher_mais_confiavel(
 
 
 def carregar_todos_jogos() -> list[dict[str, Any]]:
+    calendario = carregar_json("dados-br/calendario-completo.json", {}).get("jogos", []) or []
     jogos = carregar_json("jogos.json", {}).get("jogos", []) or []
     resultados = carregar_json("resultados.json", {}).get("resultados", []) or []
     eventos = carregar_json("espn_eventos.json", {}).get("eventos", []) or []
+    calendario_por_times = mapa_calendario_por_times()
     todos: dict[str, dict[str, Any]] = {}
+
+    def incorporar(item: dict[str, Any]) -> None:
+        ajustado = aplicar_rodada_canonica(item, calendario_por_times)
+        chave = chave_confronto(ajustado) or jogo_id(ajustado)
+        todos[chave] = escolher_mais_confiavel(todos.get(chave), ajustado)
+
+    # A malha completa vem primeiro; fontes correntes e resultados, mais ricos,
+    # substituem o placeholder do mesmo confronto quando disponíveis. A rodada
+    # da malha canônica prevalece sobre classificações erradas da fonte.
+    for item in calendario:
+        if isinstance(item, dict):
+            incorporar(item)
     for item in jogos:
         if isinstance(item, dict):
-            jid = jogo_id(item)
-            todos[jid] = escolher_mais_confiavel(todos.get(jid), item)
+            incorporar(item)
     for item in resultados:
         if isinstance(item, dict):
-            jid = jogo_id(item)
-            todos[jid] = escolher_mais_confiavel(todos.get(jid), item)
+            incorporar(item)
     for evento in eventos:
         if isinstance(evento, dict):
-            item = jogo_para_evento(evento)
-            jid = jogo_id(item)
-            todos[jid] = escolher_mais_confiavel(todos.get(jid), item)
+            incorporar(jogo_para_evento(evento))
     return list(todos.values())
 
 
@@ -208,7 +267,9 @@ def carregar_resultados_finais() -> list[dict[str, Any]]:
 
 def resultado_mapa(jogos: Iterable[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     mapa: dict[str, dict[str, Any]] = {}
-    for jogo in jogos:
+    calendario_por_times = mapa_calendario_por_times()
+    for bruto in jogos:
+        jogo = aplicar_rodada_canonica(bruto, calendario_por_times)
         if not jogo_finalizado(jogo):
             continue
         rid = jogo_id(jogo)
@@ -231,6 +292,9 @@ def resultado_mapa(jogos: Iterable[dict[str, Any]]) -> dict[str, dict[str, Any]]
         mapa[rid] = resultado
         if jogo.get("event_id"):
             mapa[str(jogo["event_id"])] = resultado
+        confronto = chave_confronto(jogo)
+        if confronto:
+            mapa[confronto] = resultado
     return mapa
 
 
@@ -681,7 +745,11 @@ def pendencias_rodada(
 ) -> list[dict[str, Any]]:
     pendentes: list[dict[str, Any]] = []
     for jid, jogo in sorted(jogos_rodada.items(), key=lambda item: str(item[1].get("data_iso") or "")):
-        if jid in resultados or str(jogo.get("event_id") or "") in resultados:
+        if (
+            jid in resultados
+            or str(jogo.get("event_id") or "") in resultados
+            or chave_confronto(jogo) in resultados
+        ):
             continue
         pendentes.append(
             {
@@ -735,7 +803,7 @@ def apurar_rodada(
             if not membro or not participante_id:
                 continue
             eid = str(palpite.get("event_id") or palpite.get("jogo_chave") or "")
-            resultado = resultados.get(eid)
+            resultado = resultados.get(eid) or resultados.get(chave_confronto(palpite))
             if not resultado:
                 continue
             if not palpite_valido_no_prazo(palpite):
@@ -777,7 +845,11 @@ def apurar_rodada(
 
     # A quantidade de partidas encerradas independe de haver palpite para elas.
     for jid, jogo in jogos_rodada.items():
-        resultado = resultados.get(jid) or resultados.get(str(jogo.get("event_id") or ""))
+        resultado = (
+            resultados.get(jid)
+            or resultados.get(str(jogo.get("event_id") or ""))
+            or resultados.get(chave_confronto(jogo))
+        )
         if resultado:
             ids_finais.add(str(resultado.get("event_id") or jid))
 
@@ -1212,6 +1284,31 @@ def executar_self_tests() -> None:
     assert not jogo_finalizado(falso_final_futuro)
     mapa = resultado_mapa([futuro, ao_vivo, final_zero, final_flag, falso_final_futuro])
     assert set(mapa) == {"final0", "final1"}
+
+    resultado_com_confronto = {
+        "event_id": "401999999",
+        "rodada": 21,
+        "mandante": "Atlético-MG",
+        "visitante": "Bragantino",
+        "estado": "post",
+        "concluido": True,
+        "placar_mandante": 2,
+        "placar_visitante": 0,
+    }
+    mapa_confronto = resultado_mapa([resultado_com_confronto])
+    palpite_sintetico = {
+        "event_id": "fg-2026-r21-atletico-mg-bragantino",
+        "rodada": 21,
+        "mandante": "Atlético-MG",
+        "visitante": "Bragantino",
+        "placar_mandante": 2,
+        "placar_visitante": 0,
+    }
+    assert mapa_confronto[chave_confronto(palpite_sintetico)]["event_id"] == "401999999"
+    assert calcular(palpite_sintetico, mapa_confronto[chave_confronto(palpite_sintetico)]) == {
+        "pontos": 5,
+        "tipo": "exato",
+    }
     assert escolher_mais_confiavel(futuro, final_zero)["event_id"] == "final0"
     assert calcular({"placar_mandante": 0, "placar_visitante": 0}, mapa["final0"]) == {
         "pontos": 5,
