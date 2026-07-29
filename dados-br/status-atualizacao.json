@@ -2,38 +2,27 @@
   "schema_version": 1,
   "site": "Brasileirão 2026 Almoço",
   "workflow": "Atualizar Brasileirao (ESPN)",
-  "status": "aviso",
+  "status": "preservado",
   "status_anterior": "aviso",
   "nivel": "aviso",
-  "ultima_tentativa": "2026-07-29T16:26:35-03:00",
+  "ultima_tentativa": "2026-07-29T17:02:26-03:00",
   "ultimo_sucesso": "2026-07-29T16:26:35-03:00",
   "ultimo_snapshot_valido": "2026-07-29T16:26:35-03:00",
   "snapshot_hash": "711fd328c97828bc6a25997c3f7f3f3343dd07c6a38c33d4545adbe91dc3abef",
   "fonte_principal": "ESPN",
-  "fontes_complementares": [
-    "override manual"
-  ],
-  "fallbacks": [
-    {
-      "event_id": "401840998",
-      "rodada": 4,
-      "jogo": "Bahia x Chapecoense",
-      "placar": "2 x 0",
-      "fonte": "override manual",
-      "origem": "manual confirmado — resultado público e vídeo publicado pelo UOL Esporte",
-      "motivo": "A ESPN manteve o event_id reagendado com placar/status incompatível com o resultado público confirmado."
-    }
-  ],
-  "tentativas": 1,
-  "sincronizado": true,
-  "mensagem_admin": "snapshot auditado e publicado; ESPN permaneceu principal e foram usadas fontes complementares: override manual",
-  "mensagem_publica": "Dados atualizados e conferidos com fonte oficial complementar.",
-  "mostrar_publico": false,
-  "run_url": "https://github.com/LAERCIOREHEM/BRASILEIRAO2026ALMOCO/actions/runs/30484089856",
-  "run_id": "30484089856",
+  "fontes_complementares": [],
+  "fallbacks": [],
+  "tentativas": 3,
+  "sincronizado": false,
+  "mensagem_admin": "fontes ainda fora de sincronia após a cadeia ESPN -> CBF -> API-Football opcional -> override manual: Atlético-MG jogos=21/20; Atlético-MG pontos=29/28; Atlético-MG empates=5/4; Botafogo jogos=21/20; Botafogo pontos=30/29; Botafogo empates=6/5; Bragantino jogos=21/20; Bragantino pontos=32/31; e mais 16. snapshot anterior íntegro nos quatro artefatos ESPN; nenhum arquivo foi sobrescrito",
+  "mensagem_publica": "Atualização em verificação: estamos exibindo o último levantamento confiável enquanto as fontes de dados são conferidas.",
+  "mostrar_publico": true,
+  "run_url": "https://github.com/LAERCIOREHEM/BRASILEIRAO2026ALMOCO/actions/runs/30486699666",
+  "run_id": "30486699666",
   "run_attempt": "1",
   "branch": "main",
-  "fingerprint": "eaf95b029042a8fecff1f31af63c6969029893fb862855483d42dff18bfc573e",
-  "ultimo_alerta_em": "2026-07-28T01:26:45-03:00",
-  "ultimo_alerta_fingerprint": "f31feb4779f81c33e04c09d35976414ec175204d6f9422e047284c45bdc019ca"
+  "fingerprint": "878c8ed21d3d563088128baa1abb76c5dbf1154c1b839396b4e2fa6352f4a0fc",
+  "ultimo_alerta_em": "2026-07-29T17:02:26-03:00",
+  "ultimo_alerta_fingerprint": "878c8ed21d3d563088128baa1abb76c5dbf1154c1b839396b4e2fa6352f4a0fc",
+  "alerta_email": "enviado"
 }
