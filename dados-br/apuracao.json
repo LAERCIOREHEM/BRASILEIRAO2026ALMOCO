@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
   "temporada": 2026,
-  "atualizado_em": "2026-07-29T18:16:32.336745-03:00",
+  "atualizado_em": "2026-07-29T18:44:29.368460-03:00",
   "fonte": "Supabase br_palpites + resultados finais auditados dos JSONs locais",
   "politica_sigilo": "Rodadas e blocos não publicados não expõem palpites nem rankings no JSON público.",
   "regra_pontuacao": {
@@ -2319,9 +2319,9 @@
     {
       "rodada": 21,
       "status": "programada",
-      "publicada": false,
-      "sigilosa": true,
-      "estado_apuracao": "sigilosa",
+      "publicada": true,
+      "sigilosa": false,
+      "estado_apuracao": "aguardando_resultados",
       "concluida": false,
       "participantes": 8,
       "total_jogos": 10,
@@ -2333,7 +2333,12 @@
       "vencedores": [],
       "vencedores_por_liga": {},
       "ranking": [],
-      "rankings_por_liga": {},
+      "rankings_por_liga": {
+        "068a5421-5cbe-493b-ae25-1fe404c2aff7": [],
+        "almoco-de-sexta": [],
+        "d42fd0f4-b035-4243-bf3e-50719e342b20": [],
+        "liga-geral": []
+      },
       "jogos": [],
       "pendencias": [
         {
@@ -4659,9 +4664,9 @@
       "rodada_inicio": 21,
       "rodada_fim": 23,
       "status": "programada",
-      "publicada": false,
-      "sigilosa": true,
-      "estado_apuracao": "sigilosa",
+      "publicada": true,
+      "sigilosa": false,
+      "estado_apuracao": "aguardando_resultados",
       "concluido": false,
       "jogos_previstos": 30,
       "jogos_carregados": 30,
@@ -4670,7 +4675,7 @@
       "rodadas": [
         {
           "rodada": 21,
-          "publicada": false,
+          "publicada": true,
           "concluida": false,
           "jogos_apurados": 0,
           "jogos_pendentes": 10
@@ -4694,7 +4699,12 @@
       "vencedores": [],
       "vencedores_por_liga": {},
       "ranking": [],
-      "rankings_por_liga": {},
+      "rankings_por_liga": {
+        "068a5421-5cbe-493b-ae25-1fe404c2aff7": [],
+        "almoco-de-sexta": [],
+        "d42fd0f4-b035-4243-bf3e-50719e342b20": [],
+        "liga-geral": []
+      },
       "pendencias": [
         {
           "event_id": "401841168",
