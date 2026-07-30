@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 # GRUPO GLOBAL DE ESCRITA (repo-write-main) — o mesmo dos demais workflows
 # que dao git push no main. Serializa as escritas -> zero corrida de push.
@@ -142,6 +143,195 @@ jobs:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           API_FOOTBALL_LEAGUE_ID: ${{ secrets.API_FOOTBALL_LEAGUE_ID }}
         run: python atualizar_espn.py
+
+      # Publicação prioritária: resultado final e ranking parcial não aguardam
+      # estatísticas, vídeos, competições continentais nem o AF-Previsão.
+      - name: Registrar saúde da coleta essencial
+        if: steps.espn.outputs.sincronizado == 'true'
+        env:
+          BR_STATUS: ${{ steps.espn.outputs.status }}
+          BR_MOTIVO: ${{ steps.espn.outputs.motivo }}
+          BR_FALLBACKS: ${{ steps.espn.outputs.fallbacks }}
+          BR_TENTATIVAS: ${{ steps.espn.outputs.tentativas }}
+          BR_SINCRONIZADO: ${{ steps.espn.outputs.sincronizado }}
+          BR_WORKFLOW: Atualizar Brasileirao (ESPN)
+          BR_SITE: Brasileirão 2026 Almoço
+        run: python scripts/gerenciar_status_brasileirao.py --from-env
+
+      - name: Publicar resultados finais imediatamente
+        if: steps.espn.outputs.sincronizado == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          FILES=(
+            "tabela.json"
+            "espn_eventos.json"
+            "jogos.json"
+            "resultados.json"
+            "dados-br/status-atualizacao.json"
+          )
+
+          TMP_DIR="$(mktemp -d)"
+          for f in "${FILES[@]}"; do
+            test -f "$f"
+            mkdir -p "$TMP_DIR/$(dirname "$f")"
+            cp -a "$f" "$TMP_DIR/$f"
+          done
+
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            for f in "${FILES[@]}"; do
+              mkdir -p "$(dirname "$f")"
+              cp -a "$TMP_DIR/$f" "$f"
+            done
+            if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
+              echo "Outro run já publicou o mesmo resultado final."
+              if ! gh workflow run deploy.yml --ref main; then
+                echo "::warning::O deploy imediato não pôde ser disparado; o workflow_run fará a recuperação ao término."
+              fi
+              exit 0
+            fi
+            git add -- "${FILES[@]}"
+            git commit -m "Publicar resultados finais - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then
+              echo "Resultados finais publicados na tentativa $i."
+              if ! gh workflow run deploy.yml --ref main; then
+                echo "::warning::O deploy imediato não pôde ser disparado; o workflow_run fará a recuperação ao término."
+              fi
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "ERRO: não foi possível publicar os resultados finais."
+          exit 1
+
+      - name: Apurar ranking parcial no mesmo snapshot essencial
+        if: steps.espn.outputs.sincronizado == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BRASILEIRAO_TEMPORADA: '2026'
+        run: python scripts/apurar_rodada.py
+
+      - name: Validar resultado e ranking parcial essenciais
+        if: steps.espn.outputs.sincronizado == 'true'
+        run: |
+          python -m json.tool tabela.json > /dev/null
+          python -m json.tool espn_eventos.json > /dev/null
+          python -m json.tool jogos.json > /dev/null
+          python -m json.tool resultados.json > /dev/null
+          python -m json.tool dados-br/apuracao.json > /dev/null
+          python -m json.tool dados-br/ranking-apostas.json > /dev/null
+          python - <<'PY'
+          import json
+
+          resultados = json.load(open('resultados.json', encoding='utf-8'))
+          apuracao = json.load(open('dados-br/apuracao.json', encoding='utf-8'))
+          ranking = json.load(open('dados-br/ranking-apostas.json', encoding='utf-8'))
+
+          finais = resultados.get('resultados') or []
+          assert int(resultados.get('total_resultados') or 0) == len(finais)
+          assert all(str(j.get('event_id') or '').strip() for j in finais)
+          assert len({str(j.get('event_id') or '') for j in finais}) == len(finais)
+          assert all(
+              str(j.get('estado') or '').lower() == 'post'
+              and j.get('placar_mandante') is not None
+              and j.get('placar_visitante') is not None
+              for j in finais
+          )
+          assert apuracao.get('schema_version') == 4
+          assert ranking.get('schema_version') == 4
+          assert (apuracao.get('validacao_resultados') or {}).get('somente_finalizados') is True
+
+          finais_por_rodada = {}
+          for jogo in finais:
+              rodada = int(jogo.get('rodada') or 0)
+              if rodada:
+                  finais_por_rodada.setdefault(rodada, set()).add(str(jogo.get('event_id') or ''))
+
+          for rodada in apuracao.get('rodadas') or []:
+              numero = int(rodada.get('rodada') or 0)
+              if numero < 20 or not rodada.get('publicada'):
+                  continue
+              esperados = len(finais_por_rodada.get(numero, set()))
+              assert int(rodada.get('jogos_apurados') or 0) == esperados, (
+                  f'Rodada {numero}: apuração não acompanhou os resultados finais '
+                  f'({rodada.get("jogos_apurados")}/{esperados}).'
+              )
+              if esperados > 0 and int(rodada.get('participantes') or 0) > 0:
+                  assert rodada.get('ranking'), f'Rodada {numero}: ranking parcial vazio.'
+                  assert rodada.get('jogos'), f'Rodada {numero}: detalhes dos palpites ausentes.'
+                  for jogo in rodada.get('jogos') or []:
+                      assert (jogo.get('resultado') or {}).get('event_id')
+                      assert isinstance(jogo.get('palpites'), list)
+                      for palpite in jogo.get('palpites') or []:
+                          assert palpite.get('pontos') is not None
+                          assert palpite.get('tipo') in {'exato', 'saldo', 'resultado', 'erro'}
+
+          print('Resultados finais, ranking parcial e detalhes validados para publicação prioritária.')
+          PY
+
+      - name: Publicar ranking parcial sem aguardar o processamento pesado
+        if: steps.espn.outputs.sincronizado == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          FILES=(
+            "dados-br/apuracao.json"
+            "dados-br/ranking-apostas.json"
+          )
+
+          TMP_DIR="$(mktemp -d)"
+          for f in "${FILES[@]}"; do
+            test -f "$f"
+            mkdir -p "$TMP_DIR/$(dirname "$f")"
+            cp -a "$f" "$TMP_DIR/$f"
+          done
+
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            for f in "${FILES[@]}"; do
+              mkdir -p "$(dirname "$f")"
+              cp -a "$TMP_DIR/$f" "$f"
+            done
+            if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
+              echo "Outro run já publicou o mesmo ranking parcial."
+              if ! gh workflow run deploy.yml --ref main; then
+                echo "::warning::O deploy imediato não pôde ser disparado; o workflow_run fará a recuperação ao término."
+              fi
+              exit 0
+            fi
+            git add -- "${FILES[@]}"
+            git commit -m "Publicar ranking parcial - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then
+              echo "Ranking parcial publicado na tentativa $i."
+              if ! gh workflow run deploy.yml --ref main; then
+                echo "::warning::O deploy imediato não pôde ser disparado; o workflow_run fará a recuperação ao término."
+              fi
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "ERRO: não foi possível publicar o ranking parcial."
+          exit 1
 
       - name: Informar preservação por dessincronia temporária da ESPN
         if: steps.espn.outputs.sincronizado != 'true'
@@ -330,58 +520,6 @@ jobs:
       - name: Gerar auditoria de cobertura da aba Resultados
         if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_auditoria_cobertura_resultados.py
-
-      - name: Registrar saúde da atualização sem enviar e-mail
-        if: steps.espn.outputs.sincronizado == 'true'
-        env:
-          BR_STATUS: ${{ steps.espn.outputs.status }}
-          BR_MOTIVO: ${{ steps.espn.outputs.motivo }}
-          BR_FALLBACKS: ${{ steps.espn.outputs.fallbacks }}
-          BR_TENTATIVAS: ${{ steps.espn.outputs.tentativas }}
-          BR_SINCRONIZADO: ${{ steps.espn.outputs.sincronizado }}
-          BR_WORKFLOW: Atualizar Brasileirao (ESPN)
-          BR_SITE: Brasileirão 2026 Almoço
-        run: python scripts/gerenciar_status_brasileirao.py --from-env
-
-      - name: Apurar apostas, blocos e rankings no mesmo snapshot
-        if: steps.espn.outputs.sincronizado == 'true'
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          BRASILEIRAO_TEMPORADA: '2026'
-        run: python scripts/apurar_rodada.py
-
-      - name: Validar artefatos da apuração
-        if: steps.espn.outputs.sincronizado == 'true'
-        run: |
-          python -m json.tool dados-br/apuracao.json > /dev/null
-          python -m json.tool dados-br/ranking-apostas.json > /dev/null
-          python - <<'PY'
-          import json
-          ap = json.load(open('dados-br/apuracao.json', encoding='utf-8'))
-          rk = json.load(open('dados-br/ranking-apostas.json', encoding='utf-8'))
-          resultados = json.load(open('resultados.json', encoding='utf-8'))
-          assert ap.get('schema_version') == 4
-          assert rk.get('schema_version') == 4
-          assert (ap.get('validacao_resultados') or {}).get('somente_finalizados') is True
-          assert len(ap.get('blocos') or []) == 6
-          for rodada in ap.get('rodadas') or []:
-              assert 0 <= int(rodada.get('jogos_apurados') or 0) <= 10
-              if rodada.get('concluida'):
-                  assert int(rodada.get('jogos_apurados') or 0) == 10
-          for bloco in ap.get('blocos') or []:
-              assert 0 <= int(bloco.get('jogos_apurados') or 0) <= 30
-              if bloco.get('concluido'):
-                  assert int(bloco.get('jogos_apurados') or 0) == 30
-
-          r20 = next((r for r in ap.get('rodadas') or [] if int(r.get('rodada') or 0) == 20), None)
-          finais_r20 = [r for r in resultados.get('resultados') or [] if int(r.get('rodada') or 0) == 20]
-          if r20 and int(r20.get('participantes') or 0) > 0 and len(finais_r20) >= 10:
-              assert r20.get('publicada') is True, 'Rodada 20 encerrada voltou a ficar sigilosa.'
-              assert int(r20.get('jogos_apurados') or 0) == 10, 'Rodada 20 não apurou os dez jogos.'
-              assert r20.get('ranking'), 'Ranking da Rodada 20 ficou vazio apesar dos palpites e resultados.'
-          print('Apuração, rankings e regressão da Rodada 20 validados.')
-          PY
 
       - name: Conferir e validar JSONs gerados
         if: steps.espn.outputs.sincronizado == 'true'

@@ -63,8 +63,9 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' ||
       (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
+       github.event.workflow_run.head_branch == 'main' &&
+       (github.event.workflow_run.conclusion == 'success' ||
+        github.event.workflow_run.name == 'Atualizar Brasileirao (ESPN)'))
 
     environment:
       name: github-pages
@@ -268,4 +269,3 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
         run: python scripts/gerenciar_status_brasileirao.py --error --notify
-
