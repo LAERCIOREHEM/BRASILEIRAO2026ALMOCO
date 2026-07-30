@@ -15,10 +15,11 @@ Regras de segurança:
      gravados continuam nos 20 nomes canônicos do site.
   2. Se a tabela vier incompleta, duplicada ou com time não mapeado, o script
      falha antes de gravar tabela.json. O arquivo anterior fica preservado.
-  3. Tabela e resultados só são gravados quando standings e scoreboard
-     descrevem exatamente o mesmo estado esportivo. Em indisponibilidade ou
-     dessincronia transitória, a coleta repete e preserva o último snapshot
-     íntegro sem publicar arquivos parciais.
+  3. Tabela e resultados só são gravados quando descrevem exatamente o mesmo
+     estado esportivo. Se o standings estiver provisoriamente contaminado por
+     jogos ao vivo, a classificação é avançada de forma transacional a partir
+     do último snapshot íntegro, aplicando somente novos resultados finais
+     confirmados pela ESPN. Qualquer alteração retroativa continua bloqueada.
   4. Nenhum arquivo de copa2026/ é lido ou alterado.
 
 Só usa biblioteca padrão, para rodar direto no GitHub Actions.
@@ -1634,6 +1635,152 @@ def resumir_discrepancias(discrepancias: list[dict[str, Any]], limite: int = 8) 
     return amostra + (f"; e mais {restantes}" if restantes > 0 else "")
 
 
+def _resultado_por_id(payload: dict[str, Any]) -> dict[str, dict[str, Any]] | None:
+    itens = payload.get("resultados")
+    if not isinstance(itens, list):
+        return None
+    saida: dict[str, dict[str, Any]] = {}
+    for item in itens:
+        event_id = str(item.get("event_id") or "").strip()
+        if not event_id or event_id in saida:
+            return None
+        saida[event_id] = item
+    return saida
+
+
+def _assinatura_resultado(item: dict[str, Any]) -> tuple[Any, ...]:
+    mandante_bruto = item.get("mandante")
+    visitante_bruto = item.get("visitante")
+    mandante_nome = mandante_bruto.get("nome") if isinstance(mandante_bruto, dict) else mandante_bruto
+    visitante_nome = visitante_bruto.get("nome") if isinstance(visitante_bruto, dict) else visitante_bruto
+    return (
+        para_canonico(mandante_nome, item.get("mandante_nome")),
+        para_canonico(visitante_nome, item.get("visitante_nome")),
+        int(item.get("placar_mandante")),
+        int(item.get("placar_visitante")),
+    )
+
+
+def reconstruir_tabela_incremental(
+    tabela_anterior: dict[str, Any],
+    resultados_anteriores: dict[str, Any],
+    resultados_atuais: dict[str, Any],
+) -> tuple[dict[str, Any] | None, int, str]:
+    """Avança uma tabela íntegra aplicando apenas resultados finais novos.
+
+    Essa rota existe para a janela em que o standings da ESPN já incorpora
+    placares ao vivo, enquanto o scoreboard distingue corretamente partidas
+    encerradas das que ainda estão em andamento. O histórico anterior precisa
+    permanecer integralmente presente e imutável; remoção ou alteração de
+    resultado bloqueia a reconstrução.
+    """
+    if diagnosticar_sincronia_tabela_resultados(tabela_anterior, resultados_anteriores):
+        return None, 0, "snapshot anterior não fecha com seus próprios resultados"
+
+    anteriores = _resultado_por_id(resultados_anteriores)
+    atuais = _resultado_por_id(resultados_atuais)
+    if anteriores is None or atuais is None:
+        return None, 0, "coleção de resultados inválida ou com event_id duplicado"
+
+    ids_anteriores = set(anteriores)
+    ids_atuais = set(atuais)
+    if not ids_anteriores.issubset(ids_atuais):
+        return None, 0, "a coleta atual removeu resultados já publicados"
+
+    for event_id in ids_anteriores:
+        try:
+            assinatura_anterior = _assinatura_resultado(anteriores[event_id])
+            assinatura_atual = _assinatura_resultado(atuais[event_id])
+        except (TypeError, ValueError):
+            return None, 0, f"placar inválido no resultado histórico {event_id}"
+        if assinatura_anterior != assinatura_atual:
+            return None, 0, f"resultado histórico {event_id} foi alterado"
+
+    novos_ids = ids_atuais - ids_anteriores
+    if not novos_ids:
+        return None, 0, "nenhum resultado final novo para aplicar"
+
+    linhas_anteriores = tabela_anterior.get("tabela")
+    if not isinstance(linhas_anteriores, list):
+        return None, 0, "tabela anterior inválida"
+    linhas = {str(item.get("time") or ""): copy.deepcopy(item) for item in linhas_anteriores}
+    if set(linhas) != set(CANONICOS):
+        return None, 0, "tabela anterior não contém os 20 clubes canônicos"
+
+    for event_id in sorted(novos_ids, key=lambda chave: str(atuais[chave].get("data_iso") or "")):
+        item = atuais[event_id]
+        try:
+            mandante, visitante, gols_mandante, gols_visitante = _assinatura_resultado(item)
+        except (TypeError, ValueError):
+            return None, 0, f"placar inválido no novo resultado {event_id}"
+        if mandante not in linhas or visitante not in linhas or mandante == visitante:
+            return None, 0, f"confronto inválido no novo resultado {event_id}"
+
+        casa = linhas[mandante]
+        fora = linhas[visitante]
+        casa["jogos"] = int(casa.get("jogos") or 0) + 1
+        fora["jogos"] = int(fora.get("jogos") or 0) + 1
+        casa["gp"] = int(casa.get("gp") or 0) + gols_mandante
+        casa["gc"] = int(casa.get("gc") or 0) + gols_visitante
+        fora["gp"] = int(fora.get("gp") or 0) + gols_visitante
+        fora["gc"] = int(fora.get("gc") or 0) + gols_mandante
+        if gols_mandante > gols_visitante:
+            casa["pontos"] = int(casa.get("pontos") or 0) + 3
+            casa["vitorias"] = int(casa.get("vitorias") or 0) + 1
+            fora["derrotas"] = int(fora.get("derrotas") or 0) + 1
+        elif gols_mandante < gols_visitante:
+            fora["pontos"] = int(fora.get("pontos") or 0) + 3
+            fora["vitorias"] = int(fora.get("vitorias") or 0) + 1
+            casa["derrotas"] = int(casa.get("derrotas") or 0) + 1
+        else:
+            casa["pontos"] = int(casa.get("pontos") or 0) + 1
+            fora["pontos"] = int(fora.get("pontos") or 0) + 1
+            casa["empates"] = int(casa.get("empates") or 0) + 1
+            fora["empates"] = int(fora.get("empates") or 0) + 1
+
+    posicao_anterior = {
+        str(item.get("time") or ""): int(item.get("pos") or 999)
+        for item in linhas_anteriores
+    }
+    ordenadas = list(linhas.values())
+    for linha in ordenadas:
+        linha["sg"] = int(linha.get("gp") or 0) - int(linha.get("gc") or 0)
+        jogos = int(linha.get("jogos") or 0)
+        pontos = int(linha.get("pontos") or 0)
+        linha["aproveitamento"] = int(round(100.0 * pontos / (3 * jogos))) if jogos else 0
+        linha.pop("pos", None)
+    ordenadas.sort(key=lambda linha: (
+        -int(linha.get("pontos") or 0),
+        -int(linha.get("vitorias") or 0),
+        -int(linha.get("sg") or 0),
+        -int(linha.get("gp") or 0),
+        posicao_anterior.get(str(linha.get("time") or ""), 999),
+        str(linha.get("time") or ""),
+    ))
+    tabela = [{"pos": pos, **linha} for pos, linha in enumerate(ordenadas, 1)]
+    candidato = {
+        "atualizado_em": resultados_atuais.get("atualizado_em") or iso_agora_brt(),
+        "fonte": "ESPN",
+        "metodo_classificacao": "snapshot ESPN anterior + novos resultados finais ESPN",
+        "standings_provisorio_ignorado": True,
+        "resultados_finais_aplicados": len(novos_ids),
+        "tabela": tabela,
+    }
+    discrepancias = diagnosticar_sincronia_tabela_resultados(candidato, resultados_atuais)
+    if discrepancias:
+        return None, 0, "classificação incremental não passou na auditoria: " + resumir_discrepancias(discrepancias)
+    return candidato, len(novos_ids), ""
+
+
+def tentar_tabela_transacional(resultados_atuais: dict[str, Any]) -> tuple[dict[str, Any] | None, int, str]:
+    try:
+        tabela_anterior = json.loads(Path("tabela.json").read_text(encoding="utf-8"))
+        resultados_anteriores = json.loads(Path("resultados.json").read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return None, 0, f"não foi possível carregar o snapshot anterior: {type(exc).__name__}: {exc}"
+    return reconstruir_tabela_incremental(tabela_anterior, resultados_anteriores, resultados_atuais)
+
+
 def snapshot_local_sincronizado() -> tuple[bool, str]:
     caminhos = {
         "tabela": Path("tabela.json"),
@@ -1907,6 +2054,70 @@ def selftest_execucao_6() -> None:
     divergencias = diagnosticar_sincronia_tabela_resultados(tabela_teste, resultados_teste)
     assert any(item["clube"] == "Botafogo" and item["campo"] == "jogos" for item in divergencias)
 
+    # Regressão de 29/07/2026: dois jogos terminaram enquanto o standings já
+    # calculava partidas ainda ao vivo. Somente os dois resultados finais devem
+    # avançar o snapshot anterior; nenhuma parcial ao vivo entra na tabela.
+    tabela_base = {
+        "fonte": "ESPN",
+        "tabela": [
+            {
+                "pos": indice,
+                "time": clube,
+                "jogos": 0,
+                "pontos": 0,
+                "vitorias": 0,
+                "empates": 0,
+                "derrotas": 0,
+                "gp": 0,
+                "gc": 0,
+                "sg": 0,
+                "aproveitamento": 0,
+            }
+            for indice, clube in enumerate(CANONICOS, 1)
+        ],
+    }
+    resultados_base = {"fonte": "ESPN", "resultados": []}
+    resultados_finais = {
+        "fonte": "ESPN",
+        "atualizado_em": "2026-07-29T22:05:00-03:00",
+        "resultados": [
+            {
+                "event_id": "401841170",
+                "data_iso": "2026-07-29T19:30",
+                "mandante": {"nome": "Mirassol"},
+                "visitante": {"nome": "Remo"},
+                "placar_mandante": 2,
+                "placar_visitante": 1,
+            },
+            {
+                "event_id": "401841171",
+                "data_iso": "2026-07-29T19:30",
+                "mandante": {"nome": "Internacional"},
+                "visitante": {"nome": "Flamengo"},
+                "placar_mandante": 1,
+                "placar_visitante": 1,
+            },
+        ],
+    }
+    tabela_incremental, aplicados, erro_incremental = reconstruir_tabela_incremental(
+        tabela_base, resultados_base, resultados_finais
+    )
+    assert not erro_incremental and aplicados == 2 and tabela_incremental
+    assert diagnosticar_sincronia_tabela_resultados(tabela_incremental, resultados_finais) == []
+    incremental_por_time = {item["time"]: item for item in tabela_incremental["tabela"]}
+    assert incremental_por_time["Mirassol"]["pontos"] == 3
+    assert incremental_por_time["Remo"]["derrotas"] == 1
+    assert incremental_por_time["Internacional"]["empates"] == 1
+    assert incremental_por_time["Flamengo"]["pontos"] == 1
+
+    resultados_historicos = copy.deepcopy(resultados_finais)
+    resultado_alterado = copy.deepcopy(resultados_finais)
+    resultado_alterado["resultados"][0]["placar_mandante"] = 3
+    bloqueada, _, motivo_bloqueio = reconstruir_tabela_incremental(
+        tabela_incremental, resultados_historicos, resultado_alterado
+    )
+    assert bloqueada is None and "foi alterado" in motivo_bloqueio
+
     # Uma fonte auxiliar comum não pode trocar resultado ESPN finalizado; a CBF,
     # como autoridade oficial, pode oferecê-lo à auditoria transacional. A troca
     # só será efetivada posteriormente se reduzir as divergências da tabela.
@@ -1937,6 +2148,8 @@ def main() -> None:
     for tentativa in range(1, MAX_TENTATIVAS_SINCRONIA + 1):
         print(f"== COLETA SINCRONIZADA {tentativa}/{MAX_TENTATIVAS_SINCRONIA} ==")
         try:
+            classificacao_transacional = False
+            resultados_transacionais = 0
             tabela = gerar_tabela()
             validar_contra_ranking(tabela)
             eventos_brutos = buscar_eventos_scoreboard()
@@ -1965,6 +2178,26 @@ def main() -> None:
                     "ESPN summary",
                     aplicar_resumos_alternativos_espn,
                 )
+
+            if discrepancias:
+                # O standings da ESPN inclui placares provisórios de partidas ao
+                # vivo. Se o scoreboard já confirmou novos jogos encerrados,
+                # avançamos SOMENTE esses resultados sobre o último snapshot
+                # íntegro. O método rejeita remoção ou alteração histórica.
+                tabela_candidata, aplicados, motivo_transacional = tentar_tabela_transacional(resultados)
+                if tabela_candidata is not None:
+                    tabela = tabela_candidata
+                    discrepancias = diagnosticar_sincronia_tabela_resultados(tabela, resultados)
+                    classificacao_transacional = not discrepancias
+                    resultados_transacionais = aplicados if classificacao_transacional else 0
+                    if classificacao_transacional:
+                        print(
+                            "Classificação transacional aceita: "
+                            f"{aplicados} novo(s) resultado(s) final(is) ESPN aplicado(s); "
+                            "placares de jogos ainda ao vivo foram ignorados."
+                        )
+                else:
+                    print(f"::warning::Classificação transacional não aplicada: {motivo_transacional}.")
 
             if discrepancias:
                 # 2) Autoridade esportiva oficial: resultado/tabela da CBF.
@@ -2010,10 +2243,18 @@ def main() -> None:
                 gravar_json_atomico("espn_eventos.json", eventos_json)
 
                 fontes = sorted({item.get("fonte") for item in fallbacks if item.get("fonte")})
-                if fallbacks:
+                if fallbacks or classificacao_transacional:
+                    complementos = []
+                    if fallbacks:
+                        complementos.append("fontes complementares: " + ", ".join(fontes))
+                    if classificacao_transacional:
+                        complementos.append(
+                            f"classificação avançada com {resultados_transacionais} "
+                            "resultado(s) final(is) ESPN, sem incorporar jogos ao vivo"
+                        )
                     motivo = (
-                        "snapshot auditado e publicado; ESPN permaneceu principal e "
-                        "foram usadas fontes complementares: " + ", ".join(fontes)
+                        "snapshot auditado e publicado; ESPN permaneceu principal; "
+                        + "; ".join(complementos)
                     )
                     status = "aviso"
                 else:

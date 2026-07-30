@@ -66,7 +66,10 @@
     rankingRodadaSelecionada: null,
     rankingBlocoInicio: null,
     rankingExportAtual: null,
-    toastTimer: null
+    toastTimer: null,
+    abaInicialExplicita: false,
+    abaEscolhidaManualmente: false,
+    destinoCronologicoResolvido: false
   };
 
 
@@ -1786,6 +1789,37 @@
 
   function blocosRanking() { return (state.apuracao?.blocos || state.rankingApostas?.ranking_blocos || []); }
 
+  function blocoRankingCronologicoMaisAtual(blocos) {
+    return (Array.isArray(blocos) ? blocos : [])
+      .filter(bloco => bloco && bloco.publicada === true && bloco.sigilosa !== true)
+      .slice()
+      .sort((a, b) => Number(b.rodada_inicio || 0) - Number(a.rodada_inicio || 0))[0] || null;
+  }
+
+  function aplicarDestinoCronologicoInicial() {
+    if (
+      !state.usuario
+      || state.destinoCronologicoResolvido
+      || state.abaInicialExplicita
+      || state.abaEscolhidaManualmente
+    ) return;
+
+    state.destinoCronologicoResolvido = true;
+    const blocoPublicado = blocoRankingCronologicoMaisAtual(blocosRanking());
+    const blocoAtual = blocoDaRodada(state.rodadaAutomatica);
+    if (
+      !blocoPublicado
+      || !blocoAtual
+      || Number(blocoPublicado.rodada_inicio) !== Number(blocoAtual.rodada_inicio)
+    ) return;
+
+    state.rodada = Number(blocoPublicado.rodada_inicio);
+    state.aba = "ranking";
+    state.rankingVisao = "blocos";
+    state.rankingVisaoInicialResolvida = true;
+    state.rankingBlocoInicio = Number(blocoPublicado.rodada_inicio);
+  }
+
   function renderRankingBloco() {
     const blocos=blocosRanking();
     const contexto=contextoEhBloco()?blocoDaRodada(state.rodada)?.rodada_inicio:21;
@@ -2771,6 +2805,7 @@
   async function refresh() {
     await carregarConfigsSupabase();
     resolverRodadaAutomatica(false);
+    aplicarDestinoCronologicoInicial();
     if (state.usuario) {
       await carregarLigas();
       await carregarMeusPalpites();
@@ -2824,7 +2859,9 @@
         return;
       }
       await carregarLigas();
-      state.aba = "apostas";
+      state.abaInicialExplicita = false;
+      state.abaEscolhidaManualmente = false;
+      state.destinoCronologicoResolvido = false;
       state.rodadaEscolhidaManualmente = false;
       await refresh();
     } catch (err) {
@@ -2844,6 +2881,8 @@
     $("#form-login")?.addEventListener("submit", onLogin);
     $("#voltar-rodada-atual")?.addEventListener("click", voltarRodadaAtual);
     $$("[data-aba]").forEach(btn => btn.addEventListener("click", async () => {
+      state.abaEscolhidaManualmente = true;
+      state.destinoCronologicoResolvido = true;
       state.aba = btn.dataset.aba;
       await refresh();
     }));
@@ -2851,7 +2890,11 @@
 
   async function init() {
     const abaUrl = abaInicialPorUrl();
-    if (abaUrl) state.aba = abaUrl;
+    state.abaInicialExplicita = Boolean(abaUrl);
+    if (abaUrl) {
+      state.aba = abaUrl;
+      state.destinoCronologicoResolvido = true;
+    }
     state.supabase = initSupabase();
     bindBaseEvents();
     await carregarBase();
@@ -2869,7 +2912,6 @@
     }
     if (state.usuario && !abaUrl) {
       await carregarLigas();
-      state.aba = "apostas";
       state.rodadaEscolhidaManualmente = false;
     }
     if (!state.usuario && state.supabase) {
@@ -2877,6 +2919,14 @@
     }
     await refresh();
     iniciarAutoRefresh();
+  }
+
+  if (global.__BR_APOSTAS_TEST__) {
+    global.__BR_APOSTAS_TEST_HOOKS = {
+      state,
+      blocoRankingCronologicoMaisAtual,
+      aplicarDestinoCronologicoInicial
+    };
   }
 
   document.addEventListener("DOMContentLoaded", init);
