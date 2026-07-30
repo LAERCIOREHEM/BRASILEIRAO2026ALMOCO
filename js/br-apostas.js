@@ -1295,6 +1295,14 @@
   function determinarRodadaAtual() {
     const rodadas = (state.rodadas || []).slice().sort((a, b) => a - b);
     if (!rodadas.length) return Number(CFG.rodadaInicialApostas || 20);
+
+    // A apuração publicada é a fonte canônica do contexto cronológico visível.
+    // Uma janela futura eventualmente aberta/configurada no Supabase não deve
+    // deslocar a página para um bloco ainda sigiloso.
+    const blocoPublicado = blocoRankingCronologicoMaisAtual(blocosRanking());
+    const inicioBlocoPublicado = Number(blocoPublicado?.rodada_inicio);
+    if (Number.isFinite(inicioBlocoPublicado)) return inicioBlocoPublicado;
+
     const abertas = rodadas.filter(r => !rodadaConcluida(r) && rodadaAberta(r));
     if (abertas.length) return abertas[0];
     const emAndamento = rodadas.find(r => rodadaTemJogoEmAndamento(r));
@@ -1837,18 +1845,20 @@
 
     state.destinoCronologicoResolvido = true;
     const blocoPublicado = blocoRankingCronologicoMaisAtual(blocosRanking());
-    const blocoAtual = blocoDaRodada(state.rodadaAutomatica);
-    if (
-      !blocoPublicado
-      || !blocoAtual
-      || Number(blocoPublicado.rodada_inicio) !== Number(blocoAtual.rodada_inicio)
-    ) return;
+    const inicioBlocoPublicado = Number(blocoPublicado?.rodada_inicio);
+    if (!Number.isFinite(inicioBlocoPublicado)) return;
 
-    state.rodada = Number(blocoPublicado.rodada_inicio);
+    // O bloco publicado prevalece na abertura direta. Antes, o redirecionamento
+    // dependia de ele coincidir com a rodada calculada por janelas do Supabase;
+    // qualquer janela futura fazia a interface permanecer em "Apostar".
+    state.rodadaAutomatica = inicioBlocoPublicado;
+    state.rodadaAutomaticaResolvida = true;
+    state.rodadaEscolhidaManualmente = false;
+    state.rodada = inicioBlocoPublicado;
     state.aba = "ranking";
     state.rankingVisao = "blocos";
     state.rankingVisaoInicialResolvida = true;
-    state.rankingBlocoInicio = Number(blocoPublicado.rodada_inicio);
+    state.rankingBlocoInicio = inicioBlocoPublicado;
   }
 
   function renderRankingBloco() {
@@ -2958,6 +2968,8 @@
   if (global.__BR_APOSTAS_TEST__) {
     global.__BR_APOSTAS_TEST_HOOKS = {
       state,
+      determinarRodadaAtual,
+      resolverRodadaAutomatica,
       blocoRankingCronologicoMaisAtual,
       aplicarDestinoCronologicoInicial,
       palpitesParticipanteRodada,
