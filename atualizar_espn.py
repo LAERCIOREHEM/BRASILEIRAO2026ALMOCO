@@ -620,37 +620,51 @@ def aplicar_ajustes_calendario(eventos: list[dict[str, Any]]) -> None:
     print(f"Ajustes de calendário aplicados: {aplicados}/{len(ajustes)}")
 
 
-def evento_futuro_post_inconsistente(
-    *,
-    estado: Any,
-    concluido: Any,
-    data: datetime | None,
-    status: Any,
-    referencia: datetime | None = None,
-) -> bool:
-    """Detecta o falso pós-jogo que a ESPN às vezes publica para evento futuro.
+def _status_interrompido(st: dict[str, Any], status_publico: str = "") -> bool:
+    texto = " ".join(
+        str(valor or "")
+        for valor in (
+            status_publico,
+            st.get("name"),
+            st.get("description"),
+            st.get("detail"),
+            st.get("shortDetail"),
+        )
+    ).lower()
+    return bool(re.search(r"postpon|adiad|suspend|cancel", texto))
 
-    Padrão observado: state=post, completed=false, relógio 0' e um horário
-    artificial. Esse registro não é calendário confirmado e não pode abrir ou
-    fechar o bolão. A regra é deliberadamente conservadora e só atua quando a
-    data ainda está no futuro.
+
+def _estado_scoreboard_seguro(
+    estado_fonte: str,
+    concluido: bool,
+    dt_brt: datetime,
+    st: dict[str, Any],
+    status_publico: str,
+    agora: datetime,
+) -> tuple[str, bool]:
+    """Normaliza sinais contraditórios da ESPN sem perder finais reais.
+
+    Um ``state=post`` com ``completed=false`` só vira pós-jogo quando já
+    transcorreram ao menos 90 minutos desde o início e não existe sinal de
+    adiamento, suspensão ou cancelamento. Esta é a mesma regra usada com
+    sucesso pelo coletor do Fórmula do Gol.
     """
-    if not isinstance(data, datetime):
-        return False
-    agora = referencia or agora_brt()
-    relogio = str(status or "").strip().lower()
-    return (
-        str(estado or "").strip().lower() == "post"
-        and concluido is not True
-        and relogio in {"", "0", "0'", "0:00", "0’"}
-        and data > agora + timedelta(minutes=15)
-    )
+    estado = str(estado_fonte or ("post" if concluido else "pre")).lower()
+    interrompido = _status_interrompido(st, status_publico)
+    if interrompido:
+        return "pre", True
+    if concluido:
+        return "post", False
+    if estado == "post" and dt_brt > agora - timedelta(minutes=90):
+        return "pre", False
+    return estado, False
 
 
 def normalizar_eventos_scoreboard(eventos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     legadas = carregar_rodadas_legadas()
     normalizados: list[dict[str, Any]] = []
     nao_mapeados: list[str] = []
+    agora = agora_brt()
 
     for ev in eventos:
         casa, fora = competidores(ev)
@@ -665,36 +679,26 @@ def normalizar_eventos_scoreboard(eventos: list[dict[str, Any]]) -> list[dict[st
             continue
         comp = primeira_competicao(ev)
         st = tipo_status(ev)
-        estado = str(st.get("state") or "pre").lower()
         concluido = bool(st.get("completed") is True)
-        if concluido:
-            estado = "post"
         status_publico = status_evento(ev).get("displayClock") or st.get("shortDetail") or st.get("detail") or ""
+        estado, interrompido = _estado_scoreboard_seguro(
+            str(st.get("state") or "pre"),
+            concluido,
+            dt_brt,
+            st,
+            status_publico,
+            agora,
+        )
 
         rodada = extrair_rodada_evento(ev)
         if not rodada:
             rodada = legadas.get((mand, vis, dt_brt.strftime("%Y-%m-%d")))
 
-        horario_inconsistente = evento_futuro_post_inconsistente(
-            estado=estado,
-            concluido=concluido,
-            data=dt_brt,
-            status=status_publico,
-        )
-        data_publica = None if horario_inconsistente else dt_brt
-        if horario_inconsistente:
-            print(
-                "::warning::Horário ESPN descartado por estado futuro inconsistente: "
-                f"{mand} x {vis} ({dt_brt.strftime('%d/%m/%Y %H:%M')}, event {ev.get('id')})"
-            )
-            estado = "pre"
-            status_publico = "Data a definir"
-
         normalizados.append({
             "event_id": str(ev.get("id") or ""),
             "rodada": rodada,
-            "data_dt": data_publica,
-            "data_iso": data_publica.strftime("%Y-%m-%dT%H:%M") if data_publica else None,
+            "data_dt": dt_brt,
+            "data_iso": dt_brt.strftime("%Y-%m-%dT%H:%M"),
             "mandante_nome": mand,
             "visitante_nome": vis,
             "mandante": info_time(mand),
@@ -704,11 +708,11 @@ def normalizar_eventos_scoreboard(eventos: list[dict[str, Any]]) -> list[dict[st
             "status": status_publico,
             "estado": estado,
             "concluido": concluido,
+            "adiado": interrompido,
             "placar_mandante": placar_competidor(casa),
             "placar_visitante": placar_competidor(fora),
-            "data_definir": horario_inconsistente,
-            "horario_descartado_inconsistente": horario_inconsistente,
-            "_sort": data_publica.timestamp() if data_publica else float("inf"),
+            "data_definir": False,
+            "_sort": dt_brt.timestamp(),
         })
 
     if nao_mapeados:
@@ -1335,12 +1339,15 @@ def aplicar_finalizados_em(eventos: list[dict[str, Any]], anteriores: dict[str, 
         dt = e.get("data_dt")
         placar_presente = e.get("placar_mandante") is not None and e.get("placar_visitante") is not None
         realmente_finalizado = bool(
-            e.get("concluido") is True
-            or (
-                str(e.get("estado") or "").lower() == "post"
-                and isinstance(dt, datetime)
-                and dt <= agora - timedelta(minutes=90)
-                and placar_presente
+            e.get("adiado") is not True
+            and (
+                e.get("concluido") is True
+                or (
+                    str(e.get("estado") or "").lower() == "post"
+                    and isinstance(dt, datetime)
+                    and dt <= agora - timedelta(minutes=90)
+                    and placar_presente
+                )
             )
         )
         if not realmente_finalizado:
@@ -1393,7 +1400,11 @@ def evento_realmente_finalizado(e: dict[str, Any], agora: datetime) -> bool:
     A ESPN às vezes devolve placar 0x0 e estado/status inconsistentes para jogo
     futuro. Por isso a data também precisa estar no passado com margem de segurança.
     """
-    if e.get("placar_mandante") is None or e.get("placar_visitante") is None:
+    if (
+        e.get("adiado") is True
+        or e.get("placar_mandante") is None
+        or e.get("placar_visitante") is None
+    ):
         return False
     dt = e.get("data_dt")
     if not isinstance(dt, datetime):
@@ -2029,6 +2040,30 @@ def selftest_execucao_6() -> None:
     assert payload_jogo(empate_post)["status"] == "Encerrado"
     empate_pre = dict(empate_post, estado="pre")
     assert not evento_realmente_finalizado(empate_pre, agora_teste)
+    assert _estado_scoreboard_seguro(
+        "post",
+        False,
+        agora_teste - timedelta(minutes=20),
+        {},
+        "0'",
+        agora_teste,
+    ) == ("pre", False)
+    assert _estado_scoreboard_seguro(
+        "post",
+        False,
+        agora_teste - timedelta(minutes=112),
+        {},
+        "0'",
+        agora_teste,
+    ) == ("post", False)
+    assert _estado_scoreboard_seguro(
+        "post",
+        False,
+        agora_teste - timedelta(hours=3),
+        {"description": "Postponed"},
+        "Adiado",
+        agora_teste,
+    ) == ("pre", True)
 
     tabela_teste = {
         "tabela": [
@@ -2054,8 +2089,8 @@ def selftest_execucao_6() -> None:
     divergencias = diagnosticar_sincronia_tabela_resultados(tabela_teste, resultados_teste)
     assert any(item["clube"] == "Botafogo" and item["campo"] == "jogos" for item in divergencias)
 
-    # Regressão de 29/07/2026: dois jogos terminaram enquanto o standings já
-    # calculava partidas ainda ao vivo. Somente os dois resultados finais devem
+    # Regressão de 29/07/2026: quatro jogos terminaram enquanto o standings já
+    # calculava partidas ainda ao vivo. Somente os resultados finais devem
     # avançar o snapshot anterior; nenhuma parcial ao vivo entra na tabela.
     tabela_base = {
         "fonte": "ESPN",
@@ -2097,18 +2132,38 @@ def selftest_execucao_6() -> None:
                 "placar_mandante": 1,
                 "placar_visitante": 1,
             },
+            {
+                "event_id": "401841177",
+                "data_iso": "2026-07-29T21:30",
+                "mandante": {"nome": "Fluminense"},
+                "visitante": {"nome": "Bahia"},
+                "placar_mandante": 0,
+                "placar_visitante": 0,
+            },
+            {
+                "event_id": "401841172",
+                "data_iso": "2026-07-29T21:30",
+                "mandante": {"nome": "Vitória"},
+                "visitante": {"nome": "Palmeiras"},
+                "placar_mandante": 0,
+                "placar_visitante": 4,
+            },
         ],
     }
     tabela_incremental, aplicados, erro_incremental = reconstruir_tabela_incremental(
         tabela_base, resultados_base, resultados_finais
     )
-    assert not erro_incremental and aplicados == 2 and tabela_incremental
+    assert not erro_incremental and aplicados == 4 and tabela_incremental
     assert diagnosticar_sincronia_tabela_resultados(tabela_incremental, resultados_finais) == []
     incremental_por_time = {item["time"]: item for item in tabela_incremental["tabela"]}
     assert incremental_por_time["Mirassol"]["pontos"] == 3
     assert incremental_por_time["Remo"]["derrotas"] == 1
     assert incremental_por_time["Internacional"]["empates"] == 1
     assert incremental_por_time["Flamengo"]["pontos"] == 1
+    assert incremental_por_time["Fluminense"]["empates"] == 1
+    assert incremental_por_time["Bahia"]["pontos"] == 1
+    assert incremental_por_time["Vitória"]["derrotas"] == 1
+    assert incremental_por_time["Palmeiras"]["pontos"] == 3
 
     resultados_historicos = copy.deepcopy(resultados_finais)
     resultado_alterado = copy.deepcopy(resultados_finais)

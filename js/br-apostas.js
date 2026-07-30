@@ -1663,7 +1663,7 @@
     return linhas;
   }
 
-  function palpitesParticipanteRodada(membro, participanteId, rodada) {
+  function palpitesParticipanteRodada(membro, participanteId, rodada, opcoes={}) {
     const linhas = [
       ...(state.publicos || []).filter(p => Number(p.rodada || state.rodada) === Number(rodada)),
       ...palpitesPublicosDaApuracao(rodada)
@@ -1679,8 +1679,6 @@
       vistos.add(chave);
       return true;
     });
-    if (!minha.length) return '<p class="muted-note" style="margin:8px 0">Palpites não disponíveis nesta visão.</p>';
-
     const pontosMap = mapaPontosRodada(rodada);
     const ap = apuracaoRodada(rodada);
     const resultados = new Map();
@@ -1689,13 +1687,18 @@
       resultados.set(String(r.event_id || j.event_id || ""), r);
     });
 
-    minha.sort((a, b) => {
+    const exibidos = opcoes.somenteApurados
+      ? minha.filter(p => resultados.has(String(p.event_id || "")))
+      : minha;
+    if (!exibidos.length) return '<p class="muted-note" style="margin:8px 0">Nenhum palpite apurado nesta visão.</p>';
+
+    exibidos.sort((a, b) => {
       const ra = resultados.get(String(a.event_id || ""));
       const rb = resultados.get(String(b.event_id || ""));
       return String(ra?.data_iso || "").localeCompare(String(rb?.data_iso || ""));
     });
 
-    return `<div class="palpite-expand-grid">${minha.map(p => {
+    return `<div class="palpite-expand-grid">${exibidos.map(p => {
       const det = (p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`))
         || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`)
         || {};
@@ -1705,10 +1708,33 @@
     }).join("")}</div>`;
   }
 
+  function palpitesParticipanteBloco(membro, participanteId, bloco) {
+    const inicio = Number(bloco?.rodada_inicio);
+    const fim = Number(bloco?.rodada_fim);
+    if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim < inicio) {
+      return '<p class="muted-note" style="margin:8px 0">Palpites não disponíveis neste bloco.</p>';
+    }
+    const secoes = [];
+    for (let rodada = inicio; rodada <= fim; rodada += 1) {
+      const ap = apuracaoRodada(rodada);
+      if (!ap || Number(ap.jogos_apurados || 0) <= 0) continue;
+      const detalhes = palpitesParticipanteRodada(
+        membro,
+        participanteId,
+        rodada,
+        { somenteApurados: true }
+      );
+      if (!detalhes.includes("palpite-card")) continue;
+      secoes.push(`<section class="palpite-block-round"><div class="kicker">Rodada ${rodada}</div>${detalhes}</section>`);
+    }
+    return secoes.join("") || '<p class="muted-note" style="margin:8px 0">Nenhum palpite apurado neste bloco.</p>';
+  }
+
   function rankingCardsHtml(ranking, opcoes={}) {
     const lideres = new Set(opcoes.lideres || lideresDoRanking(ranking));
     const final = Boolean(opcoes.final);
     const rodadaDetalhe = opcoes.rodadaDetalhe;
+    const blocoDetalhe = opcoes.blocoDetalhe;
     const estiloRodada20 = Boolean(opcoes.estiloRodada20);
     const posIcons = ["", "🥇", "🥈", "🥉"];
     return (ranking || []).map((r, idx) => {
@@ -1717,8 +1743,13 @@
       const badges = estiloRodada20
         ? `<span class="rk-badge">✅ ${r.cravadas || 0} cravada${Number(r.cravadas || 0) !== 1 ? "s" : ""}</span><span class="rk-badge">📊 ${r.resultados || 0} resultado${Number(r.resultados || 0) !== 1 ? "s" : ""}</span><span class="rk-badge">💧 saldo +${r.saldos || 0}</span><span class="rk-badge rk-badge-err">❌ ${r.erros || 0} erro${Number(r.erros || 0) !== 1 ? "s" : ""}</span>`
         : `<span class="rk-badge">✅ ${r.cravadas || 0} exato${Number(r.cravadas||0)!==1?"s":""}</span><span class="rk-badge">💧 ${r.saldos || 0} saldo${Number(r.saldos||0)!==1?"s":""}</span><span class="rk-badge">📊 ${r.resultados || 0} resultado${Number(r.resultados||0)!==1?"s":""}</span><span class="rk-badge rk-badge-err">❌ ${r.erros || 0} erro${Number(r.erros||0)!==1?"s":""}</span><span class="rk-badge rk-index">🎯 ${indice}%</span>`;
-      const textoDetalhes = estiloRodada20 ? "Ver palpites" : "Ver palpites da rodada";
-      return `<article class="rk-card${destaque ? " rk-vencedor" : ""}" id="rk-${idx}-${normalizarTexto(r.membro)}"><div class="rk-main"><div class="rk-pos">${posIcons[r.pos] || r.pos}</div><div class="rk-info"><div class="rk-nome">${escapeHtml(r.membro)}${destaque ? (final ? " 🏆" : " ⭐") : ""}</div><div class="rk-badges">${badges}</div></div><div class="rk-pts"><strong>${r.pontos || 0}</strong><small>pts</small></div></div>${rodadaDetalhe ? `<details class="rk-palpites"><summary><span>${textoDetalhes}</span><i aria-hidden="true"></i></summary><div class="rk-palpites-body">${palpitesParticipanteRodada(r.membro, r.participante_id, rodadaDetalhe)}</div></details>` : ""}</article>`;
+      const textoDetalhes = estiloRodada20 || blocoDetalhe ? "Ver palpites" : "Ver palpites da rodada";
+      const corpoDetalhes = blocoDetalhe
+        ? palpitesParticipanteBloco(r.membro, r.participante_id, blocoDetalhe)
+        : rodadaDetalhe
+          ? palpitesParticipanteRodada(r.membro, r.participante_id, rodadaDetalhe)
+          : "";
+      return `<article class="rk-card${destaque ? " rk-vencedor" : ""}" id="rk-${idx}-${normalizarTexto(r.membro)}"><div class="rk-main"><div class="rk-pos">${posIcons[r.pos] || r.pos}</div><div class="rk-info"><div class="rk-nome">${escapeHtml(r.membro)}${destaque ? (final ? " 🏆" : " ⭐") : ""}</div><div class="rk-badges">${badges}</div></div><div class="rk-pts"><strong>${r.pontos || 0}</strong><small>pts</small></div></div>${corpoDetalhes ? `<details class="rk-palpites"><summary><span>${textoDetalhes}</span><i aria-hidden="true"></i></summary><div class="rk-palpites-body">${corpoDetalhes}</div></details>` : ""}</article>`;
     }).join("");
   }
 
@@ -1829,7 +1860,7 @@
     if (!bloco || bloco.sigilosa) return `${seletor}<div class="panel"><div class="panel-inner empty"><strong>Ranking do bloco ainda sigiloso.</strong><p>Os trinta palpites tornam-se públicos no fechamento único do bloco.</p></div></div>`;
     const ranking=rankingObjetoPorLiga(bloco); const final=Boolean(bloco.concluido);
     state.rankingExportAtual={tipo:'bloco',nome:`bloco-${bloco.rodada_inicio}-${bloco.rodada_fim}`,ranking,jogos_apurados:Number(bloco.jogos_apurados||0)};
-    return `${seletor}${rankingHeaderHtml({kicker:'Ranking do bloco',titulo:bloco.nome||`Bloco ${bloco.rodada_inicio}–${bloco.rodada_fim}`,objeto:bloco,ranking,final})}<div class="block-round-progress">${(bloco.rodadas||[]).map(r=>`<div><span>Rodada ${r.rodada}</span><strong>${r.jogos_apurados}/10</strong><small>${r.concluida?'concluída':'em andamento'}</small></div>`).join('')}</div>${ranking.length?`<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div><div class="rk-list">${rankingCardsHtml(ranking,{final})}</div>`:'<div class="panel"><div class="panel-inner empty">Aguardando o primeiro resultado final do bloco.</div></div>'}`;
+    return `${seletor}${rankingHeaderHtml({kicker:'Ranking do bloco',titulo:bloco.nome||`Bloco ${bloco.rodada_inicio}–${bloco.rodada_fim}`,objeto:bloco,ranking,final})}<div class="block-round-progress">${(bloco.rodadas||[]).map(r=>`<div><span>Rodada ${r.rodada}</span><strong>${r.jogos_apurados}/10</strong><small>${r.concluida?'concluída':'em andamento'}</small></div>`).join('')}</div>${ranking.length?`<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div><div class="rk-list">${rankingCardsHtml(ranking,{final,blocoDetalhe:bloco,estiloRodada20:true})}</div>`:'<div class="panel"><div class="panel-inner empty">Aguardando o primeiro resultado final do bloco.</div></div>'}`;
   }
 
   function objetoRankingParcial() {
@@ -1847,7 +1878,10 @@
     const titulo=ref.tipo==='bloco'?(obj.nome||`Bloco ${obj.rodada_inicio}–${obj.rodada_fim}`):`Rodada ${obj.rodada}`;
     state.rankingExportAtual={tipo:'parcial',nome:`parcial-${normalizarTexto(titulo)}`,ranking,jogos_apurados:Number(obj.jogos_apurados||0)};
     const pend=(obj.pendencias||[]).slice(0,8);
-    return `${rankingHeaderHtml({kicker:'Ranking parcial',titulo,objeto:obj,ranking})}<div class="partial-progress-card"><div class="partial-progress-bar"><span style="width:${Math.min(100,(Number(obj.jogos_apurados||0)/Number(obj.jogos_previstos||obj.total_jogos||10))*100)}%"></span></div><p><strong>${obj.jogos_apurados||0}</strong> jogos apurados · <strong>${obj.jogos_pendentes||0}</strong> pendentes. Jogos adiados não encerram antecipadamente a disputa.</p></div>${pend.length?`<details class="pending-games"><summary>Ver partidas pendentes (${obj.jogos_pendentes||pend.length})</summary><div>${pend.map(p=>`<article><strong>${escapeHtml(p.mandante||'A confirmar')} × ${escapeHtml(p.visitante||'A confirmar')}</strong><span>${p.adiado?'ADIADO · ':''}${escapeHtml(p.status||'Aguardando resultado')}</span></article>`).join('')}</div></details>`:''}${ranking.length?`<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div><div class="rk-list">${rankingCardsHtml(ranking)}</div>`:'<div class="panel"><div class="panel-inner empty">Aguardando o primeiro jogo encerrado.</div></div>'}`;
+    const opcoesDetalhe=ref.tipo==='bloco'
+      ? {blocoDetalhe:obj,estiloRodada20:true}
+      : {rodadaDetalhe:Number(obj.rodada),estiloRodada20:Number(obj.rodada)===20};
+    return `${rankingHeaderHtml({kicker:'Ranking parcial',titulo,objeto:obj,ranking})}<div class="partial-progress-card"><div class="partial-progress-bar"><span style="width:${Math.min(100,(Number(obj.jogos_apurados||0)/Number(obj.jogos_previstos||obj.total_jogos||10))*100)}%"></span></div><p><strong>${obj.jogos_apurados||0}</strong> jogos apurados · <strong>${obj.jogos_pendentes||0}</strong> pendentes. Jogos adiados não encerram antecipadamente a disputa.</p></div>${pend.length?`<details class="pending-games"><summary>Ver partidas pendentes (${obj.jogos_pendentes||pend.length})</summary><div>${pend.map(p=>`<article><strong>${escapeHtml(p.mandante||'A confirmar')} × ${escapeHtml(p.visitante||'A confirmar')}</strong><span>${p.adiado?'ADIADO · ':''}${escapeHtml(p.status||'Aguardando resultado')}</span></article>`).join('')}</div></details>`:''}${ranking.length?`<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div><div class="rk-list">${rankingCardsHtml(ranking,opcoesDetalhe)}</div>`:'<div class="panel"><div class="panel-inner empty">Aguardando o primeiro jogo encerrado.</div></div>'}`;
   }
 
   function renderRanking() {
@@ -2925,7 +2959,11 @@
     global.__BR_APOSTAS_TEST_HOOKS = {
       state,
       blocoRankingCronologicoMaisAtual,
-      aplicarDestinoCronologicoInicial
+      aplicarDestinoCronologicoInicial,
+      palpitesParticipanteRodada,
+      palpitesParticipanteBloco,
+      rankingCardsHtml,
+      renderRankingBloco
     };
   }
 
