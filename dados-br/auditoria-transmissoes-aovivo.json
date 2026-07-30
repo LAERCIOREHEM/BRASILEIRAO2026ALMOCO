@@ -10,11 +10,11 @@
     "manual": "dados-br/transmissoes-aovivo-manual.json tem prioridade absoluta"
   },
   "resumo": {
-    "jogos_na_janela": 34,
+    "jogos_na_janela": 32,
     "busca_streams_executada": true,
-    "candidatos_oficiais_encontrados": 25,
-    "transmissoes_publicadas": 1,
-    "sem_transmissao": 33,
+    "candidatos_oficiais_encontrados": 26,
+    "transmissoes_publicadas": 0,
+    "sem_transmissao": 32,
     "erros": 0
   },
   "canais_resolvidos": {
@@ -40,26 +40,6 @@
     }
   },
   "jogos_analisados": [
-    {
-      "event_id": "401841177",
-      "rodada": 21,
-      "jogo": "Fluminense x Bahia",
-      "data_iso": "2026-07-29T21:30:00-03:00",
-      "principal": "",
-      "fontes_encontradas": [],
-      "manual": false
-    },
-    {
-      "event_id": "401841172",
-      "rodada": 21,
-      "jogo": "Vitória x Palmeiras",
-      "data_iso": "2026-07-29T21:30:00-03:00",
-      "principal": "GE TV",
-      "fontes_encontradas": [
-        "GE TV"
-      ],
-      "manual": false
-    },
     {
       "event_id": "401841174",
       "rodada": 21,
@@ -349,25 +329,7 @@
       "manual": false
     }
   ],
-  "aceitos": [
-    {
-      "event_id": "401841172",
-      "jogo": "Vitória x Palmeiras",
-      "fonte": "getv",
-      "video_id": "J_b8bOVwRgE",
-      "url": "https://www.youtube.com/watch?v=J_b8bOVwRgE",
-      "titulo": "VITÓRIA X PALMEIRAS | AO VIVO E COM IMAGENS | BRASILEIRÃO 2026 | ge tv",
-      "status": "live",
-      "confianca": 0.9,
-      "motivos": [
-        "os dois clubes aparecem no título",
-        "identifica Brasileirão/competição",
-        "identifica transmissão ao vivo",
-        "transmissão já está ao vivo",
-        "horário compatível (90 min de diferença)"
-      ]
-    }
-  ],
+  "aceitos": [],
   "rejeitados": [
     {
       "video_id": "q1kUIRzZVNc",
@@ -377,6 +339,16 @@
       "titulo": "AO VIVO: É TUDO OU NADA PRA DESIMPAIN NA KINGS! | COPA DO MUNDO DE CLUBES KINGS LEAGUE | LAST CHANCE",
       "status": "upcoming",
       "inicio_programado": "2026-07-30T12:45:00-03:00",
+      "motivo": "não identifica com segurança os dois clubes"
+    },
+    {
+      "video_id": "J_b8bOVwRgE",
+      "url": "https://www.youtube.com/watch?v=J_b8bOVwRgE",
+      "fonte": "getv",
+      "canal": "ge tv",
+      "titulo": "VITÓRIA 0 X 4 PALMEIRAS AO VIVO: GOLEADA COM MUITA POLÊMICA! | Tropa ge tv",
+      "status": "live",
+      "inicio_programado": "2026-07-29T20:00:00-03:00",
       "motivo": "não identifica com segurança os dois clubes"
     },
     {
@@ -570,6 +542,16 @@
       "motivo": "não identifica com segurança os dois clubes"
     },
     {
+      "video_id": "fGT1Jw04efk",
+      "url": "https://www.youtube.com/watch?v=fGT1Jw04efk",
+      "fonte": "getv",
+      "canal": "ge tv",
+      "titulo": "AO VIVO: GRÊMIO DECIDE VAGA NAS OITAVAS DA COPA SUL-AMERICANA COM O BOLÍVAR | TÁ ON | sportv",
+      "status": "upcoming",
+      "inicio_programado": "2026-07-30T12:15:00-03:00",
+      "motivo": "não identifica com segurança os dois clubes"
+    },
+    {
       "video_id": "jpnlIxDADJs",
       "url": "https://www.youtube.com/watch?v=jpnlIxDADJs",
       "fonte": "getv",
@@ -611,13 +593,6 @@
     }
   ],
   "sem_transmissao": [
-    {
-      "event_id": "401841177",
-      "rodada": 21,
-      "jogo": "Fluminense x Bahia",
-      "data_iso": "2026-07-29T21:30:00-03:00",
-      "motivo": "nenhuma transmissão oficial validada em CazéTV ou GE TV"
-    },
     {
       "event_id": "401841174",
       "rodada": 21,
@@ -853,5 +828,5 @@
     },
     "observacao": "search.list não é usado. A aba /streams custa apenas videos.list; a playlist de uploads mantém redundância. A execução típica permanece muito abaixo da cota diária gratuita do YouTube Data API."
   },
-  "atualizado_em": "2026-07-29T22:06:17-03:00"
+  "atualizado_em": "2026-07-30T00:19:39-03:00"
 }
