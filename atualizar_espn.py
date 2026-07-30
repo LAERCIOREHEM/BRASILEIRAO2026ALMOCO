@@ -1336,21 +1336,7 @@ def estimar_finalizado_em(e: dict[str, Any], agora: datetime, anterior: dict[str
 def aplicar_finalizados_em(eventos: list[dict[str, Any]], anteriores: dict[str, dict[str, Any]],
                             snapshot_anterior_em: datetime | None, agora: datetime) -> None:
     for e in eventos:
-        dt = e.get("data_dt")
-        placar_presente = e.get("placar_mandante") is not None and e.get("placar_visitante") is not None
-        realmente_finalizado = bool(
-            e.get("adiado") is not True
-            and (
-                e.get("concluido") is True
-                or (
-                    str(e.get("estado") or "").lower() == "post"
-                    and isinstance(dt, datetime)
-                    and dt <= agora - timedelta(minutes=90)
-                    and placar_presente
-                )
-            )
-        )
-        if not realmente_finalizado:
+        if not evento_realmente_finalizado(e, agora):
             e.pop("finalizado_em", None)
             continue
         event_id = str(e.get("event_id") or "")
@@ -1398,11 +1384,16 @@ def evento_realmente_finalizado(e: dict[str, Any], agora: datetime) -> bool:
     """Resultado só entra no resultados.json depois que o jogo já aconteceu.
 
     A ESPN às vezes devolve placar 0x0 e estado/status inconsistentes para jogo
-    futuro. Por isso a data também precisa estar no passado com margem de segurança.
+    futuro. Por isso a data também precisa estar no passado com margem de
+    segurança.
+
+    ``adiado=True`` registra também partidas que foram reagendadas e depois
+    disputadas. Ele não pode, sozinho, anular um resultado final. Adiamentos
+    ainda ativos já chegam normalizados com ``estado=pre`` e continuam fora do
+    resultados.json pela checagem de estado abaixo.
     """
     if (
-        e.get("adiado") is True
-        or e.get("placar_mandante") is None
+        e.get("placar_mandante") is None
         or e.get("placar_visitante") is None
     ):
         return False
@@ -1988,6 +1979,7 @@ def selftest_execucao_6() -> None:
                     "placar_mandante": 2,
                     "placar_visitante": 0,
                     "status": "Encerrado",
+                    "adiado": True,
                 }
             }
         }), encoding="utf-8")
@@ -2002,8 +1994,12 @@ def selftest_execucao_6() -> None:
         eventos = [evento]
         assert aplicar_resultados_manuais(eventos) == 1
         assert evento["estado"] == "post" and evento["concluido"] is True
+        assert evento["adiado"] is True
         assert (evento["placar_mandante"], evento["placar_visitante"]) == (2, 0)
-        assert evento_realmente_finalizado(evento, datetime(2026, 7, 18, 0, 0, tzinfo=FUSO_BRASILIA))
+        fim_teste = datetime(2026, 7, 18, 0, 0, tzinfo=FUSO_BRASILIA)
+        assert evento_realmente_finalizado(evento, fim_teste)
+        aplicar_finalizados_em(eventos, {}, None, fim_teste)
+        assert evento.get("finalizado_em")
 
         evento_oficial = dict(evento)
         evento_oficial["resultado_manual"] = False
@@ -2035,6 +2031,7 @@ def selftest_execucao_6() -> None:
         "estado": "post",
         "concluido": False,
         "status": "0'",
+        "adiado": True,
     }
     assert evento_realmente_finalizado(empate_post, agora_teste)
     assert payload_jogo(empate_post)["status"] == "Encerrado"
@@ -2064,6 +2061,16 @@ def selftest_execucao_6() -> None:
         "Adiado",
         agora_teste,
     ) == ("pre", True)
+    adiado_ativo = dict(
+        empate_post,
+        estado="pre",
+        concluido=False,
+        status="Adiado",
+        finalizado_em="2026-07-23T21:00:00-03:00",
+    )
+    assert not evento_realmente_finalizado(adiado_ativo, agora_teste)
+    aplicar_finalizados_em([adiado_ativo], {}, None, agora_teste)
+    assert "finalizado_em" not in adiado_ativo
 
     tabela_teste = {
         "tabela": [
