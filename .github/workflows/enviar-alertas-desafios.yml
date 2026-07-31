@@ -1,0 +1,44 @@
+name: Enviar alertas dos Desafios na Mesa
+
+on:
+  schedule:
+    # Todos os dias às 08:00 de Brasília (11:00 UTC).
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/enviar_alertas_desafios.py'
+      - '.github/workflows/enviar-alertas-desafios.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enviar-alertas-desafios
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    name: Consultar lembretes e enviar e-mail
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Testar script sem acesso externo
+        run: python scripts/enviar_alertas_desafios.py --self-test
+
+      - name: Consultar e enviar alertas
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+        run: python scripts/enviar_alertas_desafios.py
