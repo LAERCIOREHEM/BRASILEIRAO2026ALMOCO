@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="br-private-pending">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desafios na Mesa — Brasileirão 2026</title>
+  <meta name="theme-color" content="#10b981">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="Registro privado de desafios recreativos entre os participantes do Almoço de Sexta.">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="css/br-apostas.css?v=20260727-exec4-apuracao-rankings-v1">
+  <link rel="stylesheet" href="css/br-global.css?v=20260731-desafios-mesa-v1">
+  <link rel="stylesheet" href="css/br-desafios-mesa.css?v=20260731-desafios-mesa-v1">
+</head>
+<body data-br-private-page="1">
+  <main class="container br-app-shell">
+    <section class="hero" aria-label="Brasileirão 2026 — Almoço de Sexta">
+      <img src="img/header-br-wide.png" alt="Brasileirão 2026 — Almoço de Sexta" fetchpriority="high">
+    </section>
+
+    <nav class="nav" data-br-auth-menu aria-label="Menu principal">
+      <a href="/jogos" data-br-view="jogos">⚽ Jogos</a>
+      <a href="apostas.html" data-br-private hidden>🎯 Apostas</a>
+      <a href="desafios-mesa.html" data-br-private data-br-challenges-menu hidden class="active" aria-current="page">🤝 Desafios na Mesa</a>
+      <a href="/bolao" data-br-view="rank" data-br-private hidden>🏆 Bolão</a>
+      <a href="/tabela" data-br-view="tabela">📊 Tabela</a>
+      <a href="/resultados" data-br-view="resultados">✅ Resultados</a>
+      <a href="regras.html" data-br-private hidden>ℹ️ Regras</a>
+      <a href="/aniversariantes" data-br-view="aniversariantes" data-br-private hidden>🎂 Aniversariantes</a>
+      <a href="copa2026/">🌎 Copa 2026</a>
+      <a href="apostas.html" data-br-auth-link>🔐 Login</a>
+    </nav>
+
+    <section class="panel br-page-title desafios-title">
+      <div class="panel-inner desafios-title-row">
+        <div>
+          <div class="kicker">Área privada do grupo</div>
+          <h1>🤝 Desafios na Mesa</h1>
+          <p>Um registro organizado dos desafios recreativos combinados entre amigos, com regra objetiva, prazo e histórico de cumprimento.</p>
+        </div>
+        <button type="button" class="btn desafios-new admin-only" id="novo-desafio" hidden>＋ Novo desafio</button>
+      </div>
+    </section>
+
+    <div id="desafios-status" class="status warn" role="status" aria-live="polite">Validando acesso e carregando desafios…</div>
+
+    <section class="desafios-summary" aria-label="Resumo dos desafios">
+      <article class="panel"><div class="panel-inner"><span class="summary-icon">⏳</span><strong id="total-andamento">0</strong><span>em andamento</span></div></article>
+      <article class="panel"><div class="panel-inner"><span class="summary-icon">🔎</span><strong id="total-apuracao">0</strong><span>aguardando resultado</span></div></article>
+      <article class="panel"><div class="panel-inner"><span class="summary-icon">📌</span><strong id="total-pendentes">0</strong><span>pendentes de cumprir</span></div></article>
+      <article class="panel"><div class="panel-inner"><span class="summary-icon">✅</span><strong id="total-cumpridos">0</strong><span>cumpridos</span></div></article>
+    </section>
+
+    <section class="panel desafios-filters" aria-label="Filtros dos desafios">
+      <div class="panel-inner">
+        <label>Buscar
+          <input type="search" id="filtro-busca" placeholder="Título, participante ou descrição" autocomplete="off">
+        </label>
+        <label>Situação
+          <select id="filtro-status">
+            <option value="ativos">Ativos e pendentes</option>
+            <option value="todos">Todos</option>
+            <option value="em_andamento">Em andamento</option>
+            <option value="aguardando_resultado">Aguardando resultado</option>
+            <option value="encerrado">Encerrados</option>
+            <option value="cumprido">Cumpridos</option>
+            <option value="cancelado">Cancelados</option>
+          </select>
+        </label>
+        <label>Participante
+          <select id="filtro-participante"><option value="">Todos os participantes</option></select>
+        </label>
+      </div>
+    </section>
+
+    <section id="desafios-lista" class="desafios-list" aria-live="polite" aria-busy="true"></section>
+
+    <dialog id="desafio-dialog" class="desafio-dialog" aria-labelledby="form-titulo">
+      <form id="desafio-form" method="dialog" novalidate>
+        <div class="dialog-head">
+          <div>
+            <div class="kicker">Administração</div>
+            <h2 id="form-titulo">Novo desafio</h2>
+          </div>
+          <button type="button" class="dialog-close" id="fechar-form" aria-label="Fechar formulário">×</button>
+        </div>
+        <input type="hidden" id="desafio-id">
+        <div class="form-grid">
+          <label class="span-2">Título do desafio
+            <input id="desafio-titulo" maxlength="100" required placeholder="Ex.: Melhor colocação no Brasileirão">
+          </label>
+          <label>Participante A
+            <select id="participante-a" required></select>
+          </label>
+          <label>Participante B
+            <select id="participante-b" required></select>
+          </label>
+          <label class="span-2">Descrição
+            <textarea id="desafio-descricao" maxlength="600" required placeholder="Descreva claramente o que foi combinado."></textarea>
+          </label>
+          <label class="span-2">Critério objetivo de resultado
+            <textarea id="desafio-criterio" maxlength="500" required placeholder="Explique como o vencedor será definido e como tratar um eventual empate."></textarea>
+          </label>
+          <label class="span-2">Compromisso simbólico
+            <input id="desafio-compromisso" maxlength="160" required placeholder="Ex.: um almoço, uma sobremesa ou uma tarefa combinada">
+            <small>Somente compromissos recreativos: sem dinheiro, itens restritos ou jogos de azar.</small>
+          </label>
+          <label>Data-limite
+            <input type="date" id="desafio-prazo" required>
+          </label>
+          <label>Data e hora do alerta
+            <input type="datetime-local" id="desafio-alerta" required>
+          </label>
+          <label>Situação
+            <select id="desafio-status-campo" required>
+              <option value="em_andamento">Em andamento</option>
+              <option value="aguardando_resultado">Aguardando resultado</option>
+              <option value="encerrado">Encerrado, aguardando cumprimento</option>
+              <option value="cumprido">Cumprido</option>
+            </select>
+          </label>
+          <label>Vencedor
+            <select id="desafio-vencedor"><option value="">Ainda não definido</option></select>
+          </label>
+          <label>Participante que cumprirá
+            <select id="desafio-perdedor"><option value="">Ainda não definido</option></select>
+          </label>
+          <label class="check-field">
+            <input type="checkbox" id="desafio-cumprido"> Compromisso cumprido
+          </label>
+          <label>Data do cumprimento
+            <input type="date" id="desafio-data-cumprimento">
+          </label>
+          <label class="span-2">Observações
+            <textarea id="desafio-observacoes" maxlength="600" placeholder="Informações adicionais ou registro da conclusão."></textarea>
+          </label>
+        </div>
+        <div id="form-erro" class="form-error" role="alert" hidden></div>
+        <div class="dialog-actions">
+          <button type="button" class="btn secondary" id="cancelar-form">Cancelar</button>
+          <button type="submit" class="btn" id="salvar-desafio">Salvar desafio</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="desafios-toast" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <footer class="site-footer br-disclaimer">
+      <div><span class="footer-title">Brasileirão 2026 — Almoço de Sexta.</span> Área privada para registro recreativo entre participantes autorizados. Não admite dinheiro, itens restritos ou jogos de azar.</div>
+      <div class="footer-sugestoes">Somente a administração pode criar, alterar ou encerrar registros; os demais participantes têm acesso de consulta.</div>
+    </footer>
+  </main>
+
+  <script src="js/br-config.js?v=20260712-menu-publico-login-v1"></script>
+  <script src="js/br-menu.js?v=20260731-desafios-mesa-v1"></script>
+  <script src="js/br-desafios-mesa.js?v=20260731-desafios-mesa-v1"></script>
+</body>
+</html>

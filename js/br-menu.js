@@ -3,7 +3,8 @@
    --------------------------------------------------------------------------
    - Visitante: Jogos, Ao vivo, Tabela, Resultados, Estatísticas, Clubes,
      Museu, Copa 2026 e Login.
-   - Participante validado: acrescenta Apostas, Bolão, Regras e Aniversariantes;
+   - Participante validado: acrescenta Apostas, Desafios na Mesa, Bolão,
+     Regras e Aniversariantes;
      o item Login passa a exibir o nome do participante e permite sair.
    - A sessão local é sempre validada no Supabase antes de liberar área privada.
    ========================================================================== */
@@ -67,6 +68,38 @@
       var clean = cleanUrlForView(link.getAttribute("data-br-view"));
       if (clean) link.setAttribute("href", clean);
     });
+  }
+
+  function ensureChallengesItem(nav) {
+    if (!nav) return null;
+    var existing = nav.querySelector("[data-br-challenges-menu]");
+    if (existing) return existing;
+
+    var betsItem = nav.querySelector("#btn-apostas, a[href$='apostas.html'][data-br-private]:not([data-br-auth-link])");
+    if (!betsItem) return null;
+
+    var isButton = String(betsItem.tagName || "").toLowerCase() === "button";
+    var item = document.createElement(isButton ? "button" : "a");
+    item.textContent = "🤝 Desafios na Mesa";
+    item.setAttribute("data-br-private", "");
+    item.setAttribute("data-br-challenges-menu", "");
+    item.hidden = true;
+    if (isButton) {
+      item.type = "button";
+      item.addEventListener("click", function () { global.location.href = "/desafios-mesa.html"; });
+    } else {
+      item.setAttribute("href", "/desafios-mesa.html");
+    }
+    if (basename() === "desafios-mesa.html") {
+      item.classList.add("active");
+      item.setAttribute("aria-current", "page");
+    }
+    betsItem.insertAdjacentElement("afterend", item);
+    return item;
+  }
+
+  function ensureAllChallengesItems() {
+    Array.prototype.forEach.call(document.querySelectorAll(".nav[data-br-auth-menu]"), ensureChallengesItem);
   }
 
   function isPrivateRoute() {
@@ -361,6 +394,7 @@
 
   function applyMenu(nav) {
     if (!nav) return;
+    ensureChallengesItem(nav);
     normalizeMenuLinks(nav);
     Array.prototype.forEach.call(nav.querySelectorAll("[data-br-private]"), function (item) {
       item.hidden = !authState.authenticated;
@@ -539,6 +573,7 @@
   };
 
   function init() {
+    ensureAllChallengesItems();
     wireAllMenus();
     loadOperationalStatus();
     refreshAuth();
