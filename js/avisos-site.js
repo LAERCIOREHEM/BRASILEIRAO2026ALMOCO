@@ -23,16 +23,20 @@
     window.COPA_CFG ||
     { url: "", key: "" };
 
-  // Prefixo mantido igual ao da Copa: um aviso já visto continua visto,
-  // mesmo tendo mudado de página.
-  const STORAGE_PREFIX = "copa_aviso_site_visto_";
+  // Chave própria da home canônica. Assim, quem chegou a visualizar o aviso
+  // antigo pela Copa ou por /?brasileirao=1 ainda o recebe uma única vez no
+  // endereço correto após esta migração.
+  const STORAGE_PREFIX = "br_home_aviso_site_visto_";
   const DEFAULT_DELAY_MS = 1000;
   const FADE_MS = 520;
   const CSS_ID = "br-aviso-site-estilo";
 
   function isPaginaPrincipal() {
     const path = String(location.pathname || "").replace(/\/+$/, "");
-    return path === "" || /\/index\.html$/i.test(path) || /\/index$/i.test(path);
+    const raiz = path === "" || path === "/index.html" || path === "/index";
+    // O aviso pertence somente à home canônica. URLs legadas ou de contexto,
+    // como /?brasileirao=1 e /?view=..., não podem consumi-lo como "visto".
+    return raiz && !String(location.search || "");
   }
 
   function injetarEstilo() {
