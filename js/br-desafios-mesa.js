@@ -16,6 +16,7 @@
     cumprido: "Cumprido",
     cancelado: "Cancelado"
   };
+  var BET_WORD = /\bapostas?\b/i;
   var RESTRICTED = /(?:\bdinheiro\b|\bpix\b|r\s*\$|\breais?\b|\bbet(?:s)?\b|\bcassino\b|\bjogos?\s+de\s+azar\b|\bvinhos?\b|\bchamp(?:agne|anhe)\b|\bespumantes?\b|\bcervejas?\b|\bwhisk(?:y|ey)\b|\bvodka\b|\bcacha[cç]as?\b|\bgins?\b|\brum\b|\blicores?\b|\bbebidas?\s+alco[oó]licas?\b)/i;
 
   var state = {
@@ -55,9 +56,16 @@
     if (!region) return;
     var item = document.createElement("div");
     item.className = "toast " + (tone || "ok");
+    item.setAttribute("role", tone === "err" ? "alert" : "status");
     item.textContent = message;
     region.appendChild(item);
-    global.setTimeout(function () { item.remove(); }, 4200);
+    global.requestAnimationFrame(function () {
+      global.requestAnimationFrame(function () { item.classList.add("show"); });
+    });
+    global.setTimeout(function () {
+      item.classList.remove("show");
+      global.setTimeout(function () { item.remove(); }, 220);
+    }, 4200);
   }
 
   function config() {
@@ -336,6 +344,7 @@
     if (payload.p_participante_a_id === payload.p_participante_b_id) return "Os dois participantes precisam ser diferentes.";
     if (!payload.p_prazo || !payload.p_alerta_em) return "Informe a data-limite e a data do alerta.";
     var safeText = [payload.p_titulo, payload.p_descricao, payload.p_criterio_resultado, payload.p_compromisso_simbolico, payload.p_observacoes || ""].join(" ");
+    if (BET_WORD.test(safeText)) return "Substitua a palavra “aposta” por “desafio”. Esta área registra somente desafios recreativos.";
     if (RESTRICTED.test(safeText)) return "Use somente compromissos simbólicos: sem dinheiro, itens restritos ou jogos de azar.";
     var hasWinner = Boolean(payload.p_vencedor_id);
     var hasLoser = Boolean(payload.p_perdedor_id);
@@ -387,8 +396,13 @@
       toast("Desafio salvo com sucesso.", "ok");
       await loadData();
     } catch (saveError) {
-      errorBox.textContent = saveError && saveError.message ? saveError.message : "Não foi possível salvar.";
+      var saveMessage = saveError && saveError.message ? saveError.message : "Não foi possível salvar.";
+      if (/compromissos simbólicos/i.test(saveMessage) && BET_WORD.test([payload.p_titulo, payload.p_descricao, payload.p_criterio_resultado, payload.p_compromisso_simbolico, payload.p_observacoes || ""].join(" "))) {
+        saveMessage = "Substitua a palavra “aposta” por “desafio”. Esta área registra somente desafios recreativos.";
+      }
+      errorBox.textContent = saveMessage;
       errorBox.hidden = false;
+      toast(saveMessage, "err");
     } finally {
       button.disabled = false;
       button.textContent = "Salvar desafio";
