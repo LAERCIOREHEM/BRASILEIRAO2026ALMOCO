@@ -3437,15 +3437,18 @@ function projecaoBolaoPorNome(nome) {
   const lista = state.probabilidadesBolao && Array.isArray(state.probabilidadesBolao.participantes) ? state.probabilidadesBolao.participantes : [];
   return lista.find(item => normalizarNome(item.nome) === normalizarNome(nome)) || null;
 }
+function formatarPercentualBolao(valor) {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return '—';
+  if (numero > 0 && numero < .1) return '<0,1%';
+  if (numero > 99.9 && numero < 100) return '>99,9%';
+  return numero.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%';
+}
 function formatarChanceBolao(item) {
   if (!item) return '—';
   const explicita = String(item.chance_titulo_exibicao || '').trim();
   if (explicita) return explicita;
-  const valor = Number(item.chance_titulo_pct);
-  if (!Number.isFinite(valor)) return '—';
-  if (valor > 0 && valor < .1) return '<0,1%';
-  if (valor > 99.9 && valor < 100) return '>99,9%';
-  return valor.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1}) + '%';
+  return formatarPercentualBolao(item.chance_titulo_pct);
 }
 function toggleBolaoProjection(chave) {
   const seletor = String(chave).replace(/"/g,'\"');
@@ -4057,8 +4060,8 @@ function renderRank() {
       const faixa = projecao.faixa_pontuacao_80 || {};
       html += `<tr class="bolao-projection-row" data-bolao-detail="${brEscapeAttr(chaveProj)}" hidden><td colspan="11"><div class="bolao-projection-detail">
         <article><span>Chance de título</span><strong>${brEscapeHtml(formatarChanceBolao(projecao))}</strong></article>
-        <article><span>Chance de top 3</span><strong>${Number(projecao.chance_top3_pct||0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong></article>
-        <article><span>Chance de não pagar</span><strong>${Number(projecao.chance_nao_pagar_pct||0).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</strong></article>
+        <article><span>Chance de top 3</span><strong>${brEscapeHtml(formatarPercentualBolao(projecao.chance_top3_pct))}</strong></article>
+        <article><span>Chance de não pagar</span><strong>${brEscapeHtml(formatarPercentualBolao(projecao.chance_nao_pagar_pct))}</strong></article>
         <article><span>Pontuação projetada</span><strong>${Number(projecao.pontuacao_projetada||0)} pts</strong></article>
         <article><span>Faixa provável de 80%</span><strong>${Number(faixa.minimo||0)}–${Number(faixa.maximo||0)} pts</strong></article>
       </div></td></tr>`;
