@@ -47,11 +47,14 @@ permissions:
   pages: write
   id-token: write
 
-# Não cancelar uma publicação já iniciada. Novos deploys aguardam na fila e,
-# ao começar, fazem checkout do main mais recente.
+# O site é sempre montado a partir do main mais recente. Se outro deploy for
+# disparado enquanto há uma publicação antiga executando ou aguardando, essa
+# execução anterior já ficou obsoleta e deve ser substituída pela mais nova.
+# Isso impede o acúmulo da fila do GitHub Pages e o cancelamento por
+# "higher priority waiting request for pages".
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
