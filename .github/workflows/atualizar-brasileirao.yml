@@ -11,6 +11,11 @@ on:
         required: false
         default: false
         type: boolean
+      coleta_completa:
+        description: 'Forçar varredura completa do scoreboard ESPN nesta execução'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -142,6 +147,7 @@ jobs:
         env:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           API_FOOTBALL_LEAGUE_ID: ${{ secrets.API_FOOTBALL_LEAGUE_ID }}
+          ESPN_COLETA_COMPLETA: ${{ inputs.coleta_completa }}
         run: python atualizar_espn.py
 
       # Publicação prioritária: resultado final e ranking parcial não aguardam
