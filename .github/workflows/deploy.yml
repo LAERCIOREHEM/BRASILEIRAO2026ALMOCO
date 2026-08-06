@@ -46,21 +46,32 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  deployments: read
 
-# O site é sempre montado a partir do main mais recente. Se outro deploy for
-# disparado enquanto há uma publicação antiga executando ou aguardando, essa
-# execução anterior já ficou obsoleta e deve ser substituída pela mais nova.
-# Isso impede o acúmulo da fila do GitHub Pages e o cancelamento por
-# "higher priority waiting request for pages".
+# ATENCAO - NAO VOLTE cancel-in-progress PARA true.
+#
+# O passo actions/deploy-pages cria uma implantacao do lado do GitHub Pages
+# (POST /pages/deployments) e depois fica apenas consultando o status. Se o run
+# for cancelado pela concorrencia no meio dessa espera, a implantacao ja criada
+# NAO e cancelada junto: ela fica pendurada na fila do Pages, que e serial por
+# repositorio. A partir dai todo deploy seguinte fica preso em
+# "deployment_queued" ate estourar o tempo limite do proprio actions/deploy-pages
+# ("Timeout reached, aborting!"), o que cancela mais um run e realimenta o
+# travamento.
+#
+# Comportamento correto (mesmo do workflow oficial do GitHub Pages): deixar o
+# run em execucao terminar e manter apenas o run enfileirado mais recente. O
+# GitHub ja descarta automaticamente os runs pendentes intermediarios, entao nao
+# ha acumulo de fila.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
     name: Publicar GitHub Pages
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -252,6 +263,68 @@ jobs:
           sort -nr /tmp/site-files.txt > /tmp/site-files-sorted.txt
           head -20 /tmp/site-files-sorted.txt | awk '{printf "%.2f MB  %s\n", $1/1024/1024, $2}'
 
+          # Guarda de peso do artefato. Pacote muito grande e a segunda causa de
+          # "deployment_queued" longo: o Pages demora para descompactar e servir.
+          BYTES=$(du -sb _site | cut -f1)
+          MB=$((BYTES / 1024 / 1024))
+          echo "Peso do artefato: ${MB} MB"
+          if (( MB > 400 )); then
+            echo "ERRO: artefato com ${MB} MB (limite operacional 400 MB)."
+            echo "Rode 'python scripts/otimizar_imagens.py' e comite as imagens otimizadas."
+            exit 1
+          fi
+          if (( MB > 120 )); then
+            echo "::warning::Artefato com ${MB} MB. Acima de 120 MB o deploy do Pages fica lento; considere rodar scripts/otimizar_imagens.py."
+          fi
+
+      - name: Destravar fila do Pages (cancelar deploys presos)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          # Cancela implantacoes do ambiente github-pages que ficaram presas em
+          # queued/in_progress por mais de 10 minutos (heranca de runs cancelados).
+          # Enquanto elas existirem, a fila serial do Pages nao anda e este deploy
+          # tambem ficaria em "deployment_queued" ate estourar o tempo limite.
+          LIMITE=$(date -u -d '10 minutes ago' +%s)
+          PRESOS=0
+
+          gh api "repos/${GITHUB_REPOSITORY}/deployments?environment=github-pages&per_page=30" \
+            --jq '.[] | [.id, .sha, .created_at] | @tsv' > /tmp/deployments.tsv || exit 0
+
+          while IFS=$'\t' read -r id sha criado; do
+            [[ -z "${id:-}" ]] && continue
+            [[ "$sha" == "$GITHUB_SHA" ]] && continue
+
+            estado=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" \
+              --jq '.[0].state // "sem_status"' 2>/dev/null || echo "sem_status")
+
+            case "$estado" in
+              queued|in_progress|pending|waiting) ;;
+              *) continue ;;
+            esac
+
+            nascido=$(date -u -d "$criado" +%s 2>/dev/null || echo 0)
+            if (( nascido == 0 || nascido > LIMITE )); then
+              continue
+            fi
+
+            echo "Cancelando implantacao presa: id=${id} sha=${sha} estado=${estado} criada_em=${criado}"
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${sha}/cancel" >/dev/null 2>&1 \
+              || echo "  (nao foi possivel cancelar ${sha}; seguindo assim mesmo)"
+            PRESOS=$((PRESOS + 1))
+          done < /tmp/deployments.tsv
+
+          if (( PRESOS == 0 )); then
+            echo "Fila do Pages limpa: nenhuma implantacao presa encontrada."
+          else
+            echo "Implantacoes presas canceladas: ${PRESOS}. Aguardando a fila liberar."
+            sleep 20
+          fi
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
@@ -259,11 +332,19 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+          retention-days: 1
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        timeout-minutes: 15
+        # O padrao do action e 600000 ms (10 min) — insuficiente para o pacote
+        # atual do site. O timeout-minutes do passo fica acima do timeout interno
+        # para que o proprio action encerre e cancele a implantacao com limpeza,
+        # em vez de o runner matar o passo e deixar lixo na fila do Pages.
+        timeout-minutes: 35
+        with:
+          timeout: 1800000
+          error_count: 20
 
       - name: Alertar falha de deploy por e-mail
         if: failure()
