@@ -83,7 +83,7 @@ jobs:
 
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url || steps.deployment_retry2.outputs.page_url }}
 
     steps:
       - name: Checkout
@@ -277,6 +277,55 @@ jobs:
             echo "::warning::Artefato com ${MB} MB. Acima de 120 MB o deploy do Pages fica lento; considere rodar scripts/otimizar_imagens.py."
           fi
 
+      # CAUSA MAIS PROVAVEL do "deployment_queued" que nunca sai do lugar.
+      #
+      # Se a origem do Pages ("Source") estiver em "Deploy from a branch", o
+      # servico so processa implantacoes vindas do workflow embutido
+      # "pages build and deployment". Uma implantacao criada por
+      # actions/deploy-pages simplesmente NAO e retirada da fila: fica em
+      # deployment_queued ate o action desistir. O log nao acusa erro de
+      # configuracao — apenas repete o status, exatamente como observado.
+      #
+      # actions/configure-pages NAO resolve: com enablement no padrao (false)
+      # ele apenas le as configuracoes, sem alterar o build_type.
+      - name: Fixar origem do Pages em GitHub Actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          echo "--- Configuracao atual do Pages ---"
+          gh api "repos/${GITHUB_REPOSITORY}/pages" \
+            --jq '{build_type, status, html_url, source}' 2>/dev/null || echo "(nao foi possivel ler /pages)"
+
+          atual=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "desconhecido"' 2>/dev/null || echo "sem_pages")
+          echo "build_type atual: ${atual}"
+
+          if [[ "$atual" == "workflow" ]]; then
+            echo "OK: origem ja e GitHub Actions."
+            exit 0
+          fi
+
+          echo "::warning::Origem do Pages em '${atual}'. Tentando corrigir para 'workflow'."
+          if gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" -f build_type=workflow >/dev/null 2>&1; then
+            echo "Origem corrigida para GitHub Actions."
+            sleep 10
+            exit 0
+          fi
+
+          # Falha rapida e explicita: seguir daqui so gastaria 10 min de fila
+          # para terminar no mesmo "Timeout reached, aborting!".
+          echo "ERRO: a origem do GitHub Pages NAO esta em 'GitHub Actions' e o GITHUB_TOKEN"
+          echo "      nao tem permissao para alterar essa configuracao."
+          echo ""
+          echo "CORRIJA MANUALMENTE, uma unica vez:"
+          echo "  Settings > Pages > Build and deployment > Source = GitHub Actions"
+          echo ""
+          echo "Enquanto isso nao for feito, toda implantacao criada por este workflow"
+          echo "ficara presa em 'deployment_queued' ate estourar o tempo limite."
+          exit 1
+
       - name: Destravar fila do Pages (cancelar deploys presos)
         continue-on-error: true
         env:
@@ -336,15 +385,50 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v4
-        # O padrao do action e 600000 ms (10 min) — insuficiente para o pacote
-        # atual do site. O timeout-minutes do passo fica acima do timeout interno
-        # para que o proprio action encerre e cancele a implantacao com limpeza,
-        # em vez de o runner matar o passo e deixar lixo na fila do Pages.
-        timeout-minutes: 35
+        # ATENCAO: 600000 ms (10 min) e o MAXIMO aceito pelo actions/deploy-pages.
+        # Valores maiores sao silenciosamente reduzidos e o log emite
+        # "timeout value is greater than the allowed maximum". Nao adianta subir
+        # aqui: para deploys lentos, a saida e reduzir o artefato e repetir.
+        timeout-minutes: 12
         with:
-          timeout: 1800000
+          timeout: 600000
           error_count: 20
+          reporting_interval: 5000
+
+      - name: Aguardar antes de repetir deploy
+        if: steps.deployment.outcome == 'failure'
+        shell: bash
+        run: sleep 60
+
+      - name: Repetir deploy no GitHub Pages
+        id: deployment_retry
+        continue-on-error: true
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        timeout-minutes: 12
+        with:
+          timeout: 600000
+          error_count: 20
+          reporting_interval: 5000
+
+      - name: Aguardar antes da ultima tentativa
+        if: steps.deployment.outcome == 'failure' && steps.deployment_retry.outcome == 'failure'
+        shell: bash
+        run: sleep 120
+
+      # Terceira e ultima tentativa: sem continue-on-error, falha aqui reprova o
+      # job e dispara o alerta por e-mail.
+      - name: Ultima tentativa de deploy no GitHub Pages
+        id: deployment_retry2
+        if: steps.deployment.outcome == 'failure' && steps.deployment_retry.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        timeout-minutes: 12
+        with:
+          timeout: 600000
+          error_count: 20
+          reporting_interval: 5000
 
       - name: Alertar falha de deploy por e-mail
         if: failure()
