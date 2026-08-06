@@ -26,6 +26,8 @@ jobs:
   enviar:
     name: Verificar aniversariantes e enviar email
     runs-on: ubuntu-latest
+    # Sem limite, um job travado prende o runner por ate 6 horas.
+    timeout-minutes: 10
 
     steps:
       - name: Baixar repositorio

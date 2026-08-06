@@ -16,12 +16,23 @@ concurrency:
 jobs:
   apurar:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Era 15 min. Duas execucoes morreram exatamente em 15m06s e outra em
+    # 28m14s (13 min de espera na fila repo-write-main + 15 min de execucao
+    # ate o corte). O trabalho de apuracao nao cabia no limite. Com o clone
+    # raso a execucao encurta bastante, mas a margem fica explicita.
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          # fetch-depth: 1 — nenhum workflow ou script deste repositorio le
+          # historico do git (nao ha git log / rev-list / describe / blame em
+          # lugar nenhum). Com fetch-depth: 1 cada execucao clonava o historico
+          # inteiro de um repositorio com 212 MB de arvore de trabalho e
+          # milhares de commits de robo — custo puro, pago em toda execucao.
+          # Os laços de push robusto usam 'git fetch origin main' +
+          # 'git reset --hard origin/main', que funcionam em clone raso.
+          fetch-depth: 1
 
       - name: Setup Python
         uses: actions/setup-python@v5

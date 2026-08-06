@@ -1,13 +1,23 @@
 name: Buscar transmissões ao vivo do Brasileirão
 
 on:
-  # Busca ativa a cada 15 minutos entre 06:07 e 23:52 BRT.
-  # Na madrugada, uma verificação por hora preserva atualidade sem desperdício.
-  # Minutos deslocados evitam o pico de carga do GitHub no início da hora.
+  # JANELAS ATIVAS (horario de Brasilia, UTC-3):
+  #   Seg-Sex: 19h -> 02h        Sab-Dom: 13h -> 02h
+  #
+  # Antes rodava das 06h as 23h BRT de 15 em 15 min: ~78 execucoes/dia, cada
+  # uma segurando o grupo repo-write-main e disparando um deploy. Era a causa
+  # do congestionamento que fazia execucoes manuais esperarem e estourarem.
+  #
+  # Minutos :02 :17 :32 :47 ficam 8 min a frente do deploy (:10 :25 :40 :55).
   schedule:
-    - cron: '7,22,37,52 9-23 * * *'
-    - cron: '7,22,37,52 0-2 * * *'
-    - cron: '17 3-8 * * *'
+    # 19h00-23h59 BRT, segunda a sexta   =  22-23 UTC, seg-sex
+    - cron: '2,17,32,47 22,23 * * 1-5'
+    # 13h00-23h59 BRT, sabado e domingo  =  16-23 UTC, sab/dom
+    - cron: '2,17,32,47 16-23 * * 6,0'
+    # 00h00-02h59 BRT, todos os dias     =  03-05 UTC
+    - cron: '2,17,32,47 3-5 * * *'
+    # 21h00-23h59 BRT da vespera         =  00-02 UTC
+    - cron: '2,17,32,47 0-2 * * *'
   workflow_dispatch:
     inputs:
       event_id:
@@ -48,7 +58,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: true
-          fetch-depth: 0
+          # fetch-depth: 1 — nenhum workflow ou script deste repositorio le
+          # historico do git (nao ha git log / rev-list / describe / blame em
+          # lugar nenhum). Com fetch-depth: 1 cada execucao clonava o historico
+          # inteiro de um repositorio com 212 MB de arvore de trabalho e
+          # milhares de commits de robo — custo puro, pago em toda execucao.
+          # Os laços de push robusto usam 'git fetch origin main' +
+          # 'git reset --hard origin/main', que funcionam em clone raso.
+          fetch-depth: 1
 
       - name: Configurar Python
         uses: actions/setup-python@v5

@@ -38,7 +38,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: true
-          fetch-depth: 0
+          # fetch-depth: 1 — nenhum workflow ou script deste repositorio le
+          # historico do git (nao ha git log / rev-list / describe / blame em
+          # lugar nenhum). Com fetch-depth: 1 cada execucao clonava o historico
+          # inteiro de um repositorio com 212 MB de arvore de trabalho e
+          # milhares de commits de robo — custo puro, pago em toda execucao.
+          # Os laços de push robusto usam 'git fetch origin main' +
+          # 'git reset --hard origin/main', que funcionam em clone raso.
+          fetch-depth: 1
 
       - name: Configurar Python
         uses: actions/setup-python@v5

@@ -1,13 +1,11 @@
 name: Atualizar Elencos Brasileirao (ESPN)
 
 on:
-  # Carga pesada de elencos/fotos: uma vez por semana.
-  # Segunda-feira, 06:17 UTC = 03:17 no horário de Brasília.
+  # Carga pesada de elencos/fotos: uma vez por semana, dentro da janela
+  # noturna e longe dos minutos usados pelos demais agendamentos.
   schedule:
-    # Segunda-feira às 06:43 UTC (03:43 BRT) — longe do :22 das transmissões
-    # e do :16/:22/:44/:59 do cron-job.org. Elencos muda pouco; uma vez por
-    # semana é suficiente.
-    - cron: '43 6 * * 1'
+    # Terca-feira 02:43 UTC = segunda-feira 23h43 em Brasilia.
+    - cron: '43 2 * * 2'
   workflow_dispatch:
 
 permissions:
@@ -28,7 +26,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: true
-          fetch-depth: 0
+          # fetch-depth: 1 — nenhum workflow ou script deste repositorio le
+          # historico do git (nao ha git log / rev-list / describe / blame em
+          # lugar nenhum). Com fetch-depth: 1 cada execucao clonava o historico
+          # inteiro de um repositorio com 212 MB de arvore de trabalho e
+          # milhares de commits de robo — custo puro, pago em toda execucao.
+          # Os laços de push robusto usam 'git fetch origin main' +
+          # 'git reset --hard origin/main', que funcionam em clone raso.
+          fetch-depth: 1
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -72,11 +77,45 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [[ -z "$(git status --porcelain -- dados-br/elencos.json dados-br/auditoria-elencos.json)" ]]; then
+
+          FILES=("dados-br/elencos.json" "dados-br/auditoria-elencos.json")
+          if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
             echo "Sem mudanças nos arquivos de elencos."
             exit 0
           fi
-          git add dados-br/elencos.json dados-br/auditoria-elencos.json
-          git commit -m "Atualizar elencos Brasileirao (ESPN roster) - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
-          git pull --rebase origin main
-          git push origin HEAD:main
+
+          # Antes este era o UNICO push do repositorio sem laço de retentativa:
+          # usava 'git pull --rebase' + 'git push' direto. Se outro fluxo
+          # publicasse entre o pull e o push, ou se o rebase esbarrasse nos
+          # arquivos-artefato, a execucao morria. Alem disso, 'pull --rebase'
+          # nao funciona em clone raso. Agora segue o mesmo padrao robusto dos
+          # demais workflows: preserva o artefato, ressincroniza com o main e
+          # tenta de novo.
+          TMP_DIR="$(mktemp -d)"
+          mkdir -p "$TMP_DIR/dados-br"
+          cp -a dados-br/elencos.json "$TMP_DIR/dados-br/elencos.json"
+          cp -a dados-br/auditoria-elencos.json "$TMP_DIR/dados-br/auditoria-elencos.json"
+
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            mkdir -p dados-br
+            cp -a "$TMP_DIR/dados-br/elencos.json" dados-br/elencos.json
+            cp -a "$TMP_DIR/dados-br/auditoria-elencos.json" dados-br/auditoria-elencos.json
+
+            if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
+              echo "Outro fluxo já publicou os mesmos elencos."
+              exit 0
+            fi
+
+            git add -- "${FILES[@]}"
+            git commit -m "Atualizar elencos Brasileirao (ESPN roster) - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "ERRO: não foi possível publicar os elencos após 5 tentativas."
+          exit 1

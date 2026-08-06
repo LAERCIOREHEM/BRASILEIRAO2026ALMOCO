@@ -2,6 +2,11 @@ name: Deploy site (GitHub Pages)
 
 on:
   workflow_dispatch:
+    inputs:
+      forcar:
+        description: 'Publicar mesmo que o site esteja identico ao ja publicado'
+        type: boolean
+        default: false
 
   push:
     branches: [main]
@@ -32,15 +37,23 @@ on:
   # Publica imediatamente após workflows que atualizam dados do site.
   # Isso cobre commits feitos por GitHub Actions, que nem sempre disparam outro
   # workflow por "push" usando GITHUB_TOKEN.
-  workflow_run:
-    workflows:
-      - 'Atualizar Brasileirao (ESPN)'
-      - 'Buscar transmissões ao vivo do Brasileirão'
-      - 'Buscar melhores momentos Brasileirão oficiais'
-      - 'Atualizar Elencos Brasileirao (ESPN)'
-      - 'Revisar melhores momentos Brasileirão oficiais'
-      - 'Apurar Apostas Brasileirão'
-    types: [completed]
+  # PUBLICACAO COALESCIDA (substitui o antigo gatilho workflow_run)
+  #
+  # Antes, seis workflows disparavam um deploy cada vez que terminavam. Como o
+  # robo de transmissoes rodava de 15 em 15 min, isso gerava dezenas de deploys
+  # por dia numa fila que e SERIAL. A fila nao drenava, e um push seu ficava
+  # esperando atras dela — quando nao era descartado por um deploy mais novo.
+  # (No print: dois deploys cancelados em 1s e 7s. Sao exatamente isso.)
+  #
+  # Agora o deploy roda sozinho, em cadencia fixa, so nas janelas ativas, e
+  # publica tudo o que os robos acumularam. Se nada mudou, encerra em ~1 min.
+  #
+  # Janelas (horario de Brasilia, UTC-3):
+  #   Seg-Sex: 19h -> 02h      Sab-Dom: 13h -> 02h
+  schedule:
+    - cron: '10,25,40,55 22,23 * * 1-5'
+    - cron: '10,25,40,55 16-23 * * 6,0'
+    - cron: '10,25,40,55 0-5 * * *'
 
 permissions:
   contents: read
@@ -72,14 +85,6 @@ jobs:
     name: Publicar GitHub Pages
     runs-on: ubuntu-latest
     timeout-minutes: 60
-
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.head_branch == 'main' &&
-       (github.event.workflow_run.conclusion == 'success' ||
-        github.event.workflow_run.name == 'Atualizar Brasileirao (ESPN)'))
 
     environment:
       name: github-pages
@@ -156,6 +161,21 @@ jobs:
           target.parent.mkdir(parents=True, exist_ok=True)
           target.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           PY
+
+      # O pacote publicado deste repositorio pesa ~187 MB em 1.364 arquivos, com
+      # o mesmo acervo em resolucao de impressao do site irmao (mascotes de
+      # clube em 3200x4000 px). O actions/deploy-pages tem teto RIGIDO de 10 min
+      # para o sincronismo, entao a unica saida e entregar menos bytes.
+      #
+      # A otimizacao roda sobre _site, nao sobre o repositorio: o acervo original
+      # continua versionado e intacto. Custo medido: ~26 s.
+      - name: Otimizar imagens do pacote publico
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --disable-pip-version-check pillow \
+            || python3 -m pip install --quiet --disable-pip-version-check --break-system-packages pillow
+          python3 scripts/otimizar_imagens.py --raiz _site --pastas img copa2026/img
 
       - name: Validar pacote estatico antes do upload
         shell: bash
@@ -288,7 +308,62 @@ jobs:
       #
       # actions/configure-pages NAO resolve: com enablement no padrao (false)
       # ele apenas le as configuracoes, sem alterar o build_type.
+      # ---------------------------------------------------------------------
+      # GUARDA DE CONTEUDO
+      #
+      # O GitHub Pages nao tem publicacao incremental: toda implantacao envia o
+      # artefato inteiro. Nao existe API de delta. O que da para fazer e nao
+      # publicar quando nao ha o que publicar.
+      #
+      # A maioria das execucoes dos robos nao muda nada. Aqui o pacote e
+      # reduzido a um hash; se bater com o da ultima publicacao, o job encerra
+      # em ~1 min sem tocar no Pages.
+      - name: Calcular hash do pacote
+        id: guarda
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Arquivos com timestamp/commit mudam a cada execucao por construcao
+          # e ficam fora do hash.
+          HASH=$(find _site -type f \
+                   ! -name 'status-deploy.json' \
+                   ! -name 'status-atualizacao.json' \
+                   -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+          echo "hash=${HASH}" >> "$GITHUB_OUTPUT"
+          echo "Hash do pacote: ${HASH}"
+          mkdir -p .hash-publicado
+          echo "${HASH}" > .hash-publicado/hash.txt
+
+      - name: Consultar hash da ultima publicacao
+        id: cache_hash
+        uses: actions/cache/restore@v4
+        with:
+          path: .hash-publicado
+          key: pages-publicado-${{ steps.guarda.outputs.hash }}
+
+      - name: Decidir se publica
+        id: decisao
+        shell: bash
+        env:
+          FORCAR: ${{ github.event.inputs.forcar }}
+          CACHE_HIT: ${{ steps.cache_hash.outputs.cache-hit }}
+          EVENTO: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [[ "${FORCAR:-false}" == "true" ]]; then
+            echo "publicar=true" >> "$GITHUB_OUTPUT"
+            echo "Publicando: forcado pelo operador."
+          elif [[ "${CACHE_HIT:-}" == "true" ]]; then
+            echo "publicar=false" >> "$GITHUB_OUTPUT"
+            echo "PULANDO: o pacote e byte a byte identico ao ja publicado."
+            echo "::notice::Deploy dispensado (site inalterado). Evento: ${EVENTO}."
+          else
+            echo "publicar=true" >> "$GITHUB_OUTPUT"
+            echo "Publicando: o pacote mudou desde a ultima implantacao."
+          fi
+
       - name: Fixar origem do Pages em GitHub Actions
+        if: steps.decisao.outputs.publicar == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -327,6 +402,7 @@ jobs:
           exit 1
 
       - name: Destravar fila do Pages (cancelar deploys presos)
+        if: steps.decisao.outputs.publicar == 'true'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -375,15 +451,18 @@ jobs:
           fi
 
       - name: Configure Pages
+        if: steps.decisao.outputs.publicar == 'true'
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
+        if: steps.decisao.outputs.publicar == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
           retention-days: 1
 
       - name: Deploy to GitHub Pages
+        if: steps.decisao.outputs.publicar == 'true'
         id: deployment
         continue-on-error: true
         uses: actions/deploy-pages@v4
@@ -398,14 +477,14 @@ jobs:
           reporting_interval: 5000
 
       - name: Aguardar antes de repetir deploy
-        if: steps.deployment.outcome == 'failure'
+        if: steps.decisao.outputs.publicar == 'true' && steps.deployment.outcome == 'failure'
         shell: bash
         run: sleep 60
 
       - name: Repetir deploy no GitHub Pages
         id: deployment_retry
         continue-on-error: true
-        if: steps.deployment.outcome == 'failure'
+        if: steps.decisao.outputs.publicar == 'true' && steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
         timeout-minutes: 12
         with:
@@ -414,7 +493,7 @@ jobs:
           reporting_interval: 5000
 
       - name: Aguardar antes da ultima tentativa
-        if: steps.deployment.outcome == 'failure' && steps.deployment_retry.outcome == 'failure'
+        if: steps.decisao.outputs.publicar == 'true' && steps.deployment.outcome == 'failure' && steps.deployment_retry.outcome == 'failure'
         shell: bash
         run: sleep 120
 
@@ -422,13 +501,21 @@ jobs:
       # job e dispara o alerta por e-mail.
       - name: Ultima tentativa de deploy no GitHub Pages
         id: deployment_retry2
-        if: steps.deployment.outcome == 'failure' && steps.deployment_retry.outcome == 'failure'
+        if: steps.decisao.outputs.publicar == 'true' && steps.deployment.outcome == 'failure' && steps.deployment_retry.outcome == 'failure'
         uses: actions/deploy-pages@v4
         timeout-minutes: 12
         with:
           timeout: 600000
           error_count: 20
           reporting_interval: 5000
+
+      - name: Registrar hash publicado
+        if: steps.decisao.outputs.publicar == 'true' && success()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .hash-publicado
+          key: pages-publicado-${{ steps.guarda.outputs.hash }}
 
       - name: Alertar falha de deploy por e-mail
         if: failure()

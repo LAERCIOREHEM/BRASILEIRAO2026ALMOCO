@@ -13,6 +13,8 @@ jobs:
   informar:
     name: Informar mecanismo vigente
     runs-on: ubuntu-latest
+    # Sem limite, um job travado prende o runner por ate 6 horas.
+    timeout-minutes: 10
     steps:
       - name: Exibir orientação
         run: |
