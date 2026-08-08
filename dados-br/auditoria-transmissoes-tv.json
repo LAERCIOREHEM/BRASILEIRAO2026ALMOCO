@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 42,
     "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 14,
+    "registros_preservados": 17,
     "fontes_com_falha": 1
   },
   "fontes": {
@@ -16,20 +16,20 @@
     "ge_agenda": {
       "ok": true,
       "jogos_com_canal": 19,
-      "duracao_ms": 6357
+      "duracao_ms": 7174
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 5,
-      "jogos_com_canal": 21,
-      "duracao_ms": 84348
+      "artigos_consultados": 6,
+      "jogos_com_canal": 18,
+      "duracao_ms": 108006
     },
     "espn": {
       "ok": true,
       "eventos_na_janela": 43,
       "scoreboard_com_canal": 0,
       "summary_com_canal": 0,
-      "duracao_ms": 3556
+      "duracao_ms": 4592
     }
   },
   "sem_transmissao": [],
@@ -48,6 +48,13 @@
         "Globo",
         "SporTV",
         "Premiere"
+      ]
+    },
+    {
+      "event_id": "401841189",
+      "jogo": "São Paulo x Coritiba",
+      "canais": [
+        "Globo"
       ]
     },
     {
@@ -73,6 +80,13 @@
       ]
     },
     {
+      "event_id": "401841204",
+      "jogo": "Internacional x Atlético-MG",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
       "event_id": "401841202",
       "jogo": "Bragantino x Grêmio",
       "canais": [
@@ -92,6 +106,13 @@
       "canais": [
         "Premiere",
         "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841216",
+      "jogo": "Atlético-MG x Vitória",
+      "canais": [
+        "Globo"
       ]
     },
     {
@@ -155,11 +176,12 @@
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: RuntimeError: falha ao buscar página oficial: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada :: curl_cffi=CertificateVerifyError: Failed to perform, curl: (60) SSL certificate problem: unable to get local issuer certificate. See https://curl.se/libcurl/c/libcurl-errors.html first for more details. | urllib=URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)> | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: RuntimeError: falha ao buscar página oficial: https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada :: curl_cffi=CertificateVerifyError: Failed to perform, curl: (60) SSL certificate problem: unable to get local issuer certificate. See https://curl.se/libcurl/c/libcurl-errors.html first for more details. | urllib=URLError: <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1010)>"
   ],
   "artigos_ge_descobertos": [
+    "https://ge.globo.com/mg/futebol/brasileirao-serie-a/noticia/2026/08/08/cruzeiro-x-mirassol-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/gato-mestre/noticia/2026/08/08/palpite-ge-2026-veja-as-apostas-de-apresentadores-e-comentaristas-para-a-22a-rodada-do-brasileirao.ghtml",
     "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/08/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-22a-rodada.ghtml",
     "https://ge.globo.com/pr/futebol/brasileirao-serie-a/noticia/2026/08/08/coritiba-x-chapecoense-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/rj/futebol/brasileirao-serie-a/noticia/2026/08/08/botafogo-x-fluminense-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/pa/futebol/brasileirao-serie-a/noticia/2026/08/07/remo-x-atletico-mg-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
   ],
-  "atualizado_em": "2026-08-08T18:22:35-03:00"
+  "atualizado_em": "2026-08-08T19:20:58-03:00"
 }
