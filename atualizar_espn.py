@@ -33,7 +33,6 @@ import re
 import sys
 import time
 import unicodedata
-import urllib.error
 import urllib.parse
 import urllib.request
 import copy
@@ -78,12 +77,11 @@ HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/150.0.0.0 Safari/537.36"
+        "Chrome/126.0.0.0 Safari/537.36"
     ),
     "Accept": "application/json,text/plain,*/*",
     "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-    "Referer": "https://www.espn.com/",
-    "Connection": "close",
+    "Cache-Control": "no-cache",
 }
 
 CANONICOS = [
@@ -210,46 +208,68 @@ def fetch_json(
     *,
     cache_bust: bool = False,
 ) -> dict[str, Any]:
-    """Busca JSON sem destruir o cache da ESPN em toda chamada.
+    """Busca JSON ESPN com transporte resistente a bloqueios de runner.
 
-    O parâmetro aleatório e ``Cache-Control: no-cache`` usados anteriormente
-    faziam cada execução parecer uma sequência de requisições inéditas. Agora o
-    cache-busting é opt-in e erros 403/429/5xx recebem espera progressiva apenas
-    quando a própria chamada foi configurada para repetir.
+    O site irmão já instalava ``curl-cffi`` no GitHub Actions, mas este coletor
+    continuava usando apenas ``urllib``. Em runners compartilhados a ESPN passou
+    a responder 403 ao urllib, deixando o snapshot congelado mesmo enquanto o
+    navegador conseguia ler o placar ao vivo.
+
+    A lógica agora é a mesma usada no Fórmula do Gol: tenta primeiro curl-cffi
+    com fingerprint real de Chrome e, de forma independente, mantém urllib como
+    fallback. O parâmetro ``cache_bust`` continua aceito por compatibilidade; o
+    cliente Chrome usa uma URL fresca em toda tentativa para não reaproveitar
+    uma resposta 403 intermediária do edge da ESPN.
     """
     ultimo: Exception | None = None
     tentativas = max(1, int(tentativas))
     for i in range(1, tentativas + 1):
+        sep = "&" if "?" in url else "?"
+        # O caminho curl usa sempre uma URL fresca, como no Fórmula do Gol.
+        curl_url = f"{url}{sep}_={int(time.time())}"
+        urllib_url = curl_url if cache_bust else url
+        erros: list[str] = []
+
         try:
-            url_final = url
-            if cache_bust:
-                sep = "&" if "?" in url else "?"
-                url_final = f"{url}{sep}_={int(time.time())}"
-            req = urllib.request.Request(url_final, headers=HEADERS)
+            from curl_cffi import requests as curl_requests  # type: ignore
+
+            response = curl_requests.get(
+                curl_url,
+                impersonate="chrome",
+                timeout=timeout + 8 * (i - 1),
+                headers={
+                    "Accept": HEADERS["Accept"],
+                    "Accept-Language": HEADERS["Accept-Language"],
+                    "Cache-Control": HEADERS["Cache-Control"],
+                },
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ValueError(f"resposta JSON não é objeto: {type(payload).__name__}")
+            return payload
+        except ImportError as exc:
+            erros.append(f"curl_cffi=indisponível: {exc}")
+        except Exception as exc:  # noqa: BLE001
+            erros.append(f"curl_cffi={type(exc).__name__}: {exc}")
+            ultimo = exc
+
+        try:
+            req = urllib.request.Request(urllib_url, headers=HEADERS)
             with urllib.request.urlopen(req, timeout=timeout + 10 * (i - 1)) as r:
                 charset = r.headers.get_content_charset() or "utf-8"
                 bruto = r.read().decode(charset, errors="replace")
                 payload = json.loads(bruto)
                 if not isinstance(payload, dict):
-                    raise RuntimeError(f"resposta JSON não é objeto: {type(payload).__name__}")
+                    raise ValueError(f"resposta JSON não é objeto: {type(payload).__name__}")
                 return payload
-        except urllib.error.HTTPError as exc:
-            codigo = int(getattr(exc, "code", 0) or 0)
-            ultimo = exc
-            print(f"  tentativa {i}/{tentativas} falhou: HTTP {codigo}: {exc.reason}")
-            repetivel = codigo in {403, 408, 425, 429, 500, 502, 503, 504}
-            if i < tentativas and repetivel:
-                retry_after = str(exc.headers.get("Retry-After") or "").strip()
-                espera = int(retry_after) if retry_after.isdigit() else (12 * i if codigo == 403 else 4 * i)
-                print(f"  aguardando {espera}s antes da nova tentativa HTTP...")
-                time.sleep(espera)
-                continue
-            break
         except Exception as exc:  # noqa: BLE001
-            ultimo = exc
-            print(f"  tentativa {i}/{tentativas} falhou: {type(exc).__name__}: {exc}")
+            erros.append(f"urllib={type(exc).__name__}: {exc}")
+            ultimo = RuntimeError(" | ".join(erros))
+            print(f"  tentativa {i}/{tentativas} falhou: {ultimo}")
             if i < tentativas:
-                time.sleep(3 * i)
+                time.sleep(2 * i)
+
     raise RuntimeError(f"falha ao buscar JSON: {url} :: {ultimo}")
 
 

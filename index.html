@@ -4971,14 +4971,21 @@ function espnLiveData(live) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+// A ESPN pode devolver state=post com completed=false e placar 0 x 0 para
+// partidas que ainda nem começaram. Centralizamos aqui a validação do sinal
+// de encerramento para que Jogos, Tabela e Resultados usem a mesma regra.
 function espnLiveEhFinalReal(live, referencia = new Date()) {
-  if (!live || live.estado !== 'post' || espnLiveEhInterrompido(live)) return false;
+  if (!live || espnLiveEhInterrompido(live)) return false;
+  const estado = String(live.estado || '').toLowerCase();
+  const concluido = live.completed === true || live.concluido === true;
+  if (estado !== 'post' && !concluido) return false;
+
   const data = espnLiveData(live);
   if (!data || data.getTime() > referencia.getTime() - 90 * 60 * 1000) return false;
+
   const pm = numeroPlacarLive(live.placarMandante);
   const pv = numeroPlacarLive(live.placarVisitante);
-  if (pm === null || pv === null) return false;
-  return live.completed === true || live.estado === 'post';
+  return pm !== null && pv !== null;
 }
 
 async function espnLiveBuscar() {
@@ -5023,11 +5030,19 @@ async function espnLiveBuscar() {
       const dataIso = ev.date || comp.date || null;
       const dataEvento = dataIso ? new Date(dataIso) : null;
       const completed = tipo.completed === true;
+      const statusName = tipo.name || '';
+      const statusDescription = tipo.description || tipo.detail || tipo.shortDetail || '';
+      const statusTexto = [st.displayClock, tipo.shortDetail, tipo.detail, statusName, statusDescription]
+        .filter(Boolean).join(' ').toLowerCase();
       let estadoSeguro = String(tipo.state || (completed ? 'post' : 'pre')).toLowerCase();
-      // A ESPN às vezes publica state=post/completed=false para partidas futuras.
-      // No navegador, nunca aceitamos um pós-jogo antes de 90 minutos do início.
-      if (estadoSeguro === 'post' && !completed && dataEvento && !Number.isNaN(dataEvento.getTime()) &&
-          dataEvento.getTime() > Date.now() + 15 * 60 * 1000) {
+
+      // state=post só é confiável se completed=true ou se o horário de início já
+      // tiver passado há pelo menos 90 minutos. Isso preserva empates reais em
+      // 0 x 0 com completed=false, sem transformar partidas futuras em resultado.
+      const dataValida = dataEvento && !Number.isNaN(dataEvento.getTime());
+      const interrompido = /postpon|adiad|suspend|cancel/.test(statusTexto);
+      if (estadoSeguro === 'post' && !completed &&
+          (interrompido || !dataValida || dataEvento.getTime() > Date.now() - 90 * 60 * 1000)) {
         estadoSeguro = 'pre';
       }
 
@@ -5035,8 +5050,8 @@ async function espnLiveBuscar() {
         estado: estadoSeguro,                              // pre | in | post
         completed: completed,
         status: st.displayClock || tipo.shortDetail || tipo.detail || '',
-        statusName: tipo.name || '',
-        statusDescription: tipo.description || tipo.detail || tipo.shortDetail || '',
+        statusName: statusName,
+        statusDescription: statusDescription,
         placarMandante: casa.score != null ? casa.score : '-',
         placarVisitante: fora.score != null ? fora.score : '-',
         mandante: nomeCanonico((casa.team || {}).displayName || (casa.team || {}).name),
