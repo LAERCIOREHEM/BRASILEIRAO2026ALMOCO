@@ -91,6 +91,7 @@ jobs:
           python scripts/gerenciar_status_brasileirao.py --selftest
           python scripts/buscar_lideres_jogadores_espn.py --self-test
           python scripts/buscar_detalhes_jogos_brasileirao.py --self-test
+          python scripts/gerar_auditoria_estatisticas_brasileirao.py --self-test
           python scripts/atualizar_competicoes_af_previsao.py --self-test
           python scripts/af_previsao_continental.py --self-test
           python scripts/gerar_probabilidades_brasileirao.py --self-test
@@ -414,7 +415,7 @@ jobs:
 
       - name: Buscar estatísticas por jogo finalizado
         if: steps.espn.outputs.sincronizado == 'true'
-        run: python scripts/buscar_detalhes_jogos_brasileirao.py
+        run: python scripts/buscar_detalhes_jogos_brasileirao.py --refresh-hours 48
 
       - name: Buscar líderes oficiais de gols e assistências
         if: steps.espn.outputs.sincronizado == 'true'
