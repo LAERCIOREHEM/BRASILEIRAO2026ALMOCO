@@ -12,9 +12,9 @@
   "resumo": {
     "jogos_na_janela": 42,
     "busca_streams_executada": true,
-    "candidatos_oficiais_encontrados": 30,
-    "transmissoes_publicadas": 1,
-    "sem_transmissao": 41,
+    "candidatos_oficiais_encontrados": 31,
+    "transmissoes_publicadas": 2,
+    "sem_transmissao": 40,
     "erros": 0
   },
   "canais_resolvidos": {
@@ -124,15 +124,6 @@
       "manual": false
     },
     {
-      "event_id": "401841195",
-      "rodada": 23,
-      "jogo": "Atlético-MG x Grêmio",
-      "data_iso": "2026-08-15T16:30:00-03:00",
-      "principal": "",
-      "fontes_encontradas": [],
-      "manual": false
-    },
-    {
       "event_id": "401841192",
       "rodada": 23,
       "jogo": "Fluminense x Palmeiras",
@@ -166,6 +157,17 @@
       "data_iso": "2026-08-16T11:00:00-03:00",
       "principal": "",
       "fontes_encontradas": [],
+      "manual": false
+    },
+    {
+      "event_id": "401841195",
+      "rodada": 23,
+      "jogo": "Atlético-MG x Grêmio",
+      "data_iso": "2026-08-16T16:00:00-03:00",
+      "principal": "GE TV",
+      "fontes_encontradas": [
+        "GE TV"
+      ],
       "manual": false
     },
     {
@@ -423,6 +425,22 @@
   ],
   "aceitos": [
     {
+      "event_id": "401841195",
+      "jogo": "Atlético-MG x Grêmio",
+      "fonte": "getv",
+      "video_id": "89tPGaf7W4s",
+      "url": "https://www.youtube.com/watch?v=89tPGaf7W4s",
+      "titulo": "ATLÉTICO-MG X GRÊMIO | AO VIVO E COM IMAGENS | BRASILEIRÃO 2026 | ge tv",
+      "status": "upcoming",
+      "confianca": 0.85,
+      "motivos": [
+        "os dois clubes aparecem no título",
+        "identifica Brasileirão/competição",
+        "identifica transmissão ao vivo",
+        "horário compatível (90 min de diferença)"
+      ]
+    },
+    {
       "event_id": "401841180",
       "jogo": "Palmeiras x Internacional",
       "fonte": "getv",
@@ -448,6 +466,16 @@
       "titulo": "AO VIVO: CORITIBA X CHAPECOENSE | BRASILEIRÃO 2026 | 22ª RODADA",
       "status": "live",
       "inicio_programado": "2026-08-08T19:00:00-03:00",
+      "motivo": "conteúdo rejeitado: pre jogo"
+    },
+    {
+      "video_id": "v-e7zF7F9Hc",
+      "url": "https://www.youtube.com/watch?v=v-e7zF7F9Hc",
+      "fonte": "getv",
+      "canal": "ge tv",
+      "titulo": "BOTAFOGO X FLUMINENSE | AQUECIMENTO AO VIVO | BRASILEIRÃO 2026 | #live | sportv",
+      "status": "upcoming",
+      "inicio_programado": "2026-08-08T19:50:00-03:00",
       "motivo": "conteúdo rejeitado: pre jogo"
     },
     {
@@ -651,16 +679,6 @@
       "motivo": "não identifica com segurança os dois clubes"
     },
     {
-      "video_id": "89tPGaf7W4s",
-      "url": "https://www.youtube.com/watch?v=89tPGaf7W4s",
-      "fonte": "getv",
-      "canal": "ge tv",
-      "titulo": "ATLÉTICO-MG X GRÊMIO | AO VIVO E COM IMAGENS | BRASILEIRÃO 2026 | ge tv",
-      "status": "upcoming",
-      "inicio_programado": "2026-08-16T14:30:00-03:00",
-      "motivo": "não identifica com segurança os dois clubes"
-    },
-    {
       "video_id": "JnIm9FoIc0E",
       "url": "https://www.youtube.com/watch?v=JnIm9FoIc0E",
       "fonte": "getv",
@@ -695,7 +713,7 @@
       "url": "https://www.youtube.com/watch?v=nZy3ySQmLxM",
       "fonte": "getv",
       "canal": "ge tv",
-      "titulo": "SURFE AO VIVO: WSL TAHITI PRO 2026 | ETAPA DE TEAHUPO'O - DIA 2 | ge tv",
+      "titulo": "SURFE AO VIVO: WSL TAHITI PRO 2026 | ETAPA DE TEAHUPO'O | DIA 1 | ge tv",
       "status": "upcoming",
       "inicio_programado": "2026-08-09T14:00:00-03:00",
       "motivo": "não identifica com segurança os dois clubes"
@@ -786,13 +804,6 @@
       "rodada": 22,
       "jogo": "Flamengo x Vitória",
       "data_iso": "2026-08-09T19:30:00-03:00",
-      "motivo": "nenhuma transmissão oficial validada em CazéTV ou GE TV"
-    },
-    {
-      "event_id": "401841195",
-      "rodada": 23,
-      "jogo": "Atlético-MG x Grêmio",
-      "data_iso": "2026-08-15T16:30:00-03:00",
       "motivo": "nenhuma transmissão oficial validada em CazéTV ou GE TV"
     },
     {
@@ -1030,5 +1041,5 @@
     },
     "observacao": "search.list não é usado. A aba /streams custa apenas videos.list; a playlist de uploads mantém redundância. A execução típica permanece muito abaixo da cota diária gratuita do YouTube Data API."
   },
-  "atualizado_em": "2026-08-08T19:20:49-03:00"
+  "atualizado_em": "2026-08-08T19:58:24-03:00"
 }
