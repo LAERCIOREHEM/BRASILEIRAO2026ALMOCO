@@ -59,6 +59,222 @@ def write(path: Path, data: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
+def canonical_team(value: Any, home: str, away: str) -> str:
+    """Resolve apenas os dois clubes do jogo, sem adivinhar equipe desconhecida."""
+    target = norm(value)
+    if target and target == norm(home):
+        return home
+    if target and target == norm(away):
+        return away
+    return ""
+
+
+def classify_game_events(event_id: str, game: dict[str, Any]) -> dict[str, Any]:
+    """Classifica divergências sem confundir atraso da ficha com corrupção.
+
+    O coletor marca ``validacao_eventos.ok=false`` tanto quando existe uma
+    inconsistência real quanto quando o placar final já chegou, mas a ESPN ainda
+    não publicou todos os autores dos gols. A auditoria precisa separar esses dois
+    estados antes de decidir se bloqueia o workflow.
+    """
+    validation = game.get("validacao_eventos") or {}
+    is_pending_manual = (
+        game.get("resultado_manual") is True
+        and validation.get("resultado_confirmado") is True
+        and validation.get("pendente_detalhes") is True
+    )
+    if is_pending_manual:
+        return {
+            "pending_manual": (
+                f"{event_id}: resultado manual confirmado; eventos nominais aguardando ESPN"
+            ),
+            "errors": [],
+            "incomplete": None,
+            "duplicates": [],
+            "narrative_false_positives": [],
+        }
+
+    is_safe_espn_pending = (
+        validation.get("pendente_detalhes") is True
+        and validation.get("tipo_pendencia") == "ficha_espn_incompleta"
+        and validation.get("gols_compativeis") is True
+        and validation.get("cartoes_compativeis") is True
+    )
+    if is_safe_espn_pending:
+        return {
+            "pending_manual": None,
+            "errors": [],
+            "incomplete": (
+                f"{event_id}: ficha ESPN incompleta sem contradição"
+                + (f" ({validation.get('motivo')})" if validation.get("motivo") else "")
+            ),
+            "duplicates": [],
+            "narrative_false_positives": [],
+        }
+
+    home = str(game.get("mandante") or "")
+    away = str(game.get("visitante") or "")
+    errors: list[str] = []
+    duplicates: list[str] = []
+    narrative_false_positives: list[str] = []
+    incomplete: str | None = None
+
+    if not home or not away or norm(home) == norm(away):
+        errors.append("mandante/visitante ausente ou inválido")
+
+    expected = {
+        home: int(game.get("placar_mandante") or 0),
+        away: int(game.get("placar_visitante") or 0),
+    }
+    extracted = {home: 0, away: 0}
+    unknown_goals: list[str] = []
+    seen_goals: set[tuple[str, str, str, str]] = set()
+    for goal in game.get("gols") or []:
+        if not isinstance(goal, dict):
+            continue
+        team = canonical_team(goal.get("time"), home, away)
+        if team:
+            extracted[team] += 1
+        else:
+            unknown_goals.append(
+                f"{goal.get('minuto') or '?'} {goal.get('jogador') or 'autor não informado'}"
+            )
+        key = (
+            norm(goal.get("minuto")),
+            norm(team or goal.get("time")),
+            norm(goal.get("jogador")),
+            norm(goal.get("descricao")),
+        )
+        if key in seen_goals:
+            duplicates.append(
+                f"{event_id}: gol duplicado {goal.get('minuto')} {goal.get('jogador')}"
+            )
+        seen_goals.add(key)
+        desc = norm(goal.get("descricao"))
+        if "attempt saved" in desc or "shot is saved" in desc:
+            narrative_false_positives.append(f"{event_id}: {goal.get('jogador')}")
+
+    if unknown_goals:
+        errors.append("gol(s) sem equipe reconhecida: " + ", ".join(unknown_goals[:4]))
+
+    if extracted != expected:
+        exceeded = any(extracted[team] > expected[team] for team in expected)
+        if exceeded:
+            errors.append(f"gols extraídos {extracted} excedem o placar {expected}")
+        elif not unknown_goals:
+            incomplete = (
+                f"{event_id}: ficha nominal incompleta ({sum(extracted.values())}"
+                f"/{sum(expected.values())} gols publicados pela ESPN)"
+            )
+
+    seen_cards: set[tuple[str, str, str, str]] = set()
+    unknown_cards: list[str] = []
+    for card in game.get("cartoes") or []:
+        if not isinstance(card, dict):
+            continue
+        team = canonical_team(card.get("time"), home, away)
+        if not team:
+            unknown_cards.append(
+                f"{card.get('minuto') or '?'} {card.get('jogador') or 'atleta não informado'}"
+            )
+        key = (
+            norm(card.get("tipo")),
+            norm(card.get("minuto")),
+            norm(team or card.get("time")),
+            norm(card.get("jogador")),
+        )
+        if key in seen_cards:
+            duplicates.append(
+                f"{event_id}: cartão duplicado {card.get('minuto')} {card.get('jogador')}"
+            )
+        seen_cards.add(key)
+
+    if unknown_cards:
+        errors.append("cartão(ões) sem equipe reconhecida: " + ", ".join(unknown_cards[:4]))
+
+    # ``cartoes_ok=false`` no coletor representa excesso, duplicidade ou equipe
+    # inválida — nunca mera ausência de eventos nominais. Portanto permanece
+    # crítico. Já ``gols_ok=false`` pode ser apenas publicação tardia da ficha.
+    if validation:
+        if validation.get("cartoes_ok") is False:
+            errors.append("validação de cartões reprovada")
+        if validation.get("gols_ok") is False and extracted == expected:
+            errors.append("validação de gols diverge da recontagem independente")
+        if validation.get("ok") is False:
+            tolerated_incomplete = (
+                incomplete is not None
+                and validation.get("gols_ok") is False
+                and validation.get("cartoes_ok") is not False
+                and not errors
+            )
+            if not tolerated_incomplete and not errors:
+                errors.append("validação de eventos reprovada sem causa tolerável")
+    else:
+        errors.append("validacao_eventos ausente")
+
+    unique_errors = list(dict.fromkeys(errors))
+    return {
+        "pending_manual": None,
+        "errors": [f"{event_id}: {'; '.join(unique_errors)}"] if unique_errors else [],
+        "incomplete": incomplete,
+        "duplicates": duplicates,
+        "narrative_false_positives": narrative_false_positives,
+    }
+
+
+def self_test() -> None:
+    base = {
+        "mandante": "Time A",
+        "visitante": "Time B",
+        "placar_mandante": 2,
+        "placar_visitante": 1,
+        "cartoes": [],
+    }
+    delayed = classify_game_events(
+        "atraso",
+        {
+            **base,
+            "gols": [
+                {"time": "Time A", "minuto": "10'", "jogador": "A1"},
+                {"time": "Time B", "minuto": "20'", "jogador": "B1"},
+            ],
+            "validacao_eventos": {"ok": False, "gols_ok": False, "cartoes_ok": True},
+        },
+    )
+    assert not delayed["errors"] and delayed["incomplete"], delayed
+
+    excess = classify_game_events(
+        "excesso",
+        {
+            **base,
+            "placar_mandante": 1,
+            "placar_visitante": 0,
+            "gols": [
+                {"time": "Time A", "minuto": "10'", "jogador": "A1"},
+                {"time": "Time A", "minuto": "11'", "jogador": "A2"},
+            ],
+            "validacao_eventos": {"ok": False, "gols_ok": False, "cartoes_ok": True},
+        },
+    )
+    assert excess["errors"] and not excess["incomplete"], excess
+
+    bad_cards = classify_game_events(
+        "cartao",
+        {
+            **base,
+            "gols": [
+                {"time": "Time A", "minuto": "10'", "jogador": "A1"},
+                {"time": "Time A", "minuto": "30'", "jogador": "A2"},
+                {"time": "Time B", "minuto": "20'", "jogador": "B1"},
+            ],
+            "cartoes": [{"tipo": "amarelo", "time": "", "minuto": "40'", "jogador": "X"}],
+            "validacao_eventos": {"ok": False, "gols_ok": True, "cartoes_ok": False},
+        },
+    )
+    assert bad_cards["errors"], bad_cards
+    print("SELF-TEST OK: atraso nominal tolerado; excesso e cartões inválidos bloqueados.")
+
+
 def main() -> None:
     leaders = read(ROOT / "dados-br" / "lideres-jogadores.json", {})
     leader_audit = read(ROOT / "dados-br" / "auditoria-lideres-jogadores.json", {})
@@ -120,58 +336,42 @@ def main() -> None:
     event_errors: list[str] = []
     pending_manual_details: list[str] = []
     duplicate_events: list[str] = []
+    incomplete_events: list[str] = []
     narrative_false_positives: list[str] = []
     for event_id, game in detail_games.items():
         if not isinstance(game, dict):
             event_errors.append(f"{event_id}: registro inválido")
             continue
-        validation = game.get("validacao_eventos") or {}
-        is_pending_manual = (
-            game.get("resultado_manual") is True
-            and validation.get("resultado_confirmado") is True
-            and validation.get("pendente_detalhes") is True
-        )
-        if is_pending_manual:
+        classification = classify_game_events(str(event_id), game)
+        if classification["pending_manual"]:
             # O placar foi confirmado por exceção editorial auditável, mas a ESPN
             # ainda não publicou eventos compatíveis. Não inventamos autores dos
             # gols/cartões e não tratamos essa pendência declarada como corrupção.
-            pending_manual_details.append(
-                f"{event_id}: resultado manual confirmado; eventos nominais aguardando ESPN"
-            )
+            pending_manual_details.append(classification["pending_manual"])
             continue
-        if not validation.get("ok"):
-            event_errors.append(f"{event_id}: validação de eventos reprovada")
-        home, away = str(game.get("mandante") or ""), str(game.get("visitante") or "")
-        expected = {home: int(game.get("placar_mandante") or 0), away: int(game.get("placar_visitante") or 0)}
-        extracted = {home: 0, away: 0}
-        seen_goals: set[tuple[str, str, str, str]] = set()
-        for goal in game.get("gols") or []:
-            if not isinstance(goal, dict):
-                continue
-            team = str(goal.get("time") or "")
-            if team in extracted:
-                extracted[team] += 1
-            key = (norm(goal.get("minuto")), norm(team), norm(goal.get("jogador")), norm(goal.get("descricao")))
-            if key in seen_goals:
-                duplicate_events.append(f"{event_id}: gol duplicado {goal.get('minuto')} {goal.get('jogador')}")
-            seen_goals.add(key)
-            desc = norm(goal.get("descricao"))
-            if "attempt saved" in desc or "shot is saved" in desc:
-                narrative_false_positives.append(f"{event_id}: {goal.get('jogador')}")
-        if extracted != expected:
-            event_errors.append(f"{event_id}: gols extraídos {extracted} != placar {expected}")
-        seen_cards: set[tuple[str, str, str, str]] = set()
-        for card in game.get("cartoes") or []:
-            if not isinstance(card, dict):
-                continue
-            key = (norm(card.get("tipo")), norm(card.get("minuto")), norm(card.get("time")), norm(card.get("jogador")))
-            if key in seen_cards:
-                duplicate_events.append(f"{event_id}: cartão duplicado {card.get('minuto')} {card.get('jogador')}")
-            seen_cards.add(key)
+        event_errors.extend(classification["errors"])
+        if classification["incomplete"]:
+            incomplete_events.append(classification["incomplete"])
+        duplicate_events.extend(classification["duplicates"])
+        narrative_false_positives.extend(classification["narrative_false_positives"])
     if pending_manual_details:
         warnings.append(
             f"{len(pending_manual_details)} resultado(s) manual(is) confirmado(s) aguardando detalhes nominais da ESPN"
         )
+    if incomplete_events:
+        # Trava de segurança: atraso pontual da ESPN é normal; atraso generalizado
+        # indica coleta quebrada e volta a ser crítico.
+        limite = max(4, int(len(detail_games) * 0.05))
+        if len(incomplete_events) > limite:
+            critical.append(
+                f"{len(incomplete_events)} jogo(s) com ficha nominal incompleta "
+                f"(limite tolerado: {limite}) — coleta de eventos provavelmente quebrada"
+            )
+        else:
+            warnings.append(
+                f"{len(incomplete_events)} jogo(s) aguardando eventos nominais da ESPN: "
+                + "; ".join(incomplete_events[:4])
+            )
     if event_errors:
         critical.append(f"{len(event_errors)} jogo(s) com gols/cartões incompatíveis")
     if duplicate_events:
@@ -271,4 +471,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if "--self-test" in sys.argv:
+        self_test()
+    else:
+        main()
