@@ -1,5 +1,5 @@
 {
-  "atualizado_em": "2026-08-08T02:28:24-03:00",
+  "atualizado_em": "2026-08-08T20:13:57-03:00",
   "fonte": "auditoria local das fontes dos melhores momentos",
   "politica": {
     "regra": "GE/Globo/sportv/Premiere/Globoplay, Amazon Prime Video e CazéTV são prioritários. UOL Esporte é aceito como fallback após 48 horas ou por vínculo manual conferido.",
@@ -13,18 +13,27 @@
     "criterio_classificacao": "A auditoria classifica pela fonte/canal/origem do vínculo, não pelo título do vídeo, para evitar falso ge.globo em canais não oficiais."
   },
   "resumo": {
-    "jogos_resultados": 205,
+    "jogos_resultados": 206,
     "jogos_com_video": 205,
-    "ge_globo": 200,
+    "ge_globo": 201,
     "amazon_prime_video": 1,
     "cazetv": 2,
-    "uol_esporte": 2,
+    "uol_esporte": 1,
     "outros": 0,
-    "sem_video": 0,
+    "sem_video": 1,
     "percentual_fontes_preferidas": 100.0
   },
   "outros_sites_ainda_em_uso": [],
-  "sem_video": [],
+  "sem_video": [
+    {
+      "event_id": "401879459",
+      "rodada": 4,
+      "mandante": "Bahia",
+      "visitante": "Chapecoense",
+      "placar_mandante": 2,
+      "placar_visitante": 0
+    }
+  ],
   "detalhamento": {
     "ge_globo": [
       {
@@ -3226,6 +3235,22 @@
         "titulo": "VITÓRIA 0 X 4 PALMEIRAS | MELHORES MOMENTOS | 21ª RODADA BRASILEIRÃO 2026 | ge tv",
         "url": "https://www.youtube.com/watch?v=JW6Lxcvoi74",
         "confianca": 1.0
+      },
+      {
+        "event_id": "401841181",
+        "rodada": 22,
+        "mandante": "Grêmio",
+        "visitante": "São Paulo",
+        "placar_mandante": 2,
+        "placar_visitante": 1,
+        "categoria_fonte": "ge_globo",
+        "origem_vinculo": "automatico",
+        "fonte": "GE TV / YouTube",
+        "fonte_busca": "",
+        "channel_title": "",
+        "titulo": "GRÊMIO 2 X 1 SÃO PAULO | MELHORES MOMENTOS | 22ª RODADA BRASILEIRÃO 2026 | ge.globo",
+        "url": "https://www.youtube.com/watch?v=dGhO7ah73WM",
+        "confianca": 1.0
       }
     ],
     "amazon_prime_video": [
@@ -3248,7 +3273,7 @@
     ],
     "cazetv": [
       {
-        "event_id": "401840999",
+        "event_id": "401879458",
         "rodada": 4,
         "mandante": "Botafogo",
         "visitante": "Vitória",
@@ -3281,22 +3306,6 @@
       }
     ],
     "uol_esporte": [
-      {
-        "event_id": "401840998",
-        "rodada": 4,
-        "mandante": "Bahia",
-        "visitante": "Chapecoense",
-        "placar_mandante": 2,
-        "placar_visitante": 0,
-        "categoria_fonte": "uol_esporte",
-        "origem_vinculo": "manual",
-        "fonte": "UOL Esporte / YouTube",
-        "fonte_busca": "Manual / usuário",
-        "channel_title": "UOL Esporte",
-        "titulo": "BAHIA 2 X 0 CHAPECOENSE | MELHORES MOMENTOS | BRASILEIRÃO 2026",
-        "url": "https://www.youtube.com/watch?v=bQOiH-8ShZE",
-        "confianca": 1.0
-      },
       {
         "event_id": "401841155",
         "rodada": 19,
