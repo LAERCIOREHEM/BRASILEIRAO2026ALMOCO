@@ -1,17 +1,67 @@
 {
-  "gerado_em": "2026-08-09T02:57:46.168718-03:00",
+  "gerado_em": "2026-08-09T13:58:11.824864-03:00",
   "fonte": "ESPN summary",
   "modo": "rede",
-  "total_resultados_lidos": 209,
-  "total_processados": 209,
+  "total_resultados_lidos": 210,
+  "total_processados": 210,
   "total_buscados_na_espn": 0,
   "total_com_estatisticas": 203,
   "total_com_publico": 182,
-  "total_sem_publico": 27,
+  "total_sem_publico": 28,
   "total_com_eventos": 203,
   "total_eventos_validados": 204,
-  "total_eventos_pendentes_detalhes": 5,
+  "total_eventos_pendentes_detalhes": 6,
   "eventos_pendentes_detalhes": [
+    {
+      "event_id": "401841183",
+      "jogo": "Cruzeiro x Mirassol",
+      "validacao": {
+        "gols_esperados": {
+          "Cruzeiro": 3,
+          "Mirassol": 1
+        },
+        "gols_extraidos": {
+          "Cruzeiro": 0,
+          "Mirassol": 0
+        },
+        "gols_completos": false,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": false,
+        "cartoes_esperados": {
+          "Cruzeiro": {
+            "amarelo": null,
+            "vermelho": null
+          },
+          "Mirassol": {
+            "amarelo": null,
+            "vermelho": null
+          }
+        },
+        "cartoes_extraidos": {
+          "Cruzeiro": {
+            "amarelo": 0,
+            "vermelho": 0
+          },
+          "Mirassol": {
+            "amarelo": 0,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": true,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": false,
+        "pendente_detalhes": true,
+        "tipo_pendencia": "ficha_espn_incompleta",
+        "motivo": "ficha de gols incompleta: 0/4 atribuídos"
+      }
+    },
     {
       "event_id": "401841185",
       "jogo": "Botafogo x Fluminense",
@@ -267,11 +317,21 @@
   "inconsistencias_eventos": [],
   "total_sem_estatisticas": 0,
   "total_preservados_de_execucao_anterior": 209,
-  "total_falhas": 0,
+  "total_falhas": 1,
   "sem_estatisticas": [],
-  "falhas": [],
+  "falhas": [
+    {
+      "event_id": "401841183",
+      "jogo": "R22 · Cruzeiro x Mirassol · 401841183",
+      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841183: HTTPError: HTTP Error 403: Forbidden"
+    }
+  ],
   "total_com_jogadores": 203,
   "jogos_sem_escalacoes": [
+    {
+      "event_id": "401841183",
+      "jogo": "Cruzeiro x Mirassol"
+    },
     {
       "event_id": "401841185",
       "jogo": "Botafogo x Fluminense"
