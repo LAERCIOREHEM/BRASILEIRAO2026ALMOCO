@@ -69,6 +69,41 @@ def canonical_team(value: Any, home: str, away: str) -> str:
     return ""
 
 
+def tipo_pendencia_eventos_segura(game: dict[str, Any]) -> str:
+    """Retorna o tipo da pendência nominal que pode ser publicada sem corromper dados.
+
+    Há somente dois estados toleráveis:
+    1. placar confirmado manualmente enquanto a ESPN ainda não publicou a ficha;
+    2. placar ESPN final com ficha nominal ainda incompleta, desde que gols e
+       cartões permaneçam compatíveis com placar/boxscore.
+
+    Qualquer outro ``pendente_detalhes`` é rejeitado. Esta função é usada tanto
+    pela auditoria quanto pela trava final do workflow para evitar regras
+    divergentes entre as duas camadas.
+    """
+    validation = game.get("validacao_eventos") or {}
+    if validation.get("pendente_detalhes") is not True:
+        return ""
+
+    pending_type = str(validation.get("tipo_pendencia") or "")
+    if (
+        game.get("resultado_manual") is True
+        and validation.get("resultado_confirmado") is True
+        and pending_type == "resultado_manual_sem_ficha"
+    ):
+        return pending_type
+
+    if (
+        game.get("resultado_manual") is not True
+        and pending_type == "ficha_espn_incompleta"
+        and validation.get("gols_compativeis") is True
+        and validation.get("cartoes_compativeis") is True
+    ):
+        return pending_type
+
+    return ""
+
+
 def classify_game_events(event_id: str, game: dict[str, Any]) -> dict[str, Any]:
     """Classifica divergências sem confundir atraso da ficha com corrupção.
 
@@ -78,12 +113,8 @@ def classify_game_events(event_id: str, game: dict[str, Any]) -> dict[str, Any]:
     estados antes de decidir se bloqueia o workflow.
     """
     validation = game.get("validacao_eventos") or {}
-    is_pending_manual = (
-        game.get("resultado_manual") is True
-        and validation.get("resultado_confirmado") is True
-        and validation.get("pendente_detalhes") is True
-    )
-    if is_pending_manual:
+    pending_kind = tipo_pendencia_eventos_segura(game)
+    if pending_kind == "resultado_manual_sem_ficha":
         return {
             "pending_manual": (
                 f"{event_id}: resultado manual confirmado; eventos nominais aguardando ESPN"
@@ -94,13 +125,7 @@ def classify_game_events(event_id: str, game: dict[str, Any]) -> dict[str, Any]:
             "narrative_false_positives": [],
         }
 
-    is_safe_espn_pending = (
-        validation.get("pendente_detalhes") is True
-        and validation.get("tipo_pendencia") == "ficha_espn_incompleta"
-        and validation.get("gols_compativeis") is True
-        and validation.get("cartoes_compativeis") is True
-    )
-    if is_safe_espn_pending:
+    if pending_kind == "ficha_espn_incompleta":
         return {
             "pending_manual": None,
             "errors": [],
@@ -272,7 +297,32 @@ def self_test() -> None:
         },
     )
     assert bad_cards["errors"], bad_cards
-    print("SELF-TEST OK: atraso nominal tolerado; excesso e cartões inválidos bloqueados.")
+
+    safe_espn = {
+        **base,
+        "gols": [{"time": "Time A", "minuto": "10'", "jogador": "A1"}],
+        "validacao_eventos": {
+            "ok": False,
+            "pendente_detalhes": True,
+            "tipo_pendencia": "ficha_espn_incompleta",
+            "gols_compativeis": True,
+            "cartoes_compativeis": True,
+        },
+    }
+    assert tipo_pendencia_eventos_segura(safe_espn) == "ficha_espn_incompleta"
+
+    unsafe_pending = {
+        **base,
+        "validacao_eventos": {
+            "ok": False,
+            "pendente_detalhes": True,
+            "tipo_pendencia": "ficha_espn_incompleta",
+            "gols_compativeis": False,
+            "cartoes_compativeis": True,
+        },
+    }
+    assert tipo_pendencia_eventos_segura(unsafe_pending) == ""
+    print("SELF-TEST OK: pendências ESPN/manuais seguras; excesso e cartões inválidos bloqueados.")
 
 
 def main() -> None:
