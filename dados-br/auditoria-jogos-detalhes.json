@@ -1,15 +1,15 @@
 {
-  "gerado_em": "2026-08-09T17:58:01.183393-03:00",
+  "gerado_em": "2026-08-09T18:57:51.298472-03:00",
   "fonte": "ESPN summary",
   "modo": "rede",
-  "total_resultados_lidos": 210,
-  "total_processados": 210,
+  "total_resultados_lidos": 212,
+  "total_processados": 212,
   "total_buscados_na_espn": 0,
   "total_com_estatisticas": 203,
   "total_com_publico": 182,
-  "total_sem_publico": 28,
+  "total_sem_publico": 30,
   "total_com_eventos": 203,
-  "total_eventos_validados": 204,
+  "total_eventos_validados": 206,
   "total_eventos_pendentes_detalhes": 6,
   "eventos_pendentes_detalhes": [
     {
@@ -317,11 +317,30 @@
   "inconsistencias_eventos": [],
   "total_sem_estatisticas": 0,
   "total_preservados_de_execucao_anterior": 210,
-  "total_falhas": 0,
+  "total_falhas": 2,
   "sem_estatisticas": [],
-  "falhas": [],
+  "falhas": [
+    {
+      "event_id": "401841186",
+      "jogo": "R22 · Bahia x Vasco da Gama · 401841186",
+      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841186: HTTPError: HTTP Error 403: Forbidden"
+    },
+    {
+      "event_id": "401841180",
+      "jogo": "R22 · Palmeiras x Internacional · 401841180",
+      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841180: HTTPError: HTTP Error 403: Forbidden"
+    }
+  ],
   "total_com_jogadores": 203,
   "jogos_sem_escalacoes": [
+    {
+      "event_id": "401841186",
+      "jogo": "Bahia x Vasco da Gama"
+    },
+    {
+      "event_id": "401841180",
+      "jogo": "Palmeiras x Internacional"
+    },
     {
       "event_id": "401841183",
       "jogo": "Cruzeiro x Mirassol"
