@@ -1,17 +1,67 @@
 {
-  "gerado_em": "2026-08-08T23:01:02.180465-03:00",
+  "gerado_em": "2026-08-08T23:47:40.306473-03:00",
   "fonte": "ESPN summary",
   "modo": "rede",
-  "total_resultados_lidos": 208,
-  "total_processados": 208,
+  "total_resultados_lidos": 209,
+  "total_processados": 209,
   "total_buscados_na_espn": 0,
   "total_com_estatisticas": 203,
   "total_com_publico": 182,
-  "total_sem_publico": 26,
+  "total_sem_publico": 27,
   "total_com_eventos": 203,
   "total_eventos_validados": 204,
-  "total_eventos_pendentes_detalhes": 4,
+  "total_eventos_pendentes_detalhes": 5,
   "eventos_pendentes_detalhes": [
+    {
+      "event_id": "401841185",
+      "jogo": "Botafogo x Fluminense",
+      "validacao": {
+        "gols_esperados": {
+          "Botafogo": 1,
+          "Fluminense": 1
+        },
+        "gols_extraidos": {
+          "Botafogo": 0,
+          "Fluminense": 0
+        },
+        "gols_completos": false,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": false,
+        "cartoes_esperados": {
+          "Botafogo": {
+            "amarelo": null,
+            "vermelho": null
+          },
+          "Fluminense": {
+            "amarelo": null,
+            "vermelho": null
+          }
+        },
+        "cartoes_extraidos": {
+          "Botafogo": {
+            "amarelo": 0,
+            "vermelho": 0
+          },
+          "Fluminense": {
+            "amarelo": 0,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": true,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": false,
+        "pendente_detalhes": true,
+        "tipo_pendencia": "ficha_espn_incompleta",
+        "motivo": "ficha de gols incompleta: 0/2 atribuídos"
+      }
+    },
     {
       "event_id": "401841184",
       "jogo": "Coritiba x Chapecoense",
@@ -216,38 +266,22 @@
   "total_inconsistencias_eventos": 0,
   "inconsistencias_eventos": [],
   "total_sem_estatisticas": 0,
-  "total_preservados_de_execucao_anterior": 203,
-  "total_falhas": 5,
+  "total_preservados_de_execucao_anterior": 208,
+  "total_falhas": 1,
   "sem_estatisticas": [],
   "falhas": [
     {
-      "event_id": "401841184",
-      "jogo": "R22 · Coritiba x Chapecoense · 401841184",
-      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841184: HTTPError: HTTP Error 403: Forbidden"
-    },
-    {
-      "event_id": "401841178",
-      "jogo": "R22 · Remo x Atlético-MG · 401841178",
-      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841178: HTTPError: HTTP Error 403: Forbidden"
-    },
-    {
-      "event_id": "401841181",
-      "jogo": "R22 · Grêmio x São Paulo · 401841181",
-      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841181: HTTPError: HTTP Error 403: Forbidden"
-    },
-    {
-      "event_id": "401879458",
-      "jogo": "R4 · Botafogo x Vitória · 401879458",
-      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401879458: HTTPError: HTTP Error 403: Forbidden"
-    },
-    {
-      "event_id": "401879459",
-      "jogo": "R4 · Bahia x Chapecoense · 401879459",
-      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401879459: HTTPError: HTTP Error 403: Forbidden"
+      "event_id": "401841185",
+      "jogo": "R22 · Botafogo x Fluminense · 401841185",
+      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841185: HTTPError: HTTP Error 403: Forbidden"
     }
   ],
   "total_com_jogadores": 203,
   "jogos_sem_escalacoes": [
+    {
+      "event_id": "401841185",
+      "jogo": "Botafogo x Fluminense"
+    },
     {
       "event_id": "401841184",
       "jogo": "Coritiba x Chapecoense"
