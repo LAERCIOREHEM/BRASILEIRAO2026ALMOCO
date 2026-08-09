@@ -618,11 +618,16 @@ jobs:
           assert auditoria.get('total_inconsistencias_eventos') == 0, 'há gols/cartões inconsistentes'
           validados = int(detalhes.get('total_eventos_validados') or 0)
           pendentes = int(detalhes.get('total_eventos_pendentes_detalhes') or 0)
-          assert validados + pendentes == detalhes.get('total_jogos'), 'há jogo sem eventos validados ou pendência manual declarada'
-          for item in (detalhes.get('jogos') or {}).values():
+          assert validados + pendentes == detalhes.get('total_jogos'), 'há jogo sem eventos validados ou pendência segura declarada'
+          from scripts.gerar_auditoria_estatisticas_brasileirao import tipo_pendencia_eventos_segura
+          for event_id, item in (detalhes.get('jogos') or {}).items():
               validacao = item.get('validacao_eventos') or {}
               if validacao.get('pendente_detalhes') is True:
-                  assert item.get('resultado_manual') is True, 'pendência de detalhes permitida apenas para resultado manual confirmado'
+                  tipo_seguro = tipo_pendencia_eventos_segura(item)
+                  assert tipo_seguro, (
+                      f'{event_id}: pendência de detalhes não é uma pendência segura reconhecida: '
+                      f'tipo={validacao.get("tipo_pendencia")!r} validacao={validacao}'
+                  )
           competicao = json.load(open('dados-br/estatisticas-competicao.json', encoding='utf-8'))
           assert len(competicao.get('gols_por_clube') or []) == 20, 'estatísticas da competição sem 20 clubes'
           assert all(len(item.get('marcadores') or []) >= 5 for item in competicao.get('gols_por_clube') or []), 'há clube com menos de cinco marcadores'
