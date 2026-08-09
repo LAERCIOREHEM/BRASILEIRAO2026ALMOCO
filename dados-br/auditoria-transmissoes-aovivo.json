@@ -10,11 +10,11 @@
     "manual": "dados-br/transmissoes-aovivo-manual.json tem prioridade absoluta"
   },
   "resumo": {
-    "jogos_na_janela": 38,
+    "jogos_na_janela": 36,
     "busca_streams_executada": true,
-    "candidatos_oficiais_encontrados": 33,
-    "transmissoes_publicadas": 2,
-    "sem_transmissao": 36,
+    "candidatos_oficiais_encontrados": 34,
+    "transmissoes_publicadas": 1,
+    "sem_transmissao": 35,
     "erros": 0
   },
   "canais_resolvidos": {
@@ -40,26 +40,6 @@
     }
   },
   "jogos_analisados": [
-    {
-      "event_id": "401841186",
-      "rodada": 22,
-      "jogo": "Bahia x Vasco da Gama",
-      "data_iso": "2026-08-09T16:00:00-03:00",
-      "principal": "",
-      "fontes_encontradas": [],
-      "manual": false
-    },
-    {
-      "event_id": "401841180",
-      "rodada": 22,
-      "jogo": "Palmeiras x Internacional",
-      "data_iso": "2026-08-09T16:00:00-03:00",
-      "principal": "GE TV",
-      "fontes_encontradas": [
-        "GE TV"
-      ],
-      "manual": false
-    },
     {
       "event_id": "401841179",
       "rodada": 22,
@@ -389,23 +369,6 @@
   ],
   "aceitos": [
     {
-      "event_id": "401841180",
-      "jogo": "Palmeiras x Internacional",
-      "fonte": "getv",
-      "video_id": "uVdrqw8H1u8",
-      "url": "https://www.youtube.com/watch?v=uVdrqw8H1u8",
-      "titulo": "PALMEIRAS X INTERNACIONAL | AO VIVO E COM IMAGENS | BRASILEIRÃO 2026 | ge tv",
-      "status": "live",
-      "confianca": 0.9,
-      "motivos": [
-        "os dois clubes aparecem no título",
-        "identifica Brasileirão/competição",
-        "identifica transmissão ao vivo",
-        "transmissão já está ao vivo",
-        "horário compatível (90 min de diferença)"
-      ]
-    },
-    {
       "event_id": "401841195",
       "jogo": "Atlético-MG x Grêmio",
       "fonte": "getv",
@@ -423,6 +386,16 @@
     }
   ],
   "rejeitados": [
+    {
+      "video_id": "Y4x_-sCdNgo",
+      "url": "https://www.youtube.com/watch?v=Y4x_-sCdNgo",
+      "fonte": "getv",
+      "canal": "ge tv",
+      "titulo": "RED BULL BRAGANTINO X CORINTHIANS | BRASILEIRÃO 2026 | AQUECIMENTO AO VIVO | Premiere",
+      "status": "live",
+      "inicio_programado": "2026-08-09T17:30:00-03:00",
+      "motivo": "conteúdo rejeitado: pre jogo"
+    },
     {
       "video_id": "qxt8hkI930o",
       "url": "https://www.youtube.com/watch?v=qxt8hkI930o",
@@ -554,6 +527,16 @@
       "motivo": "não identifica com segurança os dois clubes"
     },
     {
+      "video_id": "jRI0eKG2ro8",
+      "url": "https://www.youtube.com/watch?v=jRI0eKG2ro8",
+      "fonte": "cazetv",
+      "canal": "CazéTV",
+      "titulo": "AO VIVO: BRUNA TAKAHASHI NO EUROPA SMASH | TÊNIS DE MESA",
+      "status": "upcoming",
+      "inicio_programado": "2026-08-10T14:30:00-03:00",
+      "motivo": "não identifica com segurança os dois clubes"
+    },
+    {
       "video_id": "pYy2BKTHxnI",
       "url": "https://www.youtube.com/watch?v=pYy2BKTHxnI",
       "fonte": "cazetv",
@@ -654,6 +637,16 @@
       "motivo": "conteúdo rejeitado: melhores momentos"
     },
     {
+      "video_id": "LY6U7W24ZqU",
+      "url": "https://www.youtube.com/watch?v=LY6U7W24ZqU",
+      "fonte": "getv",
+      "canal": "ge tv",
+      "titulo": "CRUZEIRO ELIMINA O FLAMENGO NAS OITAVAS DE FINAL DA LIBERTADORES 2018 | ge.globo",
+      "status": "upcoming",
+      "inicio_programado": "2026-08-09T19:19:00-03:00",
+      "motivo": "não identifica com segurança os dois clubes"
+    },
+    {
       "video_id": "Xa4YI5FNU0Y",
       "url": "https://www.youtube.com/watch?v=Xa4YI5FNU0Y",
       "fonte": "getv",
@@ -662,16 +655,6 @@
       "status": "upcoming",
       "inicio_programado": "2026-08-18T21:00:00-03:00",
       "motivo": "não identifica com segurança os dois clubes"
-    },
-    {
-      "video_id": "Y4x_-sCdNgo",
-      "url": "https://www.youtube.com/watch?v=Y4x_-sCdNgo",
-      "fonte": "getv",
-      "canal": "ge tv",
-      "titulo": "AO VIVO: RED BULL BRAGANTINO X CORINTHIANS | BRASILEIRÃO 2026 | PRÉ-JOGO | Premiere",
-      "status": "upcoming",
-      "inicio_programado": "2026-08-09T17:30:00-03:00",
-      "motivo": "conteúdo rejeitado: pre jogo"
     },
     {
       "video_id": "eFxY6C6kgjw",
@@ -684,16 +667,6 @@
       "motivo": "não identifica com segurança os dois clubes"
     },
     {
-      "video_id": "nZy3ySQmLxM",
-      "url": "https://www.youtube.com/watch?v=nZy3ySQmLxM",
-      "fonte": "getv",
-      "canal": "ge tv",
-      "titulo": "SURFE AO VIVO: WSL TAHITI PRO 2026 | ETAPA DE TEAHUPO'O | DIA 2 | ge tv",
-      "status": "live",
-      "inicio_programado": "2026-08-09T14:00:00-03:00",
-      "motivo": "não identifica com segurança os dois clubes"
-    },
-    {
       "video_id": "tJBjYhNHtiE",
       "url": "https://www.youtube.com/watch?v=tJBjYhNHtiE",
       "fonte": "getv",
@@ -701,6 +674,16 @@
       "titulo": "AO VIVO! GE ATLÉTICO-MG ANALISA EMPATE CONTRA O REMO PELO BRASILEIRÃO | #podcast | ge.globo",
       "status": "upcoming",
       "inicio_programado": "2026-08-10T15:30:00-03:00",
+      "motivo": "não identifica com segurança os dois clubes"
+    },
+    {
+      "video_id": "uVdrqw8H1u8",
+      "url": "https://www.youtube.com/watch?v=uVdrqw8H1u8",
+      "fonte": "getv",
+      "canal": "ge tv",
+      "titulo": "PALMEIRAS X INTERNACIONAL | AO VIVO E COM IMAGENS | BRASILEIRÃO 2026 | ge tv",
+      "status": "live",
+      "inicio_programado": "2026-08-09T14:30:00-03:00",
       "motivo": "não identifica com segurança os dois clubes"
     },
     {
@@ -735,13 +718,6 @@
     }
   ],
   "sem_transmissao": [
-    {
-      "event_id": "401841186",
-      "rodada": 22,
-      "jogo": "Bahia x Vasco da Gama",
-      "data_iso": "2026-08-09T16:00:00-03:00",
-      "motivo": "nenhuma transmissão oficial validada em CazéTV ou GE TV"
-    },
     {
       "event_id": "401841179",
       "rodada": 22,
@@ -990,13 +966,13 @@
   ],
   "erros": [],
   "quota_estimada_youtube": {
-    "unidades": 45,
+    "unidades": 44,
     "requisicoes": {
       "channels": 2,
-      "videos": 23,
+      "videos": 22,
       "playlistItems": 20
     },
     "observacao": "search.list não é usado. A aba /streams custa apenas videos.list; a playlist de uploads mantém redundância. A execução típica permanece muito abaixo da cota diária gratuita do YouTube Data API."
   },
-  "atualizado_em": "2026-08-09T17:03:02-03:00"
+  "atualizado_em": "2026-08-09T17:50:20-03:00"
 }
