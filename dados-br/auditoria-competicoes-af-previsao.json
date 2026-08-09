@@ -2,34 +2,38 @@
   "schema_version": 1,
   "projeto": "AF-Previsão Continental",
   "etapa": "Execução 2.5 — coleta das competições que alteram vagas",
-  "gerado_em": "2026-08-04T03:03:50-03:00",
-  "status": "ok",
+  "gerado_em": "2026-08-08T23:01:28-03:00",
+  "status": "parcial_com_snapshot_preservado",
   "fonte": "ESPN",
   "temporada": 2026,
   "competicoes": [
     {
       "competicao": "copa_do_brasil",
-      "status": "cache_valido",
+      "status": "preservado_apos_falha",
       "arquivo": "dados-br/competicoes-af-previsao/copa-do-brasil.json",
       "gerado_em": "2026-08-04T02:26:17-03:00",
-      "eventos": 142
+      "erro": "copa_do_brasil: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.copa_do_brazil/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 403: Forbidden"
     },
     {
       "competicao": "libertadores",
-      "status": "cache_valido",
+      "status": "preservado_apos_falha",
       "arquivo": "dados-br/competicoes-af-previsao/libertadores.json",
       "gerado_em": "2026-08-04T02:26:17-03:00",
-      "eventos": 142
+      "erro": "libertadores: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.libertadores/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 403: Forbidden"
     },
     {
       "competicao": "sul_americana",
-      "status": "cache_valido",
+      "status": "preservado_apos_falha",
       "arquivo": "dados-br/competicoes-af-previsao/sul-americana.json",
       "gerado_em": "2026-08-04T02:26:18-03:00",
-      "eventos": 144
+      "erro": "sul_americana: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.sudamericana/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 403: Forbidden"
     }
   ],
-  "falhas": [],
+  "falhas": [
+    "copa_do_brasil: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.copa_do_brazil/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 403: Forbidden",
+    "libertadores: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.libertadores/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 403: Forbidden",
+    "sul_americana: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.sudamericana/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 403: Forbidden"
+  ],
   "regras_operacionais": {
     "cache_minutos": 45,
     "falha_de_rede": "preserva o último snapshot íntegro; --strict transforma a falha em erro",
