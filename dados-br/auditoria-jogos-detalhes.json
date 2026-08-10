@@ -1,17 +1,67 @@
 {
-  "gerado_em": "2026-08-09T20:57:34.229007-03:00",
+  "gerado_em": "2026-08-09T21:57:53.769078-03:00",
   "fonte": "ESPN summary",
   "modo": "rede",
-  "total_resultados_lidos": 214,
-  "total_processados": 214,
+  "total_resultados_lidos": 215,
+  "total_processados": 215,
   "total_buscados_na_espn": 0,
   "total_com_estatisticas": 203,
   "total_com_publico": 182,
-  "total_sem_publico": 32,
+  "total_sem_publico": 33,
   "total_com_eventos": 203,
   "total_eventos_validados": 206,
-  "total_eventos_pendentes_detalhes": 8,
+  "total_eventos_pendentes_detalhes": 9,
   "eventos_pendentes_detalhes": [
+    {
+      "event_id": "401841187",
+      "jogo": "Flamengo x Vitória",
+      "validacao": {
+        "gols_esperados": {
+          "Flamengo": 2,
+          "Vitória": 0
+        },
+        "gols_extraidos": {
+          "Flamengo": 0,
+          "Vitória": 0
+        },
+        "gols_completos": false,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": false,
+        "cartoes_esperados": {
+          "Flamengo": {
+            "amarelo": null,
+            "vermelho": null
+          },
+          "Vitória": {
+            "amarelo": null,
+            "vermelho": null
+          }
+        },
+        "cartoes_extraidos": {
+          "Flamengo": {
+            "amarelo": 0,
+            "vermelho": 0
+          },
+          "Vitória": {
+            "amarelo": 0,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": true,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": false,
+        "pendente_detalhes": true,
+        "tipo_pendencia": "ficha_espn_incompleta",
+        "motivo": "ficha de gols incompleta: 0/2 atribuídos"
+      }
+    },
     {
       "event_id": "401841179",
       "jogo": "Bragantino x Corinthians",
@@ -416,23 +466,22 @@
   "total_inconsistencias_eventos": 0,
   "inconsistencias_eventos": [],
   "total_sem_estatisticas": 0,
-  "total_preservados_de_execucao_anterior": 212,
-  "total_falhas": 2,
+  "total_preservados_de_execucao_anterior": 214,
+  "total_falhas": 1,
   "sem_estatisticas": [],
   "falhas": [
     {
-      "event_id": "401841179",
-      "jogo": "R22 · Bragantino x Corinthians · 401841179",
-      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841179: HTTPError: HTTP Error 403: Forbidden"
-    },
-    {
-      "event_id": "401841182",
-      "jogo": "R22 · Santos x Athletico-PR · 401841182",
-      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841182: HTTPError: HTTP Error 403: Forbidden"
+      "event_id": "401841187",
+      "jogo": "R22 · Flamengo x Vitória · 401841187",
+      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841187: HTTPError: HTTP Error 403: Forbidden"
     }
   ],
   "total_com_jogadores": 203,
   "jogos_sem_escalacoes": [
+    {
+      "event_id": "401841187",
+      "jogo": "Flamengo x Vitória"
+    },
     {
       "event_id": "401841179",
       "jogo": "Bragantino x Corinthians"

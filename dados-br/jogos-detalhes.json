@@ -1,15 +1,88 @@
 {
   "_comentario": "Gerado por scripts/buscar_detalhes_jogos_brasileirao.py. Gols e cartões são deduplicados e validados contra placar/boxscore.",
-  "gerado_em": "2026-08-09T20:57:34.228754-03:00",
+  "gerado_em": "2026-08-09T21:57:53.768883-03:00",
   "fonte": "ESPN summary",
-  "total_jogos": 214,
+  "total_jogos": 215,
   "total_com_estatisticas": 203,
   "total_com_publico": 182,
   "total_com_eventos": 203,
   "total_com_jogadores": 203,
   "total_eventos_validados": 206,
-  "total_eventos_pendentes_detalhes": 8,
+  "total_eventos_pendentes_detalhes": 9,
   "jogos": {
+    "401841187": {
+      "event_id": "401841187",
+      "event_id_fonte_detalhes": "401841187",
+      "rodada": 22,
+      "data_iso": "2026-08-09T19:30",
+      "mandante": "Flamengo",
+      "visitante": "Vitória",
+      "placar_mandante": 2,
+      "placar_visitante": 0,
+      "estadio": "Estadio do Maracana",
+      "publico": null,
+      "publico_tipo": "",
+      "publico_fonte": "",
+      "arbitro": "",
+      "stats": [],
+      "estatisticas": [],
+      "gols": [],
+      "cartoes": [],
+      "jogadores": [],
+      "jogadores_preservados_de_execucao_anterior": false,
+      "validacao_eventos": {
+        "gols_esperados": {
+          "Flamengo": 2,
+          "Vitória": 0
+        },
+        "gols_extraidos": {
+          "Flamengo": 0,
+          "Vitória": 0
+        },
+        "gols_completos": false,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": false,
+        "cartoes_esperados": {
+          "Flamengo": {
+            "amarelo": null,
+            "vermelho": null
+          },
+          "Vitória": {
+            "amarelo": null,
+            "vermelho": null
+          }
+        },
+        "cartoes_extraidos": {
+          "Flamengo": {
+            "amarelo": 0,
+            "vermelho": 0
+          },
+          "Vitória": {
+            "amarelo": 0,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": true,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": false,
+        "pendente_detalhes": true,
+        "tipo_pendencia": "ficha_espn_incompleta",
+        "motivo": "ficha de gols incompleta: 0/2 atribuídos"
+      },
+      "fonte": "ESPN summary",
+      "resultado_manual": false,
+      "origem_resultado": "",
+      "motivo_resultado_manual": "",
+      "preservado_de_execucao_anterior": false,
+      "atualizado_em": "2026-08-09T21:57:35.621080-03:00"
+    },
     "401841179": {
       "event_id": "401841179",
       "event_id_fonte_detalhes": "401841179",
@@ -80,8 +153,8 @@
       "resultado_manual": false,
       "origem_resultado": "",
       "motivo_resultado_manual": "",
-      "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-09T20:57:17.704347-03:00"
+      "preservado_de_execucao_anterior": true,
+      "atualizado_em": "2026-08-09T21:57:37.258476-03:00"
     },
     "401841182": {
       "event_id": "401841182",
@@ -153,8 +226,8 @@
       "resultado_manual": false,
       "origem_resultado": "",
       "motivo_resultado_manual": "",
-      "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-09T20:57:19.355738-03:00"
+      "preservado_de_execucao_anterior": true,
+      "atualizado_em": "2026-08-09T21:57:38.913312-03:00"
     },
     "401841186": {
       "event_id": "401841186",
@@ -227,7 +300,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": true,
-      "atualizado_em": "2026-08-09T20:57:20.995456-03:00"
+      "atualizado_em": "2026-08-09T21:57:40.572269-03:00"
     },
     "401841180": {
       "event_id": "401841180",
@@ -300,7 +373,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": true,
-      "atualizado_em": "2026-08-09T20:57:22.653729-03:00"
+      "atualizado_em": "2026-08-09T21:57:42.211972-03:00"
     },
     "401841183": {
       "event_id": "401841183",
@@ -373,7 +446,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": true,
-      "atualizado_em": "2026-08-09T20:57:24.296412-03:00"
+      "atualizado_em": "2026-08-09T21:57:43.870302-03:00"
     },
     "401841185": {
       "event_id": "401841185",
@@ -446,7 +519,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": true,
-      "atualizado_em": "2026-08-09T20:57:25.939503-03:00"
+      "atualizado_em": "2026-08-09T21:57:45.507444-03:00"
     },
     "401841184": {
       "event_id": "401841184",
@@ -519,7 +592,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": true,
-      "atualizado_em": "2026-08-09T20:57:27.574311-03:00"
+      "atualizado_em": "2026-08-09T21:57:47.142329-03:00"
     },
     "401841178": {
       "event_id": "401841178",
@@ -592,7 +665,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": true,
-      "atualizado_em": "2026-08-09T20:57:29.209699-03:00"
+      "atualizado_em": "2026-08-09T21:57:48.787712-03:00"
     },
     "401841181": {
       "event_id": "401841181",
@@ -665,7 +738,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": true,
-      "atualizado_em": "2026-08-09T20:57:30.849268-03:00"
+      "atualizado_em": "2026-08-09T21:57:50.423937-03:00"
     },
     "401841173": {
       "event_id": "401841173",
@@ -9550,7 +9623,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": true,
-      "atualizado_em": "2026-08-09T20:57:32.504844-03:00"
+      "atualizado_em": "2026-08-09T21:57:52.052955-03:00"
     },
     "401841151": {
       "event_id": "401841151",
@@ -14071,7 +14144,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": true,
-      "atualizado_em": "2026-08-09T20:57:34.146297-03:00"
+      "atualizado_em": "2026-08-09T21:57:53.686390-03:00"
     },
     "401841149": {
       "event_id": "401841149",
