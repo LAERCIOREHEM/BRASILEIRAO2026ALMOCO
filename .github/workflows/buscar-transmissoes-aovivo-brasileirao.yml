@@ -1,27 +1,22 @@
 name: Buscar transmissões ao vivo do Brasileirão
+run-name: Transmissões · ${{ inputs.modo || 'tv' }} · ${{ inputs.event_id || 'todos' }}
 
 on:
-  # JANELAS ATIVAS (horario de Brasilia, UTC-3):
-  #   Seg-Sex: 19h -> 02h        Sab-Dom: 13h -> 02h
-  #
-  # Antes rodava das 06h as 23h BRT de 15 em 15 min: ~78 execucoes/dia, cada
-  # uma segurando o grupo repo-write-main e disparando um deploy. Era a causa
-  # do congestionamento que fazia execucoes manuais esperarem e estourarem.
-  #
-  # Minutos :02 :17 :32 :47 ficam 8 min a frente do deploy (:10 :25 :40 :55).
-  schedule:
-    # 19h00-23h59 BRT, segunda a sexta   =  22-23 UTC, seg-sex
-    - cron: '2,17,32,47 22,23 * * 1-5'
-    # 13h00-23h59 BRT, sabado e domingo  =  16-23 UTC, sab/dom
-    - cron: '2,17,32,47 16-23 * * 6,0'
-    # 00h00-02h59 BRT, todos os dias     =  03-05 UTC
-    - cron: '2,17,32,47 3-5 * * *'
-    # 21h00-23h59 BRT da vespera         =  00-02 UTC
-    - cron: '2,17,32,47 0-2 * * *'
+  # Sem schedule e sem push automático. O orquestrador chama somente modo=tv,
+  # uma vez ao dia. O modo aovivo fica disponível apenas para execução manual.
   workflow_dispatch:
     inputs:
+      modo:
+        description: 'tv = grade futura; aovivo = player GE TV/CazéTV; completo = ambos'
+        required: true
+        default: 'tv'
+        type: choice
+        options:
+          - tv
+          - aovivo
+          - completo
       event_id:
-        description: 'Opcional: pesquisar apenas um event_id da ESPN'
+        description: 'Opcional: pesquisar apenas um event_id da ESPN no modo aovivo'
         required: false
         default: ''
         type: string
@@ -30,18 +25,10 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    paths:
-      - 'scripts/buscar_transmissoes_aovivo_brasileirao.py'
-      - 'dados-br/config-transmissoes-aovivo.json'
-      - 'dados-br/transmissoes-aovivo-manual.json'
-      - 'dados-br/config-transmissoes-tv.json'
-      - 'transmissoes.json'
-      - 'scripts/atualizar_transmissoes_tv_brasileirao.py'
-      - '.github/workflows/buscar-transmissoes-aovivo-brasileirao.yml'
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: repo-write-main
@@ -49,7 +36,7 @@ concurrency:
 
 jobs:
   buscar:
-    name: Procurar transmissões oficiais
+    name: Atualizar somente a transmissão necessária
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -58,13 +45,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: true
-          # fetch-depth: 1 — nenhum workflow ou script deste repositorio le
-          # historico do git (nao ha git log / rev-list / describe / blame em
-          # lugar nenhum). Com fetch-depth: 1 cada execucao clonava o historico
-          # inteiro de um repositorio com 212 MB de arvore de trabalho e
-          # milhares de commits de robo — custo puro, pago em toda execucao.
-          # Os laços de push robusto usam 'git fetch origin main' +
-          # 'git reset --hard origin/main', que funcionam em clone raso.
           fetch-depth: 1
 
       - name: Configurar Python
@@ -75,7 +55,7 @@ jobs:
       - name: Instalar cliente HTTP com fingerprint de navegador
         run: python -m pip install --disable-pip-version-check --no-cache-dir curl-cffi==0.15.0
 
-      - name: Validar script e configuração
+      - name: Validar scripts e configuração
         run: |
           set -euo pipefail
           python -m py_compile scripts/buscar_transmissoes_aovivo_brasileirao.py
@@ -94,34 +74,41 @@ jobs:
       - name: Buscar transmissões oficiais
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODO: ${{ inputs.modo }}
           INPUT_EVENT_ID: ${{ inputs.event_id }}
           INPUT_DRY_RUN: ${{ inputs.dry_run }}
         shell: bash
         run: |
           set -euo pipefail
+          MODO="${INPUT_MODO:-tv}"
 
-          CMD=(python scripts/buscar_transmissoes_aovivo_brasileirao.py)
-
-          if [[ -n "${INPUT_EVENT_ID:-}" ]]; then
-            CMD+=(--event-id "${INPUT_EVENT_ID}")
+          if [[ "$MODO" != "tv" ]]; then
+            CMD=(python scripts/buscar_transmissoes_aovivo_brasileirao.py)
+            if [[ -n "${INPUT_EVENT_ID:-}" ]]; then
+              CMD+=(--event-id "${INPUT_EVENT_ID}")
+            fi
+            if [[ "${INPUT_DRY_RUN:-false}" == "true" ]]; then
+              CMD+=(--dry-run)
+            fi
+            echo "Executando player ao vivo: ${CMD[*]}"
+            "${CMD[@]}"
+          else
+            echo "Modo tv: busca de player GE TV/CazéTV desativada."
           fi
-          if [[ "${INPUT_DRY_RUN:-false}" == "true" ]]; then
-            CMD+=(--dry-run)
-          fi
 
-          echo "Executando: ${CMD[*]}"
-          "${CMD[@]}"
-
-          TV_CMD=(python scripts/atualizar_transmissoes_tv_brasileirao.py)
-          if [[ "${INPUT_DRY_RUN:-false}" == "true" ]]; then
-            TV_CMD+=(--dry-run)
+          if [[ "$MODO" != "aovivo" ]]; then
+            TV_CMD=(python scripts/atualizar_transmissoes_tv_brasileirao.py)
+            if [[ "${INPUT_DRY_RUN:-false}" == "true" ]]; then
+              TV_CMD+=(--dry-run)
+            fi
+            echo "Executando grade de TV: ${TV_CMD[*]}"
+            "${TV_CMD[@]}"
+          else
+            echo "Modo aovivo: grade de TV preservada."
           fi
-          echo "Executando: ${TV_CMD[*]}"
-          "${TV_CMD[@]}"
 
       - name: Validar relatórios gerados
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
+        if: ${{ inputs.dry_run != true }}
         run: |
           set -euo pipefail
           python -m json.tool dados-br/transmissoes-aovivo.json > /dev/null
@@ -140,56 +127,61 @@ jobs:
               principal = jogo.get('principal')
               assert isinstance(principal, dict), f'{event_id}: sem principal válido'
               assert principal.get('fonte') in {'cazetv', 'getv'}, f'{event_id}: fonte não permitida'
-              url = principal.get('url', '')
-              parsed = urlparse(url)
+              parsed = urlparse(principal.get('url', ''))
               assert parsed.netloc.lower() in {'www.youtube.com', 'youtube.com'}, f'{event_id}: URL fora do YouTube'
               assert parse_qs(parsed.query).get('v'), f'{event_id}: URL sem video_id'
               if jogo.get('alternativas'):
                   assert principal.get('fonte') == 'cazetv', f'{event_id}: com duas fontes, CazéTV deve ser principal'
+
           aud = json.load(open('dados-br/auditoria-transmissoes-aovivo.json', encoding='utf-8'))
-          assert isinstance(aud.get('resumo'), dict), 'auditoria sem resumo'
-          assert isinstance(aud.get('rejeitados'), list), 'auditoria sem rejeitados'
-          assert isinstance(aud.get('sem_transmissao'), list), 'auditoria sem sem_transmissao'
+          assert isinstance(aud.get('resumo'), dict)
+          assert isinstance(aud.get('rejeitados'), list)
+          assert isinstance(aud.get('sem_transmissao'), list)
+
           tv = json.load(open('dados-br/transmissoes-tv.json', encoding='utf-8'))
           assert isinstance(tv.get('jogos'), dict), 'transmissoes-tv.json sem objeto jogos'
-          permitidos = ALLOWED_CHANNELS
           for event_id, jogo in tv['jogos'].items():
-              assert str(jogo.get('event_id')) == str(event_id), f'TV: event_id divergente em {event_id}'
-              assert jogo.get('canais'), f'TV: {event_id} sem canais'
-              assert jogo.get('confianca') in {'confirmado', 'manual', 'preservado'}, f'TV: confiança inválida em {event_id}'
-              assert isinstance(jogo.get('fontes'), list) and jogo['fontes'], f'TV: {event_id} sem evidências'
-              invalidos = set(jogo['canais']) - permitidos
+              assert str(jogo.get('event_id')) == str(event_id)
+              assert jogo.get('canais')
+              assert jogo.get('confianca') in {'confirmado', 'manual', 'preservado'}
+              assert isinstance(jogo.get('fontes'), list) and jogo['fontes']
+              invalidos = set(jogo['canais']) - ALLOWED_CHANNELS
               assert not invalidos, f'TV: canal não permitido em {event_id}: {sorted(invalidos)}'
+
           aud_tv = json.load(open('dados-br/auditoria-transmissoes-tv.json', encoding='utf-8'))
-          resumo_tv = aud_tv.get('resumo') or {}
-          assert isinstance(aud_tv.get('fontes'), dict), 'auditoria TV sem fontes'
-          assert isinstance(aud_tv.get('sem_transmissao'), list), 'auditoria TV sem lista de pendências'
-          assert int(resumo_tv.get('jogos_com_transmissao') or 0) == len(tv['jogos']), 'auditoria TV diverge da saída'
-          criticos = int(resumo_tv.get('jogos_criticos_sem_transmissao_72h') or 0)
-          if criticos:
-              print(f'::warning title=Transmissões pendentes::{criticos} jogo(s) nas próximas 72h ainda sem canal confirmado')
-          print(f'YouTube e transmissões TV validados; críticos sem canal: {criticos}')
+          resumo = aud_tv.get('resumo') or {}
+          assert isinstance(aud_tv.get('fontes'), dict)
+          assert isinstance(aud_tv.get('sem_transmissao'), list)
+          assert int(resumo.get('jogos_com_transmissao') or 0) == len(tv['jogos'])
+          print(f"Transmissões validadas; críticos <72h sem canal: {int(resumo.get('jogos_criticos_sem_transmissao_72h') or 0)}")
           PY
 
       - name: Commitar somente quando houver mudança real
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run != true }}
+        id: publish
+        if: ${{ inputs.dry_run != true }}
+        env:
+          INPUT_MODO: ${{ inputs.modo }}
         shell: bash
         run: |
           set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-
+          echo "published=false" >> "$GITHUB_OUTPUT"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          FILES=(
-            "dados-br/transmissoes-aovivo.json"
-            "dados-br/auditoria-transmissoes-aovivo.json"
-            "dados-br/transmissoes-tv.json"
-            "dados-br/auditoria-transmissoes-tv.json"
-          )
-
+          MODO="${INPUT_MODO:-tv}"
+          FILES=()
+          if [[ "$MODO" != "tv" ]]; then
+            FILES+=("dados-br/transmissoes-aovivo.json" "dados-br/auditoria-transmissoes-aovivo.json")
+          fi
+          if [[ "$MODO" != "aovivo" ]]; then
+            FILES+=("dados-br/transmissoes-tv.json" "dados-br/auditoria-transmissoes-tv.json")
+          fi
+          if [[ ${#FILES[@]} -eq 0 ]]; then
+            echo "Nenhum artefato selecionado."
+            exit 0
+          fi
           if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
-            echo "Nenhuma transmissão nova ou mudança de auditoria. Nada para commitar."
+            echo "Nenhuma mudança de transmissão."
             exit 0
           fi
 
@@ -200,32 +192,34 @@ jobs:
           done
 
           for i in 1 2 3 4 5; do
-            echo "Tentativa de push $i/5..."
             git fetch origin main
             git reset --hard origin/main
             git clean -fd
-
             for f in "${FILES[@]}"; do
               mkdir -p "$(dirname "$f")"
               cp -a "$TMP_DIR/$f" "$f"
             done
-
             if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
-              echo "Origin/main já possui o mesmo conteúdo. Sem commit."
+              echo "Origin/main já possui o mesmo conteúdo."
               exit 0
             fi
-
             git add -- "${FILES[@]}"
-            git commit -m "Atualizar transmissões ao vivo Brasileirão - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
-
+            git commit -m "Atualizar transmissões Brasileirão (${MODO}) - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
             if git push origin HEAD:main; then
-              echo "Push concluído na tentativa $i."
+              echo "published=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-
-            echo "Push rejeitado; tentando novamente sobre origin/main atualizado..."
             sleep 3
           done
-
           echo "ERRO: push falhou após 5 tentativas."
           exit 1
+
+      - name: Disparar deploy após transmissão publicada
+        if: steps.publish.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy.yml --ref main
+          echo "Deploy disparado para a atualização de transmissão."

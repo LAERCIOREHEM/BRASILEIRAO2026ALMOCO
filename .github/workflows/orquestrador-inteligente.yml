@@ -1,0 +1,130 @@
+name: Orquestrador inteligente Brasileirão 2026 Almoço
+run-name: Orquestrador · ${{ github.event_name }}
+
+on:
+  # Sem schedule interno. Um único cron-job.org chama este workflow por
+  # workflow_dispatch. O script decide se existe trabalho real.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Só mostrar a decisão; não disparar workflow pesado'
+        required: false
+        default: false
+        type: boolean
+      sem_rede:
+        description: 'Teste: não consultar ESPN nem histórico do GitHub'
+        required: false
+        default: false
+        type: boolean
+      agora:
+        description: 'Teste opcional: data/hora ISO com fuso'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: brasileirao-almoco-orquestrador
+  cancel-in-progress: true
+
+jobs:
+  decidir:
+    name: Decidir próxima ação útil
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Baixar main mais recente
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validar orquestrador offline
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/orquestrar_workflows.py
+          python -m json.tool dados-br/config-orquestrador.json >/dev/null
+          python scripts/orquestrar_workflows.py --self-test
+
+      - name: Calcular próxima ação
+        id: plano
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_SEM_REDE: ${{ inputs.sem_rede }}
+          INPUT_AGORA: ${{ inputs.agora }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          CMD=(python scripts/orquestrar_workflows.py --github-output "$GITHUB_OUTPUT")
+          if [[ "${INPUT_SEM_REDE:-false}" == "true" ]]; then
+            CMD+=(--sem-rede)
+          fi
+          if [[ -n "${INPUT_AGORA:-}" ]]; then
+            CMD+=(--agora "$INPUT_AGORA")
+          fi
+          "${CMD[@]}"
+
+      - name: Resumir decisão
+        env:
+          ACAO: ${{ steps.plano.outputs.acao }}
+          MOTIVO: ${{ steps.plano.outputs.motivo }}
+          EVENT_ID: ${{ steps.plano.outputs.event_id }}
+          RODADA: ${{ steps.plano.outputs.rodada }}
+          MODO: ${{ steps.plano.outputs.modo }}
+        shell: bash
+        run: |
+          # Não usar [[ cond ]] && echo como último comando: campo vazio retorna
+          # exit 1 e transforma falsamente ACAO=none em falha do workflow.
+          {
+            echo "## Orquestrador Brasileirão 2026 Almoço"
+            echo ""
+            echo "- **Ação:** \`${ACAO:-none}\`"
+            echo "- **Motivo:** ${MOTIVO:-sem motivo}"
+            if [[ -n "${EVENT_ID:-}" ]]; then echo "- **event_id:** \`${EVENT_ID}\`"; fi
+            if [[ -n "${RODADA:-}" ]]; then echo "- **rodada:** \`${RODADA}\`"; fi
+            if [[ -n "${MODO:-}" ]]; then echo "- **modo:** \`${MODO}\`"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Disparar somente o workflow necessário
+        if: ${{ inputs.dry_run != true && steps.plano.outputs.acao != 'none' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACAO: ${{ steps.plano.outputs.acao }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$ACAO" in
+            atualizar_brasileirao)
+              gh workflow run atualizar-brasileirao.yml --ref main
+              ;;
+            atualizar_brasileirao_forcar_af)
+              gh workflow run atualizar-brasileirao.yml --ref main -f forcar_af=true
+              ;;
+            apurar_apostas)
+              gh workflow run apurar-brasileirao.yml --ref main
+              ;;
+            publicos)
+              gh workflow run atualizar-publicos-brasileirao.yml --ref main
+              ;;
+            melhores_momentos)
+              gh workflow run buscar-melhores-momentos-getv.yml --ref main -f modo=incremental
+              ;;
+            transmissoes_tv)
+              gh workflow run buscar-transmissoes-aovivo-brasileirao.yml --ref main -f modo=tv
+              ;;
+            *)
+              echo "Ação desconhecida: $ACAO" >&2
+              exit 1
+              ;;
+          esac
+          echo "Workflow útil despachado: $ACAO"

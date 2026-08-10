@@ -1,13 +1,14 @@
 name: Apurar Apostas Brasileirão
 
 on:
-  # O fluxo normal da Execução 4 já roda dentro de Atualizar Brasileirao
-  # (ESPN), no mesmo snapshot e no mesmo commit. Este workflow permanece como
-  # recuperação manual para reprocessar a apuração sem refazer toda a coleta.
+  # O fluxo normal roda dentro de Atualizar Brasileirao, no mesmo snapshot do
+  # resultado. Este workflow é a recuperação leve: o orquestrador o chama se a
+  # pontuação ficar atrás dos resultados, sem refazer ESPN/AF/estatísticas.
   workflow_dispatch:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: repo-write-main
@@ -76,9 +77,11 @@ jobs:
           PY
 
       - name: Publicar apuração com push robusto
+        id: publish
         shell: bash
         run: |
           set -euo pipefail
+          echo "published=false" >> "$GITHUB_OUTPUT"
           cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -110,6 +113,7 @@ jobs:
             git add -- "${FILES[@]}"
             git commit -m "Atualizar apuração e rankings do Brasileirão - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
             if git push origin HEAD:main; then
+              echo "published=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             sleep 3
@@ -117,3 +121,13 @@ jobs:
 
           echo "ERRO: não foi possível publicar a apuração após 5 tentativas."
           exit 1
+
+      - name: Disparar deploy após apuração publicada
+        if: steps.publish.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy.yml --ref main
+          echo "Deploy disparado para a apuração recuperada."

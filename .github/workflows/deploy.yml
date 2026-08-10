@@ -34,26 +34,9 @@ on:
       - 'aniversariantes/**'
       - '.github/workflows/deploy.yml'
 
-  # Publica imediatamente após workflows que atualizam dados do site.
-  # Isso cobre commits feitos por GitHub Actions, que nem sempre disparam outro
-  # workflow por "push" usando GITHUB_TOKEN.
-  # PUBLICACAO COALESCIDA (substitui o antigo gatilho workflow_run)
-  #
-  # Antes, seis workflows disparavam um deploy cada vez que terminavam. Como o
-  # robo de transmissoes rodava de 15 em 15 min, isso gerava dezenas de deploys
-  # por dia numa fila que e SERIAL. A fila nao drenava, e um push seu ficava
-  # esperando atras dela — quando nao era descartado por um deploy mais novo.
-  # (No print: dois deploys cancelados em 1s e 7s. Sao exatamente isso.)
-  #
-  # Agora o deploy roda sozinho, em cadencia fixa, so nas janelas ativas, e
-  # publica tudo o que os robos acumularam. Se nada mudou, encerra em ~1 min.
-  #
-  # Janelas (horario de Brasilia, UTC-3):
-  #   Seg-Sex: 19h -> 02h      Sab-Dom: 13h -> 02h
-  schedule:
-    - cron: '10,25,40,55 22,23 * * 1-5'
-    - cron: '10,25,40,55 16-23 * * 6,0'
-    - cron: '10,25,40,55 0-5 * * *'
+  # Commits manuais no main continuam disparando deploy por push. Commits feitos
+  # pelos robôs com GITHUB_TOKEN chamam explicitamente workflow_dispatch apenas
+  # quando publicam uma mudança real. Não há mais relógio fixo de deploy.
 
 permissions:
   contents: read

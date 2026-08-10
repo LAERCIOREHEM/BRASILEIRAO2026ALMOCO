@@ -1,0 +1,188 @@
+name: Atualizar públicos do Brasileirão
+run-name: Públicos · incremental
+
+on:
+  # Sem schedule próprio. O orquestrador chama apenas quando há partida FINAL
+  # sem público e o backoff da pendência venceu.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Testar coleta sem publicar arquivos'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: repo-write-main
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    name: Completar públicos pendentes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar main mais recente
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar cliente HTTP resiliente
+        run: python -m pip install --disable-pip-version-check --no-cache-dir curl-cffi==0.15.0
+
+      - name: Validar coletor e artefatos
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            scripts/atualizar_publicos_brasileirao.py \
+            scripts/gerar_estatisticas_competicao_brasileirao.py \
+            scripts/gerar_auditoria_estatisticas_brasileirao.py
+          python scripts/atualizar_publicos_brasileirao.py --self-test
+          python -m json.tool resultados.json >/dev/null
+          python -m json.tool dados-br/jogos-detalhes.json >/dev/null
+          python -m json.tool dados-br/publicos-complementares.json >/dev/null
+          python -m json.tool dados-br/auditoria-publicos.json >/dev/null
+
+      - name: Buscar somente públicos ainda ausentes
+        id: coleta
+        env:
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp dados-br/publicos-complementares.json /tmp/publicos-antes.json
+          CMD=(python scripts/atualizar_publicos_brasileirao.py --max-rodadas 3)
+          if [[ "${INPUT_DRY_RUN:-false}" == "true" ]]; then
+            CMD+=(--dry-run)
+          fi
+          "${CMD[@]}"
+          NOVOS="$(python - <<'PY'
+          import json
+          antes = json.load(open('/tmp/publicos-antes.json', encoding='utf-8'))
+          depois = json.load(open('dados-br/publicos-complementares.json', encoding='utf-8'))
+          print('true' if (antes.get('jogos') or {}) != (depois.get('jogos') or {}) else 'false')
+          PY
+          )"
+          echo "novos=$NOVOS" >> "$GITHUB_OUTPUT"
+          if [[ "$NOVOS" == "true" ]]; then
+            echo "Há público novo; atualizando somente os derivados necessários."
+          else
+            echo "Nenhum público novo persistido nesta tentativa."
+          fi
+
+      - name: Regenerar somente a visão de público das Estatísticas
+        if: ${{ inputs.dry_run != true && steps.coleta.outputs.novos == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # O coletor já propaga o novo público para jogos-detalhes.json sem
+          # reconsultar todas as partidas da ESPN.
+          python scripts/gerar_estatisticas_competicao_brasileirao.py
+          python scripts/gerar_auditoria_estatisticas_brasileirao.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          aud = json.loads(Path('dados-br/auditoria-publicos.json').read_text(encoding='utf-8'))
+          det = json.loads(Path('dados-br/jogos-detalhes.json').read_text(encoding='utf-8'))
+          est = json.loads(Path('dados-br/estatisticas-competicao.json').read_text(encoding='utf-8'))
+          assert isinstance(aud.get('partidas_fisicas_sem_publico'), list)
+          assert isinstance(det.get('jogos'), dict)
+          assert isinstance((est.get('publico') or {}).get('jogos'), list)
+          assert int((est.get('resumo') or {}).get('jogos_com_publico') or 0) > 0
+          print(f"Cobertura: {aud.get('total_partidas_fisicas_com_publico')}/{aud.get('total_partidas_fisicas')} partidas físicas")
+          PY
+
+      - name: Resumir tentativa
+        if: always()
+        env:
+          NOVOS: ${{ steps.coleta.outputs.novos }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          {
+            echo "## Públicos do Brasileirão"
+            echo ""
+            if [[ "${DRY_RUN:-false}" == "true" ]]; then
+              echo "- **Resultado:** dry-run; nenhum arquivo será publicado"
+            elif [[ "${NOVOS:-false}" == "true" ]]; then
+              echo "- **Resultado:** novos públicos encontrados e derivados atualizados"
+            else
+              echo "- **Resultado:** nenhuma informação nova; snapshot preservado"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Commitar somente quando houver público novo
+        id: publish
+        if: ${{ inputs.dry_run != true && steps.coleta.outputs.novos == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "published=false" >> "$GITHUB_OUTPUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          FILES=(
+            "dados-br/publicos-complementares.json"
+            "dados-br/auditoria-publicos.json"
+            "dados-br/jogos-detalhes.json"
+            "dados-br/estatisticas-competicao.json"
+            "dados-br/auditoria-estatisticas.json"
+          )
+
+          if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
+            echo "Origin já contém o mesmo conteúdo."
+            exit 0
+          fi
+
+          TMP_DIR="$(mktemp -d)"
+          for f in "${FILES[@]}"; do
+            mkdir -p "$TMP_DIR/$(dirname "$f")"
+            cp -a "$f" "$TMP_DIR/$f"
+          done
+
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            for f in "${FILES[@]}"; do
+              mkdir -p "$(dirname "$f")"
+              cp -a "$TMP_DIR/$f" "$f"
+            done
+            if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
+              echo "Origin/main já possui os novos públicos."
+              exit 0
+            fi
+            git add -- "${FILES[@]}"
+            git commit -m "Atualizar públicos do Brasileirão - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "ERRO: push dos públicos falhou após 5 tentativas." >&2
+          exit 1
+
+      - name: Disparar deploy após público publicado
+        if: steps.publish.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy.yml --ref main
+          echo "Deploy disparado para os novos públicos."

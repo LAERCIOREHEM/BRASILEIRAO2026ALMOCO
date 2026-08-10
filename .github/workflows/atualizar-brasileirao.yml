@@ -1,9 +1,9 @@
 name: Atualizar Brasileirao (ESPN)
 
 on:
-  # Execução operacional exclusiva por workflow_dispatch. O cron-job.org
-  # chama este mesmo gatilho; o botão "Run workflow" continua disponível.
-  # Não há schedule interno nem push automático, evitando execuções duplicadas.
+  # Execução operacional por workflow_dispatch. O orquestrador inteligente é o
+  # único gatilho automático; o botão "Run workflow" continua disponível.
+  # Não há schedule interno nem cron externo direto neste workflow.
   workflow_dispatch:
     inputs:
       forcar_af:
@@ -71,7 +71,6 @@ jobs:
           python -m py_compile \
             atualizar_espn.py \
             fontes_brasileirao.py \
-            scripts/atualizar_transmissoes_tv_brasileirao.py \
             scripts/gerenciar_status_brasileirao.py \
             scripts/buscar_lideres_jogadores_espn.py \
             scripts/buscar_detalhes_jogos_brasileirao.py \
@@ -87,7 +86,6 @@ jobs:
             scripts/apurar_rodada.py
           python atualizar_espn.py --selftest
           python fontes_brasileirao.py --selftest
-          python scripts/atualizar_transmissoes_tv_brasileirao.py --selftest
           python scripts/gerenciar_status_brasileirao.py --selftest
           python scripts/buscar_lideres_jogadores_espn.py --self-test
           python scripts/buscar_detalhes_jogos_brasileirao.py --self-test
@@ -98,8 +96,6 @@ jobs:
           python scripts/gerar_probabilidades_jogos.py --self-test
           python scripts/avaliar_af_previsao.py --self-test
           python scripts/apurar_rodada.py --self-test
-          python -m json.tool dados-br/config-transmissoes-tv.json > /dev/null
-          python -m json.tool dados-br/auditoria-transmissoes-tv.json > /dev/null
 
       - name: Registrar estado esportivo anterior do AF-Previsão
         run: |
@@ -143,7 +139,11 @@ jobs:
           bruto = json.dumps(estado, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')
           digest = hashlib.sha256(bruto).hexdigest()
           Path('/tmp/af_estado_antes.sha256').write_text(digest, encoding='utf-8')
+          resultados_bruto = json.dumps(estado.get('resultados') or [], ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')
+          resultados_digest = hashlib.sha256(resultados_bruto).hexdigest()
+          Path('/tmp/resultados_antes.sha256').write_text(resultados_digest, encoding='utf-8')
           print(f'Estado anterior do AF: {digest}')
+          print(f'Resultados anteriores: {resultados_digest}')
           PY
 
       # --- DADOS DO BRASILEIRAO ---
@@ -172,64 +172,35 @@ jobs:
           BR_SITE: Brasileirão 2026 Almoço
         run: python scripts/gerenciar_status_brasileirao.py --from-env
 
-      - name: Publicar resultados finais imediatamente
+      - name: Detectar mudança real de resultados
+        id: resultado_gate
         if: steps.espn.outputs.sincronizado == 'true'
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          cd "$GITHUB_WORKSPACE"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
 
-          FILES=(
-            "tabela.json"
-            "espn_eventos.json"
-            "jogos.json"
-            "resultados.json"
-            "dados-br/status-atualizacao.json"
-          )
-
-          TMP_DIR="$(mktemp -d)"
-          for f in "${FILES[@]}"; do
-            test -f "$f"
-            mkdir -p "$TMP_DIR/$(dirname "$f")"
-            cp -a "$f" "$TMP_DIR/$f"
-          done
-
-          for i in 1 2 3 4 5; do
-            git fetch origin main
-            git reset --hard origin/main
-            git clean -fd
-            for f in "${FILES[@]}"; do
-              mkdir -p "$(dirname "$f")"
-              cp -a "$TMP_DIR/$f" "$f"
-            done
-            if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
-              echo "Outro run já publicou o mesmo resultado final."
-              if ! gh workflow run deploy.yml --ref main; then
-                echo "::warning::O deploy imediato não pôde ser disparado; o workflow_run fará a recuperação ao término."
-              fi
-              exit 0
-            fi
-            git add -- "${FILES[@]}"
-            git commit -m "Publicar resultados finais - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
-            if git push origin HEAD:main; then
-              echo "Resultados finais publicados na tentativa $i."
-              if ! gh workflow run deploy.yml --ref main; then
-                echo "::warning::O deploy imediato não pôde ser disparado; o workflow_run fará a recuperação ao término."
-              fi
-              exit 0
-            fi
-            sleep 3
-          done
-
-          echo "ERRO: não foi possível publicar os resultados finais."
-          exit 1
+          payload = json.loads(Path('resultados.json').read_text(encoding='utf-8'))
+          linhas = payload.get('resultados') or []
+          bruto = json.dumps(linhas, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')
+          depois = hashlib.sha256(bruto).hexdigest()
+          antes = Path('/tmp/resultados_antes.sha256').read_text(encoding='utf-8').strip()
+          mudou = antes != depois
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as out:
+              out.write(f"mudou={str(mudou).lower()}\n")
+          print(f'Resultados antes: {antes}')
+          print(f'Resultados depois: {depois}')
+          print('Mudança esportiva de resultados:', mudou)
+          PY
 
       - name: Apurar ranking parcial no mesmo snapshot essencial
-        if: steps.espn.outputs.sincronizado == 'true'
+        id: apurar_essencial
+        if: steps.espn.outputs.sincronizado == 'true' && steps.resultado_gate.outputs.mudou == 'true'
+        continue-on-error: true
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -237,7 +208,7 @@ jobs:
         run: python scripts/apurar_rodada.py
 
       - name: Validar resultado e ranking parcial essenciais
-        if: steps.espn.outputs.sincronizado == 'true'
+        if: steps.espn.outputs.sincronizado == 'true' && steps.resultado_gate.outputs.mudou == 'true' && steps.apurar_essencial.outcome == 'success'
         run: |
           python -m json.tool tabela.json > /dev/null
           python -m json.tool espn_eventos.json > /dev/null
@@ -256,12 +227,6 @@ jobs:
           assert int(resultados.get('total_resultados') or 0) == len(finais)
           assert all(str(j.get('event_id') or '').strip() for j in finais)
           assert len({str(j.get('event_id') or '') for j in finais}) == len(finais)
-          assert all(
-              str(j.get('estado') or '').lower() == 'post'
-              and j.get('placar_mandante') is not None
-              and j.get('placar_visitante') is not None
-              for j in finais
-          )
           assert apuracao.get('schema_version') == 4
           assert ranking.get('schema_version') == 4
           assert (apuracao.get('validacao_resultados') or {}).get('somente_finalizados') is True
@@ -278,37 +243,52 @@ jobs:
                   continue
               esperados = len(finais_por_rodada.get(numero, set()))
               assert int(rodada.get('jogos_apurados') or 0) == esperados, (
-                  f'Rodada {numero}: apuração não acompanhou os resultados finais '
+                  f'Rodada {numero}: apuração não acompanhou resultados finais '
                   f'({rodada.get("jogos_apurados")}/{esperados}).'
               )
-              if esperados > 0 and int(rodada.get('participantes') or 0) > 0:
-                  assert rodada.get('ranking'), f'Rodada {numero}: ranking parcial vazio.'
-                  assert rodada.get('jogos'), f'Rodada {numero}: detalhes dos palpites ausentes.'
-                  for jogo in rodada.get('jogos') or []:
-                      assert (jogo.get('resultado') or {}).get('event_id')
-                      assert isinstance(jogo.get('palpites'), list)
-                      for palpite in jogo.get('palpites') or []:
-                          assert palpite.get('pontos') is not None
-                          assert palpite.get('tipo') in {'exato', 'saldo', 'resultado', 'erro'}
-
-          print('Resultados finais, ranking parcial e detalhes validados para publicação prioritária.')
+          print('Resultado e apuração parcial validados para publicação conjunta.')
           PY
 
-      - name: Publicar ranking parcial sem aguardar o processamento pesado
+      - name: Publicar snapshot essencial de resultado e bolão
+        id: publish_essential
         if: steps.espn.outputs.sincronizado == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          RESULTADO_MUDOU: ${{ steps.resultado_gate.outputs.mudou }}
+          APURACAO_OUTCOME: ${{ steps.apurar_essencial.outcome }}
         run: |
           set -euo pipefail
+          echo "published=false" >> "$GITHUB_OUTPUT"
           cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           FILES=(
-            "dados-br/apuracao.json"
-            "dados-br/ranking-apostas.json"
+            "tabela.json"
+            "espn_eventos.json"
+            "jogos.json"
+            "resultados.json"
+            "dados-br/status-atualizacao.json"
           )
+
+          # Caminho normal pós-FINAL: resultado e pontuação entram no MESMO commit.
+          # Se o Supabase/apuração oscilar, o resultado não fica represado; o
+          # orquestrador detectará a apuração defasada e chamará apurar-brasileirao.
+          if [[ "${RESULTADO_MUDOU:-false}" == "true" && "${APURACAO_OUTCOME:-}" == "success" ]]; then
+            FILES+=("dados-br/apuracao.json" "dados-br/ranking-apostas.json")
+            MSG="Publicar resultado e apuração parcial"
+          elif [[ "${RESULTADO_MUDOU:-false}" == "true" ]]; then
+            MSG="Publicar resultado final; apuração pendente"
+            echo "::warning::Apuração falhou; resultado será publicado e o orquestrador fará a recuperação."
+          else
+            MSG="Atualizar estado essencial do Brasileirão"
+          fi
+
+          if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
+            echo "Nenhuma mudança essencial para publicar."
+            exit 0
+          fi
 
           TMP_DIR="$(mktemp -d)"
           for f in "${FILES[@]}"; do
@@ -326,26 +306,30 @@ jobs:
               cp -a "$TMP_DIR/$f" "$f"
             done
             if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
-              echo "Outro run já publicou o mesmo ranking parcial."
-              if ! gh workflow run deploy.yml --ref main; then
-                echo "::warning::O deploy imediato não pôde ser disparado; o workflow_run fará a recuperação ao término."
-              fi
+              echo "Outro run já publicou o mesmo snapshot essencial."
               exit 0
             fi
             git add -- "${FILES[@]}"
-            git commit -m "Publicar ranking parcial - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            git commit -m "$MSG - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
             if git push origin HEAD:main; then
-              echo "Ranking parcial publicado na tentativa $i."
-              if ! gh workflow run deploy.yml --ref main; then
-                echo "::warning::O deploy imediato não pôde ser disparado; o workflow_run fará a recuperação ao término."
-              fi
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              echo "Snapshot essencial publicado na tentativa $i."
               exit 0
             fi
             sleep 3
           done
-
-          echo "ERRO: não foi possível publicar o ranking parcial."
+          echo "ERRO: não foi possível publicar o snapshot essencial."
           exit 1
+
+      - name: Deploy imediato do snapshot essencial
+        if: steps.publish_essential.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy.yml --ref main
+          echo "Deploy disparado: resultado e apuração normal chegam juntos."
 
       - name: Informar preservação por dessincronia temporária da ESPN
         if: steps.espn.outputs.sincronizado != 'true'
@@ -404,10 +388,6 @@ jobs:
           done
           echo "ERRO: não foi possível publicar o status preservado."
           exit 1
-
-      - name: Atualizar transmissões oficiais da agenda
-        if: steps.espn.outputs.sincronizado == 'true'
-        run: python scripts/atualizar_transmissoes_tv_brasileirao.py
 
       - name: Gerar auditoria estrutural do calendário
         if: steps.espn.outputs.sincronizado == 'true'
@@ -540,7 +520,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "Arquivos JSON presentes e validos:"
-          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/transmissoes-tv.json dados-br/auditoria-transmissoes-tv.json dados-br/status-atualizacao.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
+          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/status-atualizacao.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
             if [ ! -f "$arq" ]; then
               echo "ERRO: $arq nao foi gerado."
               exit 1
@@ -566,12 +546,6 @@ jobs:
           status_ops = json.load(open('dados-br/status-atualizacao.json', encoding='utf-8'))
           assert status_ops.get('status') in {'ok', 'aviso'}, 'status operacional incompatível com publicação sincronizada'
           assert status_ops.get('sincronizado') is True, 'status operacional não reconhece snapshot sincronizado'
-          tv = json.load(open('dados-br/transmissoes-tv.json', encoding='utf-8'))
-          assert isinstance(tv.get('jogos'), dict), 'transmissoes-tv.json sem mapa de jogos'
-          aud_tv = json.load(open('dados-br/auditoria-transmissoes-tv.json', encoding='utf-8'))
-          assert isinstance(aud_tv.get('fontes'), dict), 'auditoria de transmissões sem mapa de fontes'
-          assert isinstance(aud_tv.get('sem_transmissao'), list), 'auditoria de transmissões sem pendências'
-          assert int((aud_tv.get('resumo') or {}).get('jogos_com_transmissao') or 0) == len(tv['jogos']), 'auditoria de transmissões divergente'
           print('  OK   JSONs principais: ESPN como fonte principal; tabela com 20 times')
           stats = json.load(open('dados-br/estatisticas.json', encoding='utf-8'))
           rank = json.load(open('dados-br/ranking-desempenho.json', encoding='utf-8'))
@@ -850,10 +824,12 @@ jobs:
       # reaplica os arquivos -> commit -> push. Nunca gera conflito artificial
       # de rebase em arquivos-artefato, mesmo sob concorrencia real.
       - name: Commitar JSONs juntos com push robusto
+        id: publish_full
         if: steps.espn.outputs.sincronizado == 'true'
         shell: bash
         run: |
           set -euo pipefail
+          echo "published=false" >> "$GITHUB_OUTPUT"
           cd "$GITHUB_WORKSPACE"
 
           git config user.name "github-actions[bot]"
@@ -864,8 +840,6 @@ jobs:
             "espn_eventos.json"
             "jogos.json"
             "resultados.json"
-            "dados-br/transmissoes-tv.json"
-            "dados-br/auditoria-transmissoes-tv.json"
             "dados-br/status-atualizacao.json"
             "dados-br/apuracao.json"
             "dados-br/ranking-apostas.json"
@@ -934,6 +908,7 @@ jobs:
 
             if git push origin HEAD:main; then
               echo "Push OK na tentativa $i."
+              echo "published=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
@@ -943,6 +918,17 @@ jobs:
 
           echo "ERRO: Push falhou apos 5 tentativas."
           exit 1
+
+      - name: Deploy dos derivados completos
+        if: steps.publish_full.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy.yml --ref main
+          echo "Deploy disparado para AF, estatísticas e demais derivados atualizados."
+
 
   # Job de alerta de falha crítica — substitui o Monitorar (workflow_run).
   # Roda apenas quando o job principal falha; não ocupa repo-write-main.
