@@ -715,7 +715,10 @@
     });
   }
 
-  // ── Auto-refresh do ranking e apuração (a cada 5 min quando rodada ativa) ──
+  // ── Auto-refresh inteligente do ranking/apuração ───────────────────────
+  // Perto de jogo, o backend pode publicar resultado+pontuação logo após FINAL;
+  // nesse período consultamos os dois JSONs a cada 60 s. Fora da janela de jogo,
+  // 5 min são suficientes. São arquivos estáticos e não acionam workflow.
   async function recarregarApuracao() {
     try {
       const [apuracao, rankingApostas] = await Promise.all([
@@ -732,15 +735,31 @@
     return state.rodadas.some(r => rodadaAberta(r) || rodadaPublica(r));
   }
 
+  function intervaloAutoRefreshApuracao() {
+    const agora = Date.now();
+    const jogos = (state.calendarioCompletoJson && state.calendarioCompletoJson.jogos) || [];
+    const janelaRapida = jogos.some(j => {
+      if (!jogoTemHorarioConfiavel(j)) return false;
+      const data = parseData(j.data_iso);
+      if (!data) return false;
+      const delta = agora - data.getTime();
+      return delta >= -30 * 60 * 1000 && delta <= 5 * 60 * 60 * 1000;
+    });
+    return janelaRapida ? 60 * 1000 : 5 * 60 * 1000;
+  }
+
   function iniciarAutoRefresh() {
     pararAutoRefresh();
     if (!rodadaAtiva()) return;
-    state._autoRefreshTimer = setInterval(recarregarApuracao, 5 * 60 * 1000);
+    state._autoRefreshTimer = setTimeout(async () => {
+      await recarregarApuracao();
+      iniciarAutoRefresh(); // recalcula a cadência conforme a janela dos jogos
+    }, intervaloAutoRefreshApuracao());
   }
 
   function pararAutoRefresh() {
     if (state._autoRefreshTimer) {
-      clearInterval(state._autoRefreshTimer);
+      clearTimeout(state._autoRefreshTimer);
       state._autoRefreshTimer = null;
     }
   }

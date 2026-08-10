@@ -1,0 +1,47 @@
+{
+  "timezone": "America/Sao_Paulo",
+  "atualizar_brasileirao": {
+    "sondagem_antes_minutos": 45,
+    "sondagem_depois_minutos": 240,
+    "intervalo_pre_jogo_minutos": 60,
+    "retentativa_final_pendente_minutos": 10,
+    "fallback_final_estimado_minutos": 105,
+    "manutencao_diaria_apos": "05:10"
+  },
+  "apuracao": {
+    "tolerancia_atraso_segundos": 20,
+    "retentativa_minutos": 10
+  },
+  "af_previsao": {
+    "retentativa_minutos": 20
+  },
+  "publicos": {
+    "primeira_tentativa_apos_final_minutos": 15,
+    "intervalos_retentativa": [
+      {"ate_horas": 2, "minutos": 30},
+      {"ate_horas": 6, "minutos": 60},
+      {"ate_horas": 24, "minutos": 120},
+      {"ate_horas": 72, "minutos": 360},
+      {"ate_horas": 168, "minutos": 720},
+      {"ate_horas": 99999, "minutos": 1440}
+    ]
+  },
+  "melhores_momentos": {
+    "primeira_tentativa_apos_final_minutos": 10,
+    "intervalos_retentativa": [
+      {"ate_horas": 2, "minutos": 10},
+      {"ate_horas": 6, "minutos": 30},
+      {"ate_horas": 24, "minutos": 120},
+      {"ate_horas": 72, "minutos": 360},
+      {"ate_horas": 99999, "minutos": 720}
+    ]
+  },
+  "transmissoes": {
+    "tv_diaria_apos": "06:30"
+  },
+  "github": {
+    "branch": "main",
+    "historico_runs": 200,
+    "bloquear_se_writer_ativo": true
+  }
+}
