@@ -1,17 +1,117 @@
 {
-  "gerado_em": "2026-08-09T19:57:36.838315-03:00",
+  "gerado_em": "2026-08-09T20:57:34.229007-03:00",
   "fonte": "ESPN summary",
   "modo": "rede",
-  "total_resultados_lidos": 212,
-  "total_processados": 212,
+  "total_resultados_lidos": 214,
+  "total_processados": 214,
   "total_buscados_na_espn": 0,
   "total_com_estatisticas": 203,
   "total_com_publico": 182,
-  "total_sem_publico": 30,
+  "total_sem_publico": 32,
   "total_com_eventos": 203,
   "total_eventos_validados": 206,
-  "total_eventos_pendentes_detalhes": 6,
+  "total_eventos_pendentes_detalhes": 8,
   "eventos_pendentes_detalhes": [
+    {
+      "event_id": "401841179",
+      "jogo": "Bragantino x Corinthians",
+      "validacao": {
+        "gols_esperados": {
+          "Bragantino": 0,
+          "Corinthians": 2
+        },
+        "gols_extraidos": {
+          "Bragantino": 0,
+          "Corinthians": 0
+        },
+        "gols_completos": false,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": false,
+        "cartoes_esperados": {
+          "Bragantino": {
+            "amarelo": null,
+            "vermelho": null
+          },
+          "Corinthians": {
+            "amarelo": null,
+            "vermelho": null
+          }
+        },
+        "cartoes_extraidos": {
+          "Bragantino": {
+            "amarelo": 0,
+            "vermelho": 0
+          },
+          "Corinthians": {
+            "amarelo": 0,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": true,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": false,
+        "pendente_detalhes": true,
+        "tipo_pendencia": "ficha_espn_incompleta",
+        "motivo": "ficha de gols incompleta: 0/2 atribuídos"
+      }
+    },
+    {
+      "event_id": "401841182",
+      "jogo": "Santos x Athletico-PR",
+      "validacao": {
+        "gols_esperados": {
+          "Santos": 0,
+          "Athletico-PR": 2
+        },
+        "gols_extraidos": {
+          "Santos": 0,
+          "Athletico-PR": 0
+        },
+        "gols_completos": false,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": false,
+        "cartoes_esperados": {
+          "Santos": {
+            "amarelo": null,
+            "vermelho": null
+          },
+          "Athletico-PR": {
+            "amarelo": null,
+            "vermelho": null
+          }
+        },
+        "cartoes_extraidos": {
+          "Santos": {
+            "amarelo": 0,
+            "vermelho": 0
+          },
+          "Athletico-PR": {
+            "amarelo": 0,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": true,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": false,
+        "pendente_detalhes": true,
+        "tipo_pendencia": "ficha_espn_incompleta",
+        "motivo": "ficha de gols incompleta: 0/2 atribuídos"
+      }
+    },
     {
       "event_id": "401841183",
       "jogo": "Cruzeiro x Mirassol",
@@ -317,11 +417,30 @@
   "inconsistencias_eventos": [],
   "total_sem_estatisticas": 0,
   "total_preservados_de_execucao_anterior": 212,
-  "total_falhas": 0,
+  "total_falhas": 2,
   "sem_estatisticas": [],
-  "falhas": [],
+  "falhas": [
+    {
+      "event_id": "401841179",
+      "jogo": "R22 · Bragantino x Corinthians · 401841179",
+      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841179: HTTPError: HTTP Error 403: Forbidden"
+    },
+    {
+      "event_id": "401841182",
+      "jogo": "R22 · Santos x Athletico-PR · 401841182",
+      "erro": "falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841182: HTTPError: HTTP Error 403: Forbidden"
+    }
+  ],
   "total_com_jogadores": 203,
   "jogos_sem_escalacoes": [
+    {
+      "event_id": "401841179",
+      "jogo": "Bragantino x Corinthians"
+    },
+    {
+      "event_id": "401841182",
+      "jogo": "Santos x Athletico-PR"
+    },
     {
       "event_id": "401841186",
       "jogo": "Bahia x Vasco da Gama"
