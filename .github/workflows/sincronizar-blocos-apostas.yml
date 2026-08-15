@@ -1,0 +1,109 @@
+name: Sincronizar blocos de apostas
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repo-write-main
+  cancel-in-progress: false
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validar automação dos blocos
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/sincronizar_blocos_apostas.py
+          python scripts/sincronizar_blocos_apostas.py --self-test
+          python -m json.tool dados-br/apostas-config.json >/dev/null
+
+      - name: Sincronizar janelas e avisar abertura
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+          BRASILEIRAO_TEMPORADA: '2026'
+        run: python scripts/sincronizar_blocos_apostas.py
+
+      - name: Validar auditoria dos blocos
+        run: |
+          set -euo pipefail
+          python -m json.tool dados-br/auditoria-blocos-apostas.json >/dev/null
+          python - <<'PY'
+          import json
+          d=json.load(open('dados-br/auditoria-blocos-apostas.json',encoding='utf-8'))
+          assert d.get('schema_version') == 1
+          assert len(d.get('blocos') or []) == 6
+          assert all(int(b.get('total_canonicos') or 0) == 30 for b in d.get('blocos') or []), d.get('criticos')
+          assert d.get('status') != 'critical', d.get('criticos')
+          print('Auditoria dos seis blocos válida.')
+          PY
+
+      - name: Publicar auditoria dos blocos
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          FILE="dados-br/auditoria-blocos-apostas.json"
+          if [[ -z "$(git status --porcelain -- "$FILE")" ]]; then
+            echo "Nenhuma alteração na auditoria dos blocos."
+            exit 0
+          fi
+          TMP="$(mktemp)"
+          cp -a "$FILE" "$TMP"
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            mkdir -p dados-br
+            cp -a "$TMP" "$FILE"
+            if [[ -z "$(git status --porcelain -- "$FILE")" ]]; then
+              echo "Outro fluxo já publicou o mesmo estado."
+              exit 0
+            fi
+            git add -- "$FILE"
+            git commit -m "Sincronizar blocos de apostas - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then exit 0; fi
+            sleep 3
+          done
+          echo "ERRO: não foi possível publicar auditoria dos blocos." >&2
+          exit 1
+
+      - name: Alertar falha operacional
+        if: failure()
+        continue-on-error: true
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          key=os.getenv('RESEND_API_KEY','').strip(); dest=os.getenv('EMAIL_DESTINO','').strip()
+          if not key or not dest: raise SystemExit(0)
+          sender=os.getenv('EMAIL_REMETENTE','').strip() or 'Apostas · Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>'
+          body=json.dumps({'from':sender,'to':[dest],'subject':'[BR2026 Almoço] Falha na automação dos blocos','html':'<h2>Falha na automação dos blocos de apostas</h2><p>O workflow <b>Sincronizar blocos de apostas</b> falhou. Verifique o GitHub Actions antes do próximo prazo.</p>'}).encode()
+          req=urllib.request.Request('https://api.resend.com/emails',data=body,headers={'Authorization':f'Bearer {key}','Content-Type':'application/json'},method='POST')
+          urllib.request.urlopen(req,timeout=20).read()
+          PY

@@ -113,6 +113,9 @@ jobs:
             apurar_apostas)
               gh workflow run apurar-brasileirao.yml --ref main
               ;;
+            sincronizar_blocos_apostas)
+              gh workflow run sincronizar-blocos-apostas.yml --ref main
+              ;;
             publicos)
               gh workflow run atualizar-publicos-brasileirao.yml --ref main
               ;;

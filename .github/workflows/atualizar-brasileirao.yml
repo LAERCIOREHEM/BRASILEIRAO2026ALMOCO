@@ -79,6 +79,7 @@ jobs:
             scripts/gerar_auditoria_estatisticas_brasileirao.py \
             scripts/gerar_auditoria_calendario.py \
             scripts/gerar_auditoria_geral.py \
+            scripts/sincronizar_blocos_apostas.py \
             scripts/af_previsao_backtest.py \
             scripts/af_previsao_continental.py \
             scripts/atualizar_competicoes_af_previsao.py \
@@ -94,6 +95,7 @@ jobs:
           python scripts/gerar_auditoria_estatisticas_brasileirao.py --self-test
           python scripts/gerar_auditoria_calendario.py --self-test
           python scripts/gerar_auditoria_geral.py --self-test
+          python scripts/sincronizar_blocos_apostas.py --self-test
           python scripts/atualizar_competicoes_af_previsao.py --self-test
           python scripts/af_previsao_continental.py --self-test
           python scripts/gerar_probabilidades_brasileirao.py --self-test
@@ -201,6 +203,19 @@ jobs:
           print('Mudança esportiva de resultados:', mudou)
           PY
 
+      - name: Sincronizar blocos de apostas e avisar nova abertura
+        id: sync_blocos
+        if: steps.espn.outputs.sincronizado == 'true'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+          BRASILEIRAO_TEMPORADA: '2026'
+        run: python scripts/sincronizar_blocos_apostas.py
+
       - name: Apurar ranking parcial no mesmo snapshot essencial
         id: apurar_essencial
         if: steps.espn.outputs.sincronizado == 'true' && steps.resultado_gate.outputs.mudou == 'true'
@@ -210,6 +225,18 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           BRASILEIRAO_TEMPORADA: '2026'
         run: python scripts/apurar_rodada.py
+
+      - name: Atualizar auditoria dos blocos após apuração
+        if: steps.espn.outputs.sincronizado == 'true' && steps.resultado_gate.outputs.mudou == 'true' && steps.apurar_essencial.outcome == 'success'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+          BRASILEIRAO_TEMPORADA: '2026'
+        run: python scripts/sincronizar_blocos_apostas.py --sem-email
 
       - name: Validar resultado e ranking parcial essenciais
         if: steps.espn.outputs.sincronizado == 'true' && steps.resultado_gate.outputs.mudou == 'true' && steps.apurar_essencial.outcome == 'success'
@@ -275,6 +302,12 @@ jobs:
             "resultados.json"
             "dados-br/status-atualizacao.json"
           )
+          # A sincronização dos blocos ocorre antes deste push. Preserve a auditoria
+          # no snapshot essencial para que o reset robusto não a descarte na primeira
+          # execução da Execução 21.
+          if [[ -f dados-br/auditoria-blocos-apostas.json ]]; then
+            FILES+=("dados-br/auditoria-blocos-apostas.json")
+          fi
 
           # Caminho normal pós-FINAL: resultado e pontuação entram no MESMO commit.
           # Se o Supabase/apuração oscilar, o resultado não fica represado; o
@@ -531,7 +564,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "Arquivos JSON presentes e validos:"
-          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/status-atualizacao.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/auditoria-geral.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
+          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/status-atualizacao.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/auditoria-geral.json dados-br/auditoria-blocos-apostas.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
             if [ ! -f "$arq" ]; then
               echo "ERRO: $arq nao foi gerado."
               exit 1
@@ -885,6 +918,7 @@ jobs:
             "dados-br/calendario-completo.json"
             "dados-br/auditoria-calendario.json"
             "dados-br/auditoria-geral.json"
+            "dados-br/auditoria-blocos-apostas.json"
             "dados-br/competicoes-af-previsao/copa-do-brasil.json"
             "dados-br/competicoes-af-previsao/libertadores.json"
             "dados-br/competicoes-af-previsao/sul-americana.json"

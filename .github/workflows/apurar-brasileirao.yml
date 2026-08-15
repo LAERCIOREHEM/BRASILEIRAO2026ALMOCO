@@ -40,10 +40,22 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Validar regras da Execução 4.1
+      - name: Validar regras da Execução 21
         run: |
-          python -m py_compile scripts/apurar_rodada.py
+          python -m py_compile scripts/apurar_rodada.py scripts/sincronizar_blocos_apostas.py
           python scripts/apurar_rodada.py --self-test
+          python scripts/sincronizar_blocos_apostas.py --self-test
+
+      - name: Sincronizar janelas dos blocos antes da apuração
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+          BRASILEIRAO_TEMPORADA: '2026'
+        run: python scripts/sincronizar_blocos_apostas.py
 
       - name: Apurar rodadas, blocos e rankings
         env:
@@ -52,10 +64,22 @@ jobs:
           BRASILEIRAO_TEMPORADA: '2026'
         run: python scripts/apurar_rodada.py
 
+      - name: Atualizar auditoria dos blocos após apuração
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
+          BRASILEIRAO_TEMPORADA: '2026'
+        run: python scripts/sincronizar_blocos_apostas.py --sem-email
+
       - name: Validar JSONs gerados
         run: |
           python -m json.tool dados-br/apuracao.json > /dev/null
           python -m json.tool dados-br/ranking-apostas.json > /dev/null
+          if [[ -f dados-br/auditoria-blocos-apostas.json ]]; then python -m json.tool dados-br/auditoria-blocos-apostas.json >/dev/null; fi
           python - <<'PY'
           import json
           ap = json.load(open('dados-br/apuracao.json', encoding='utf-8'))
@@ -87,6 +111,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           FILES=("dados-br/apuracao.json" "dados-br/ranking-apostas.json")
+          if [[ -f dados-br/auditoria-blocos-apostas.json ]]; then FILES+=("dados-br/auditoria-blocos-apostas.json"); fi
           if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
             echo "Nenhuma alteração de apuração."
             exit 0
@@ -96,6 +121,7 @@ jobs:
           mkdir -p "$TMP_DIR/dados-br"
           cp -a dados-br/apuracao.json "$TMP_DIR/dados-br/apuracao.json"
           cp -a dados-br/ranking-apostas.json "$TMP_DIR/dados-br/ranking-apostas.json"
+          if [[ -f dados-br/auditoria-blocos-apostas.json ]]; then cp -a dados-br/auditoria-blocos-apostas.json "$TMP_DIR/dados-br/auditoria-blocos-apostas.json"; fi
 
           for i in 1 2 3 4 5; do
             git fetch origin main
@@ -104,6 +130,7 @@ jobs:
             mkdir -p dados-br
             cp -a "$TMP_DIR/dados-br/apuracao.json" dados-br/apuracao.json
             cp -a "$TMP_DIR/dados-br/ranking-apostas.json" dados-br/ranking-apostas.json
+            if [[ -f "$TMP_DIR/dados-br/auditoria-blocos-apostas.json" ]]; then cp -a "$TMP_DIR/dados-br/auditoria-blocos-apostas.json" dados-br/auditoria-blocos-apostas.json; fi
 
             if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
               echo "Outro fluxo já publicou a mesma apuração."
