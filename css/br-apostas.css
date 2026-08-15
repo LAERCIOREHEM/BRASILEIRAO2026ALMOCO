@@ -1684,3 +1684,50 @@ body > .container > section.hero > img {
   .rk-badges { gap: 4px; }
   .rk-badge { padding: 3px 6px; }
 }
+
+
+/* ==========================================================================
+   Execução 21 — blocos independentes, ação atual e apuração simultânea
+   ========================================================================== */
+.block-status-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.block-status-overview[hidden] { display: none !important; }
+.block-status-card {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 14px;
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .72);
+}
+.block-status-card.action { border-color: rgba(52, 211, 153, .42); background: rgba(5, 150, 105, .12); }
+.block-status-card.partial { border-color: rgba(250, 204, 21, .28); background: rgba(113, 63, 18, .12); }
+.block-status-card.next { border-color: rgba(96, 165, 250, .26); background: rgba(30, 64, 175, .10); }
+.block-status-card > div { min-width: 0; display: grid; gap: 3px; }
+.block-status-card strong { color: #f8fafc; font-size: 14px; line-height: 1.25; }
+.block-status-card span { color: var(--muted); font-size: 11px; line-height: 1.35; }
+.block-status-card .btn { flex: 0 0 auto; white-space: nowrap; padding: 9px 11px; font-size: 11px; }
+.round-tabs button { align-items: center; }
+.round-tabs button > span:first-child { white-space: nowrap; }
+.round-state { margin-left: 4px; font-size: 10px; line-height: 1; white-space: nowrap; }
+.round-state.partial { color: #fde68a; }
+.round-state.done { color: #bbf7d0; }
+
+@media (max-width: 640px) {
+  .block-status-overview { grid-template-columns: 1fr; margin: 10px 0 12px; }
+  .block-status-card { align-items: stretch; display: grid; gap: 9px; }
+  .block-status-card .btn { width: 100%; }
+  .round-tabs button { min-width: max-content; }
+}
+
+@media (max-width: 360px) {
+  .block-status-card { padding: 11px 12px; }
+  .round-state.partial { font-size: 9px; }
+}

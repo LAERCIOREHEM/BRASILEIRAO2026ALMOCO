@@ -1,7 +1,7 @@
 {
-  "versao": 2,
+  "versao": 3,
   "temporada": 2026,
-  "observacao": "Configuração do bolão de placares do Brasileirão 2026. Rodadas 20–38. Datas em ISO com fuso -03:00. A janelaPadrao é usada pelo front para pré-calcular a janela de rodadas ainda sem config explícita no Supabase.",
+  "observacao": "Configuração do bolão de placares do Brasileirão 2026. Rodada 20 preservada; blocos 21–38 são sincronizados automaticamente pela matriz canônica e pelo relógio do primeiro kickoff confiável.",
   "rodadaInicialApostas": 20,
   "janelaPadrao": {
     "abreDiaSemana": 4,
@@ -19,5 +19,16 @@
       "status": "aberta",
       "observacao": "Primeira rodada do bolão de placares após a Copa. Aberta manualmente pelo admin."
     }
-  ]
+  ],
+  "blocosAutomaticos": {
+    "habilitado": true,
+    "antecedenciaAberturaDias": 7,
+    "fechamentoAntesPrimeiroJogoMinutos": 60,
+    "exigirConfrontosCanonicos": 30,
+    "permitirBlocoSeguinteComAnteriorPendente": true,
+    "estenderDeadlineAutomaticamenteAposPrimeiroPalpite": false,
+    "reabrirBlocoAutomaticamente": false,
+    "emailAoAbrir": true,
+    "observacao": "Cada bloco possui relógio de apostas independente da apuração. Jogo adiado permanece na rodada e no bloco originais; o próximo bloco não espera o anterior chegar a 30/30."
+  }
 }

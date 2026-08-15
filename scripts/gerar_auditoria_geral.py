@@ -34,6 +34,7 @@ FILES = {
     "tabela": ROOT / "tabela.json",
     "apuracao": ROOT / "dados-br" / "apuracao.json",
     "ranking_apostas": ROOT / "dados-br" / "ranking-apostas.json",
+    "aud_blocos": ROOT / "dados-br" / "auditoria-blocos-apostas.json",
     "detalhes": ROOT / "dados-br" / "jogos-detalhes.json",
     "aud_detalhes": ROOT / "dados-br" / "auditoria-jogos-detalhes.json",
     "aud_cobertura": ROOT / "dados-br" / "auditoria-cobertura-resultados.json",
@@ -261,6 +262,27 @@ def audit(root: Path = ROOT, now: datetime | None = None) -> dict[str, Any]:
                 resultados_finais=total_finais_bolao, ranking_jogos=total_rank,
             ))
 
+    # Integridade dos seis blocos é auditada separadamente e agregada aqui.
+    # Um bloco anterior parcial junto de um bloco seguinte aberto é um estado
+    # esperado, não uma inconsistência.
+    aud_blocos = data["aud_blocos"] if isinstance(data["aud_blocos"], Mapping) else {}
+    blocos_status = str(aud_blocos.get("status") or "").lower()
+    blocos_resumo = aud_blocos.get("resumo") if isinstance(aud_blocos.get("resumo"), Mapping) else {}
+    if not aud_blocos:
+        warnings.append(issue("AUDITORIA_BLOCOS_AUSENTE", "A auditoria dos blocos de apostas ainda não foi materializada."))
+    elif blocos_status == "critical":
+        critical.append(issue(
+            "BLOCOS_APOSTAS_INTEGRIDADE",
+            "A automação dos blocos de apostas detectou uma inconsistência crítica.",
+            problemas=(aud_blocos.get("criticos") or [])[:20],
+        ))
+    elif blocos_status == "warning":
+        warnings.append(issue(
+            "BLOCOS_APOSTAS_ATENCAO",
+            "A automação dos blocos possui pendências não críticas.",
+            avisos=(aud_blocos.get("avisos") or [])[:20],
+        ))
+
     # Cobertura de estatísticas: ausência isolada é warning, não corrupção.
     details_games = (data["detalhes"] or {}).get("jogos") or {}
     if not isinstance(details_games, Mapping):
@@ -389,6 +411,9 @@ def audit(root: Path = ROOT, now: datetime | None = None) -> dict[str, Any]:
             "tabela_partidas": table_physical_games,
             "jogos_finais_bolao_desde_r20": total_finais_bolao,
             "jogos_apurados_bolao": int(((apuracao.get("resumo") or {}) if isinstance(apuracao, Mapping) else {}).get("jogos_apurados_publicados") or 0),
+            "blocos_apostas_abertos": int((blocos_resumo or {}).get("abertos") or 0),
+            "blocos_apostas_em_apuracao": int((blocos_resumo or {}).get("em_apuracao") or 0),
+            "blocos_apostas_concluidos": int((blocos_resumo or {}).get("concluidos") or 0),
             "jogos_sem_estatisticas": len(missing_stats),
             "partidas_sem_publico": missing_public,
             "melhores_momentos_sem_video_24_48h": len(old_24),
@@ -403,6 +428,7 @@ def audit(root: Path = ROOT, now: datetime | None = None) -> dict[str, Any]:
             "melhores_momentos": "0-24h não é falha; 24-48h aviso; >48h só é crítico em lote de 3 ou mais.",
             "email": "Somente status critical novo/diferente dispara e-mail; ok/warning ficam silenciosos.",
             "fontes": "Auditoria local; nenhum dado esportivo é inventado ou recalculado pela auditoria.",
+            "blocos": "Blocos independentes: um bloco anterior parcial pode coexistir normalmente com o seguinte aberto.",
         },
     }
 
@@ -480,6 +506,7 @@ def self_test() -> None:
         (root/"dados-br/auditoria-transmissoes-tv.json").write_text(json.dumps({"atualizado_em":"2026-08-15T08:00:00-03:00","resumo":{"jogos_criticos_sem_transmissao_72h":0}}),encoding="utf-8")
         (root/"dados-br/apuracao.json").write_text(json.dumps({"schema_version":4,"resumo":{"jogos_apurados_publicados":0},"rodadas":[]}),encoding="utf-8")
         (root/"dados-br/ranking-apostas.json").write_text(json.dumps({"schema_version":4,"resumo":{"jogos_apurados_publicados":0}}),encoding="utf-8")
+        (root/"dados-br/auditoria-blocos-apostas.json").write_text(json.dumps({"schema_version":1,"status":"ok","resumo":{"abertos":1,"em_apuracao":1,"concluidos":0},"criticos":[],"avisos":[]}),encoding="utf-8")
         (root/"dados-br/auditoria-probabilidades.json").write_text(json.dumps({"status":"ok","integridade":{"partidas_2026_concluidas":0}}),encoding="utf-8")
         (root/"dados-br/status-atualizacao.json").write_text(json.dumps({"ultimo_sucesso":"2026-08-15T08:00:00-03:00"}),encoding="utf-8")
         payload = audit(root, datetime(2026,8,15,12,0,tzinfo=TZ))

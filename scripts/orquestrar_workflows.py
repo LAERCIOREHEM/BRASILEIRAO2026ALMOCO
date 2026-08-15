@@ -48,12 +48,14 @@ MM_PATH = ROOT / "dados-br" / "melhores-momentos.json"
 MM_MANUAL_PATH = ROOT / "dados-br" / "melhores-momentos-manual.json"
 TV_AUDIT_PATH = ROOT / "dados-br" / "auditoria-transmissoes-tv.json"
 GENERAL_AUDIT_PATH = ROOT / "dados-br" / "auditoria-geral.json"
+BLOCKS_AUDIT_PATH = ROOT / "dados-br" / "auditoria-blocos-apostas.json"
 
 WORKFLOW_MAIN = "Atualizar Brasileirao (ESPN)"
 WORKFLOW_APURAR = "Apurar Apostas Brasileirão"
 WORKFLOW_PUBLICOS = "Atualizar públicos do Brasileirão"
 WORKFLOW_MM = "Buscar melhores momentos Brasileirão oficiais"
 WORKFLOW_TV = "Buscar transmissões ao vivo do Brasileirão"
+WORKFLOW_BLOCKS = "Sincronizar blocos de apostas"
 
 REPO_WRITERS = {
     "Apurar Apostas Brasileirão",
@@ -67,6 +69,7 @@ REPO_WRITERS = {
     "Atualiza fair play (cartões)",
     "Buscar melhores momentos (CazéTV)",
     "Revisar melhores momentos Brasileirão oficiais",
+    "Sincronizar blocos de apostas",
 }
 
 DEFAULT_CONFIG: dict[str, Any] = {
@@ -103,6 +106,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         ],
     },
     "transmissoes": {"tv_diaria_apos": "06:30"},
+    "blocos_apostas": {"auditoria_max_horas": 6, "janela_boundary_minutos": 20, "retentativa_minutos": 30},
     "artefatos": {
         "auditoria_geral_max_horas": 30,
         "auditoria_transmissoes_max_horas": 36,
@@ -398,6 +402,32 @@ def main_decision(config: Mapping[str, Any], now: datetime, games: Sequence[Game
     return None
 
 
+def blocks_decision(config: Mapping[str, Any], now: datetime, runs: Sequence[Mapping[str, Any]], tz: ZoneInfo) -> Decision | None:
+    """Mantém janelas dos seis blocos sincronizadas sem depender da apuração anterior."""
+    cfg = config.get("blocos_apostas") or {}
+    max_hours = float(cfg.get("auditoria_max_horas") or 6)
+    boundary = float(cfg.get("janela_boundary_minutos") or 20)
+    retry = float(cfg.get("retentativa_minutos") or 30)
+    last, _ = last_run(runs, WORKFLOW_BLOCKS, tz)
+    payload = load_json(BLOCKS_AUDIT_PATH, {})
+    if not isinstance(payload, Mapping) or not payload:
+        if minutes_since(last, now) >= retry:
+            return Decision("sincronizar_blocos_apostas", "Auditoria dos blocos ainda não existe; materializar janelas automáticas e integridade.")
+        return None
+    generated = parse_dt(payload.get("gerado_em"), tz)
+    age_hours = minutes_since(generated, now) / 60.0 if generated else 10**6
+    if str(payload.get("status") or "").lower() == "critical" and minutes_since(last, now) >= retry:
+        return Decision("sincronizar_blocos_apostas", "Auditoria dos blocos detectou inconsistência crítica; sincronizar novamente antes de qualquer ação de aposta.")
+    next_event = parse_dt(payload.get("proximo_evento_em"), tz)
+    if next_event is not None:
+        delta = abs((next_event - now).total_seconds()) / 60.0
+        if delta <= boundary and minutes_since(last, now) >= min(retry, 10):
+            return Decision("sincronizar_blocos_apostas", f"Abertura/fechamento de bloco está a {delta:.0f} min; aplicar transição automática e eventual e-mail de abertura.")
+    if age_hours > max_hours and minutes_since(last, now) >= retry:
+        return Decision("sincronizar_blocos_apostas", f"Auditoria dos blocos está há {age_hours:.1f}h sem sincronização (> {max_hours:.0f}h).")
+    return None
+
+
 def apuracao_decision(config: Mapping[str, Any], now: datetime, runs: Sequence[Mapping[str, Any]], tz: ZoneInfo) -> Decision | None:
     resultados = load_json(RESULTADOS_PATH, {})
     apuracao = load_json(APURACAO_PATH, {})
@@ -645,6 +675,9 @@ def decide(config: Mapping[str, Any], now: datetime, games: Sequence[Game], stat
     main = main_decision(config, now, games, states, probe_errors, finals, runs, tz)
     if main:
         return main
+    blocks = blocks_decision(config, now, runs, tz)
+    if blocks:
+        return blocks
     ap = apuracao_decision(config, now, runs, tz)
     if ap:
         return ap
@@ -698,15 +731,23 @@ def self_test() -> int:
     # Writer ativo bloqueia novo dispatch.
     assert active_writer(recent + [{"name": WORKFLOW_MM, "status": "in_progress", "id": 3}]) is not None
 
-    # Saúde de artefatos: ausente/velho recupera, recente não interfere.
+    # Blocos: ausência, janela de boundary e frescor devem produzir sincronização.
     import tempfile
-    global GENERAL_AUDIT_PATH, TV_AUDIT_PATH
-    old_general, old_tv = GENERAL_AUDIT_PATH, TV_AUDIT_PATH
+    global GENERAL_AUDIT_PATH, TV_AUDIT_PATH, BLOCKS_AUDIT_PATH
+    old_general, old_tv, old_blocks = GENERAL_AUDIT_PATH, TV_AUDIT_PATH, BLOCKS_AUDIT_PATH
     with tempfile.TemporaryDirectory() as td:
         base = Path(td)
         GENERAL_AUDIT_PATH = base / "auditoria-geral.json"
         TV_AUDIT_PATH = base / "auditoria-tv.json"
+        BLOCKS_AUDIT_PATH = base / "auditoria-blocos.json"
         sem_run_recente: list[dict[str, Any]] = []
+        bdec = blocks_decision(config, now, sem_run_recente, tz)
+        assert bdec and bdec.action == "sincronizar_blocos_apostas"
+        BLOCKS_AUDIT_PATH.write_text(json.dumps({"status":"ok","gerado_em":now.isoformat(),"proximo_evento_em":(now+timedelta(minutes=15)).isoformat()}), encoding="utf-8")
+        bdec = blocks_decision(config, now, sem_run_recente, tz)
+        assert bdec and bdec.action == "sincronizar_blocos_apostas"
+        BLOCKS_AUDIT_PATH.write_text(json.dumps({"status":"ok","gerado_em":now.isoformat(),"proximo_evento_em":(now+timedelta(hours=3)).isoformat()}), encoding="utf-8")
+        assert blocks_decision(config, now, sem_run_recente, tz) is None
         health = artifact_health_decision(config, now, sem_run_recente, tz)
         assert health and health.action == "atualizar_brasileirao"
         GENERAL_AUDIT_PATH.write_text(json.dumps({"gerado_em": now.isoformat()}), encoding="utf-8")
@@ -719,9 +760,9 @@ def self_test() -> int:
         TV_AUDIT_PATH.write_text(json.dumps({"atualizado_em": (now - timedelta(hours=37)).isoformat()}), encoding="utf-8")
         health = artifact_health_decision(config, now, sem_run_recente, tz)
         assert health and health.action == "transmissoes_tv"
-    GENERAL_AUDIT_PATH, TV_AUDIT_PATH = old_general, old_tv
+    GENERAL_AUDIT_PATH, TV_AUDIT_PATH, BLOCKS_AUDIT_PATH = old_general, old_tv, old_blocks
 
-    print("OK self-test: FINAL, gol sem pipeline, backoff, artefatos envelhecidos e exclusão mútua validados.")
+    print("OK self-test: FINAL, blocos automáticos, gol sem pipeline, backoff, artefatos envelhecidos e exclusão mútua validados.")
     return 0
 
 

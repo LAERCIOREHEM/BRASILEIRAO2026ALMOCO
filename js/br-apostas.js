@@ -1,6 +1,6 @@
 /* ========================================================================== 
    br-apostas.js — Apostas logadas do Brasileirão 2026
-   Execuções 1–4.1: UX, blocos, apostas progressivas, apuração e rankings.
+   Execuções 1–5: UX, blocos automáticos independentes, apostas progressivas, apuração e rankings.
    ========================================================================== */
 (function (global, document) {
   "use strict";
@@ -210,6 +210,12 @@
     return `fg-${Number(CFG.temporada || 2026)}-r${rodada}-${mandante}-${visitante}`;
   }
   function jogoChave(j) { return `${normalizarTexto(timeNome(j.mandante))}-${normalizarTexto(timeNome(j.visitante))}-${String(j.data_iso || "").slice(0, 10)}`; }
+  function jogoUidCanonico(j) {
+    const rodada = Number(j && j.rodada || 0);
+    const mandante = String(timeNome(j && j.mandante) || "").trim().toLocaleLowerCase("pt-BR");
+    const visitante = String(timeNome(j && j.visitante) || "").trim().toLocaleLowerCase("pt-BR");
+    return `${Number(CFG.temporada || 2026)}|${rodada}|${mandante}|${visitante}`;
+  }
 
   function jogoComHorarioInconsistente(j) {
     if (!j) return false;
@@ -536,7 +542,11 @@
       bloco_rodada_inicio: cfg.bloco_rodada_inicio == null ? null : Number(cfg.bloco_rodada_inicio),
       bloco_rodada_fim: cfg.bloco_rodada_fim == null ? null : Number(cfg.bloco_rodada_fim),
       bloco_primeiro_jogo_em: cfg.bloco_primeiro_jogo_em || null,
-      bloco_versao: cfg.bloco_versao == null ? null : Number(cfg.bloco_versao)
+      bloco_versao: cfg.bloco_versao == null ? null : Number(cfg.bloco_versao),
+      bloco_status: cfg.bloco_status || null,
+      bloco_jogos_apurados: cfg.bloco_jogos_apurados == null ? null : Number(cfg.bloco_jogos_apurados),
+      bloco_apuracao_concluida: cfg.bloco_apuracao_concluida == null ? null : Boolean(cfg.bloco_apuracao_concluida),
+      bloco_sincronizado_em: cfg.bloco_sincronizado_em || null
     };
   }
 
@@ -554,8 +564,11 @@
         primeiro_jogo_em: cfg.bloco_primeiro_jogo_em || null,
         abre_em: cfg.abre_em || null,
         fecha_em: cfg.fecha_em || null,
-        status: cfg.status || "futura",
-        versao: cfg.bloco_versao || null
+        status: cfg.bloco_status || cfg.status || "futura",
+        versao: cfg.bloco_versao || null,
+        jogos_apurados: cfg.bloco_jogos_apurados == null ? 0 : Number(cfg.bloco_jogos_apurados),
+        apuracao_concluida: Boolean(cfg.bloco_apuracao_concluida),
+        sincronizado_em: cfg.bloco_sincronizado_em || null
       };
     }
     return blocoEstaticoDaRodada(r);
@@ -572,7 +585,10 @@
 
   function primeiroJogoDetectadoBloco(bloco) {
     if (!bloco) return null;
-    const datas = jogosDaRodada(Number(bloco.rodada_inicio))
+    // O deadline pertence ao bloco inteiro: uma partida antecipada da R25/R26
+    // pode ocorrer antes da primeira partida da R24. Por isso os 30 jogos são
+    // sempre considerados, nunca apenas a rodada inicial do bloco.
+    const datas = jogosDoBloco(bloco)
       .filter(jogoTemHorarioConfiavel)
       .map(j => parseData(j.data_iso))
       .filter(Boolean)
@@ -624,9 +640,11 @@
     const fecha = parseData(cfg.fecha_em);
     const agora = new Date();
     const status = String(cfg.status || "programada").toLowerCase();
-    if (rodadaPublica(rodada)) return { classe: "done", texto: "Palpites publicados", detalhe: `Rodada ${rodada} publicada` };
-    if (["fechada", "apurada", "bloqueada", "encerrada"].includes(status)) return { classe: "lock", texto: "Rodada fechada", detalhe: fecha ? `Fechada em ${fmtDataLonga(fecha)}` : `Rodada ${rodada} bloqueada` };
-    if (!abre || !fecha) return { classe: "warn", texto: "Aguardando programação", detalhe: `Rodada ${rodada} ainda sem janela completa` };
+    const bloco = blocoDaRodada(rodada);
+    const alvo = bloco ? (bloco.nome || `Bloco ${bloco.rodada_inicio}–${bloco.rodada_fim}`) : `Rodada ${rodada}`;
+    if (rodadaPublica(rodada)) return { classe: "done", texto: "Palpites publicados", detalhe: `${alvo} publicado` };
+    if (["fechada", "apurada", "bloqueada", "encerrada"].includes(status)) return { classe: "lock", texto: bloco ? "Bloco fechado" : "Rodada fechada", detalhe: fecha ? `Fechado em ${fmtDataLonga(fecha)}` : `${alvo} bloqueado` };
+    if (!abre || !fecha) return { classe: "warn", texto: "Aguardando programação", detalhe: `${alvo} ainda sem janela completa` };
     if (agora < abre) return { classe: "warn", texto: "Aguardando abertura", detalhe: `Abre em ${fmtDataLonga(abre)}` };
     if (agora >= fecha) return { classe: "lock", texto: "Janela encerrada", detalhe: `Fechou em ${fmtDataLonga(fecha)}` };
     return { classe: "open", texto: "Apostas abertas", detalhe: status === "aberta" ? `Aberta pelo admin · até ${fmtDataLonga(fecha)}` : `Até ${fmtDataLonga(fecha)}` };
@@ -798,16 +816,20 @@
   async function carregarConfigsSupabase() {
     if (!state.supabase) return;
     try {
-      state.configSupabase = await rpcRows("br_listar_config_rodadas_v3", { p_temporada: CFG.temporada || 2026 });
-    } catch (errV3) {
+      state.configSupabase = await rpcRows("br_listar_config_rodadas_v4", { p_temporada: CFG.temporada || 2026 });
+    } catch (errV4) {
       try {
-        state.configSupabase = await rpcRows("br_listar_config_rodadas_v2", { p_temporada: CFG.temporada || 2026 });
-      } catch (errV2) {
+        state.configSupabase = await rpcRows("br_listar_config_rodadas_v3", { p_temporada: CFG.temporada || 2026 });
+      } catch (errV3) {
         try {
-          state.configSupabase = await rpcRows("br_listar_config_rodadas", { p_temporada: CFG.temporada || 2026 });
-        } catch (err) {
-          console.warn("Config Supabase indisponível", errV3, errV2, err);
-          state.configSupabase = [];
+          state.configSupabase = await rpcRows("br_listar_config_rodadas_v2", { p_temporada: CFG.temporada || 2026 });
+        } catch (errV2) {
+          try {
+            state.configSupabase = await rpcRows("br_listar_config_rodadas", { p_temporada: CFG.temporada || 2026 });
+          } catch (err) {
+            console.warn("Config Supabase indisponível", errV4, errV3, errV2, err);
+            state.configSupabase = [];
+          }
         }
       }
     }
@@ -1311,16 +1333,52 @@
     return eventos.some(e => ids.has(String(e.event_id || e.id || "")) && String(e.estado || e.state || "").toLowerCase() === "in");
   }
 
+  function estadoBlocoResumo(inicio) {
+    const start = Number(inicio);
+    const bloco = blocoDaRodada(start) || blocoEstaticoDaRodada(start);
+    if (!bloco) return null;
+    const cfg = configEfetiva(start);
+    const ap = apuracaoBlocoPorInicio(start);
+    const jogosApurados = Number(ap?.jogos_apurados ?? bloco?.jogos_apurados ?? cfg?.bloco_jogos_apurados ?? 0);
+    const concluido = Boolean(ap?.concluido || ap?.concluida || bloco?.apuracao_concluida || cfg?.bloco_apuracao_concluida || jogosApurados >= 30);
+    const abre = parseData(bloco.abre_em || cfg.abre_em);
+    const fecha = parseData(bloco.fecha_em || cfg.fecha_em);
+    let statusApostas = String(bloco.status || cfg.bloco_status || cfg.status || "futura").toLowerCase();
+    if (rodadaAberta(start)) statusApostas = "aberta";
+    else if (fecha && new Date() >= fecha && !["bloqueada", "publicada", "apurada"].includes(statusApostas)) statusApostas = "fechada";
+    return {
+      inicio: start, fim: Number(bloco.rodada_fim || start + 2), bloco, cfg, ap,
+      statusApostas, jogosApurados, concluido, abre, fecha,
+      parcial: jogosApurados > 0 && jogosApurados < 30 && !concluido
+    };
+  }
+
+  function blocosResumoOrdenados() {
+    return BLOCOS_3_RODADAS.map(b => estadoBlocoResumo(b.inicio)).filter(Boolean);
+  }
+
+  function blocoAcaoAtual() {
+    const agora = new Date();
+    const blocos = blocosResumoOrdenados();
+    const abertos = blocos.filter(b => b.statusApostas === "aberta" && (!b.fecha || agora < b.fecha));
+    if (abertos.length) return abertos.sort((a, b) => (a.fecha?.getTime() || Infinity) - (b.fecha?.getTime() || Infinity))[0];
+    const programados = blocos.filter(b => ["programada", "futura"].includes(b.statusApostas) && b.abre && b.abre > agora);
+    if (programados.length) return programados.sort((a, b) => a.abre - b.abre)[0];
+    const parciais = blocos.filter(b => b.parcial).sort((a, b) => b.inicio - a.inicio);
+    if (parciais.length) return parciais[0];
+    const publicados = blocosRanking().filter(b => b && b.publicada === true && b.sigilosa !== true).sort((a, b) => Number(b.rodada_inicio || 0) - Number(a.rodada_inicio || 0));
+    return publicados.length ? estadoBlocoResumo(Number(publicados[0].rodada_inicio)) : null;
+  }
+
   function determinarRodadaAtual() {
     const rodadas = (state.rodadas || []).slice().sort((a, b) => a - b);
     if (!rodadas.length) return Number(CFG.rodadaInicialApostas || 20);
 
-    // A apuração publicada é a fonte canônica do contexto cronológico visível.
-    // Uma janela futura eventualmente aberta/configurada no Supabase não deve
-    // deslocar a página para um bloco ainda sigiloso.
-    const blocoPublicado = blocoRankingCronologicoMaisAtual(blocosRanking());
-    const inicioBlocoPublicado = Number(blocoPublicado?.rodada_inicio);
-    if (Number.isFinite(inicioBlocoPublicado)) return inicioBlocoPublicado;
+    // O contexto automático responde à pergunta "o que o participante precisa fazer agora?".
+    // Um bloco novo pode estar aberto enquanto um bloco anterior continua 28/30 por
+    // causa de jogo adiado; a apuração anterior nunca bloqueia a ação atual.
+    const acao = blocoAcaoAtual();
+    if (acao) return acao.inicio;
 
     const abertas = rodadas.filter(r => !rodadaConcluida(r) && rodadaAberta(r));
     if (abertas.length) return abertas[0];
@@ -1370,6 +1428,50 @@
     if (labelPreenchimento) labelPreenchimento.textContent = contextoEhBloco() ? "palpites salvos neste bloco." : "palpites salvos nesta rodada.";
   }
 
+  function renderPainelBlocosStatus() {
+    const root = $("#painel-blocos-status");
+    if (!root) return;
+    const blocos = blocosResumoOrdenados();
+    if (!blocos.length) { root.hidden = true; root.innerHTML = ""; return; }
+    const agora = new Date();
+    const aberto = blocos.filter(b => b.statusApostas === "aberta" && (!b.fecha || agora < b.fecha))
+      .sort((a,b)=>(a.fecha?.getTime()||Infinity)-(b.fecha?.getTime()||Infinity))[0] || null;
+    const parcial = blocos.filter(b => b.parcial && (!aberto || b.inicio !== aberto.inicio))
+      .sort((a,b)=>b.inicio-a.inicio)[0] || null;
+    const proximo = blocos.filter(b => ["programada","futura"].includes(b.statusApostas) && b.abre && b.abre > agora && (!aberto || b.inicio !== aberto.inicio))
+      .sort((a,b)=>a.abre-b.abre)[0] || null;
+    const cards = [];
+    if (aberto) {
+      const selecionadoEhAberto = mesmoContextoRodadas(state.rodada, aberto.inicio);
+      const progresso = selecionadoEhAberto ? `${state.meusPalpites.length}/30 palpites salvos · ` : "";
+      cards.push({
+        tipo:"action", icon:"🟢", kicker:"AÇÃO AGORA", titulo:`Bloco ${aberto.inicio}–${aberto.fim} · apostas abertas`,
+        texto:`${progresso}fecha ${fmtDataLonga(aberto.fecha)}`,
+        botao:"Fazer/revisar palpites", inicio:aberto.inicio, aba:"apostas"
+      });
+    }
+    if (parcial) cards.push({
+      tipo:"partial", icon:"⏳", kicker:"EM APURAÇÃO", titulo:`Bloco ${parcial.inicio}–${parcial.fim} · ${parcial.jogosApurados}/30`,
+      texto:`${30-parcial.jogosApurados} jogo(s) ainda pendente(s). O bloco seguinte funciona normalmente.`,
+      botao:"Ver ranking parcial", inicio:parcial.inicio, aba:"ranking"
+    });
+    if (!aberto && proximo) cards.push({
+      tipo:"next", icon:"🕒", kicker:"PRÓXIMO BLOCO", titulo:`Bloco ${proximo.inicio}–${proximo.fim}`,
+      texto:`Abertura automática em ${fmtDataLonga(proximo.abre)}.`,
+      botao:"Consultar bloco", inicio:proximo.inicio, aba:"apostas"
+    });
+    if (!cards.length) { root.hidden = true; root.innerHTML = ""; return; }
+    root.hidden = false;
+    root.innerHTML = cards.map(c => `<article class="block-status-card ${c.tipo}"><div><div class="kicker">${c.icon} ${c.kicker}</div><strong>${escapeHtml(c.titulo)}</strong><span>${escapeHtml(c.texto)}</span></div><button type="button" class="btn secondary" data-painel-bloco="${c.inicio}" data-painel-aba="${c.aba}">${escapeHtml(c.botao)}</button></article>`).join("");
+    root.querySelectorAll("[data-painel-bloco]").forEach(btn => btn.addEventListener("click", async () => {
+      state.abaEscolhidaManualmente = true;
+      state.destinoCronologicoResolvido = true;
+      state.aba = btn.dataset.painelAba || "apostas";
+      if (state.aba === "ranking") { state.rankingVisao = "blocos"; state.rankingBlocoInicio = Number(btn.dataset.painelBloco); }
+      await trocarRodada(Number(btn.dataset.painelBloco), true);
+    }));
+  }
+
   function renderRodadas() {
     const tabs = $("#rodadas");
     const contexto = $("#rodada-contexto");
@@ -1383,18 +1485,26 @@
       const active = item.inicio === 20 ? Number(state.rodada) === 20 : Number(state.rodada) >= item.inicio && Number(state.rodada) <= item.fim;
       const current = item.inicio === 20 ? Number(state.rodadaAutomatica) === 20 : Number(state.rodadaAutomatica) >= item.inicio && Number(state.rodadaAutomatica) <= item.fim;
       const label = item.inicio === 20 ? "R20" : `${item.inicio}–${item.fim}`;
-      return `<button type="button" class="${active ? "active" : ""} ${current ? "current" : ""}" data-rodada="${item.inicio}" role="tab" aria-selected="${active}" aria-label="${item.inicio === 20 ? "Rodada 20" : `Bloco das rodadas ${item.inicio} a ${item.fim}`}${current ? ", contexto atual" : ""}">${label}${current ? `<span class="current-dot" aria-hidden="true"></span>` : ""}</button>`;
+      let stateTag = "";
+      let ariaState = "";
+      if (item.inicio >= 21) {
+        const resumo = estadoBlocoResumo(item.inicio);
+        if (resumo?.concluido) { stateTag = '<span class="round-state done" aria-hidden="true">✅</span>'; ariaState = ", concluído"; }
+        else if (resumo?.statusApostas === "aberta") { stateTag = '<span class="round-state open" aria-hidden="true">🟢</span>'; ariaState = ", apostas abertas"; }
+        else if (resumo?.parcial) { stateTag = `<span class="round-state partial" aria-hidden="true">⏳ ${resumo.jogosApurados}/30</span>`; ariaState = `, ${resumo.jogosApurados} de 30 jogos apurados`; }
+      }
+      return `<button type="button" class="${active ? "active" : ""} ${current ? "current" : ""}" data-rodada="${item.inicio}" role="tab" aria-selected="${active}" aria-label="${item.inicio === 20 ? "Rodada 20" : `Bloco das rodadas ${item.inicio} a ${item.fim}`}${current ? ", contexto de ação atual" : ""}${ariaState}"><span>${label}</span>${stateTag}${current ? `<span class="current-dot" aria-hidden="true"></span>` : ""}</button>`;
     }).join("");
     tabs.querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => trocarRodada(Number(btn.dataset.rodada), true)));
     const atualLabel = contextoLabel(state.rodadaAutomatica);
     if (contexto) contexto.innerHTML = manual
-      ? `Consultando <strong>${contextoLabel()}</strong> · atual automático: <strong>${atualLabel}</strong>`
-      : `Contexto atual identificado automaticamente: <strong>${atualLabel}</strong>`;
+      ? `Consultando <strong>${contextoLabel()}</strong> · ação automática atual: <strong>${atualLabel}</strong>`
+      : `Ação atual identificada automaticamente: <strong>${atualLabel}</strong>`;
     if (voltar) voltar.hidden = !manual;
-    if (titulo) titulo.textContent = manual ? `Consultando ${contextoLabel().toLowerCase()}` : `Atual: ${atualLabel}`;
+    if (titulo) titulo.textContent = manual ? `Consultando ${contextoLabel().toLowerCase()}` : `Agora: ${atualLabel}`;
     if (descricao) descricao.textContent = manual
-      ? "Você está consultando outro contexto. Use o botão ao lado para voltar ao bloco atual."
-      : "O sistema escolhe automaticamente a rodada 20 ou o bloco de três rodadas adequado.";
+      ? "Você está consultando outro contexto. Use o botão ao lado para voltar à ação atual."
+      : "O próximo bloco pode abrir mesmo que um bloco anterior ainda esteja aguardando jogos adiados.";
   }
 
   function renderUsuario() {
@@ -1461,7 +1571,7 @@
       const pv = pvEl?.value === "" ? null : Number(pvEl?.value);
       if (pm === null && pv === null) continue;
       if (!Number.isInteger(pm) || !Number.isInteger(pv) || pm < 0 || pv < 0 || pm > 30 || pv > 30) throw new Error(`Placar inválido em ${timeNome(j.mandante)} x ${timeNome(j.visitante)}.`);
-      payload.push({ event_id: id, jogo_chave: jogoChave(j), mandante: timeNome(j.mandante), visitante: timeNome(j.visitante), placar_mandante: pm, placar_visitante: pv, kickoff: j.data_iso || null, fecha_em: configEfetiva(state.rodada).fecha_em });
+      payload.push({ event_id: id, jogo_chave: jogoChave(j), jogo_uid: jogoUidCanonico(j), mandante: timeNome(j.mandante), visitante: timeNome(j.visitante), placar_mandante: pm, placar_visitante: pv, kickoff: j.data_iso || null, fecha_em: configEfetiva(state.rodada).fecha_em });
     }
     return payload;
   }
@@ -1563,7 +1673,7 @@
       if (v.pm === "" && v.pv === "") continue;
       const pm = Number(v.pm), pv = Number(v.pv);
       if (!Number.isInteger(pm) || !Number.isInteger(pv) || pm < 0 || pv < 0 || pm > 30 || pv > 30) throw new Error(`Placar inválido em ${timeNome(j.mandante)} x ${timeNome(j.visitante)}.`);
-      payload.push({ rodada: Number(j.rodada), event_id: id, jogo_chave: jogoChave(j), mandante: timeNome(j.mandante), visitante: timeNome(j.visitante), placar_mandante: pm, placar_visitante: pv, kickoff: j.data_iso || null });
+      payload.push({ rodada: Number(j.rodada), event_id: id, jogo_chave: jogoChave(j), jogo_uid: jogoUidCanonico(j), mandante: timeNome(j.mandante), visitante: timeNome(j.visitante), placar_mandante: pm, placar_visitante: pv, kickoff: j.data_iso || null });
     }
     return payload;
   }
@@ -1863,13 +1973,28 @@
     ) return;
 
     state.destinoCronologicoResolvido = true;
+    const acao = blocoAcaoAtual();
+    if (acao) {
+      state.rodadaAutomatica = acao.inicio;
+      state.rodadaAutomaticaResolvida = true;
+      state.rodadaEscolhidaManualmente = false;
+      state.rodada = acao.inicio;
+      if (acao.statusApostas === "aberta" || ["programada", "futura"].includes(acao.statusApostas)) {
+        state.aba = "apostas";
+        return;
+      }
+      if (acao.parcial || acao.concluido) {
+        state.aba = "ranking";
+        state.rankingVisao = "blocos";
+        state.rankingVisaoInicialResolvida = true;
+        state.rankingBlocoInicio = acao.inicio;
+        return;
+      }
+    }
+
     const blocoPublicado = blocoRankingCronologicoMaisAtual(blocosRanking());
     const inicioBlocoPublicado = Number(blocoPublicado?.rodada_inicio);
     if (!Number.isFinite(inicioBlocoPublicado)) return;
-
-    // O bloco publicado prevalece na abertura direta. Antes, o redirecionamento
-    // dependia de ele coincidir com a rodada calculada por janelas do Supabase;
-    // qualquer janela futura fazia a interface permanecer em "Apostar".
     state.rodadaAutomatica = inicioBlocoPublicado;
     state.rodadaAutomaticaResolvida = true;
     state.rodadaEscolhidaManualmente = false;
@@ -2852,6 +2977,7 @@
   function renderConteudo() {
     renderResumo();
     renderRodadas();
+    renderPainelBlocosStatus();
     $$("[data-aba]").forEach(btn => {
       const ativo = btn.dataset.aba === state.aba || (btn.dataset.aba === "admin" && state.aba === "auditoria");
       btn.classList.toggle("active", ativo);
@@ -2990,6 +3116,8 @@
       determinarRodadaAtual,
       resolverRodadaAutomatica,
       blocoRankingCronologicoMaisAtual,
+      estadoBlocoResumo,
+      blocoAcaoAtual,
       aplicarDestinoCronologicoInicial,
       palpitesParticipanteRodada,
       palpitesParticipanteBloco,

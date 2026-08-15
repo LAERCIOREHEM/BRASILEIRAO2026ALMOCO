@@ -124,6 +124,19 @@ def chave_confronto(jogo: dict[str, Any]) -> str:
     return f"{rodada}|{times}"
 
 
+def jogo_uid_canonico(jogo: dict[str, Any]) -> str:
+    """Identidade estável da aposta; event_id é apenas alias externo da ESPN."""
+    try:
+        rodada = int(jogo.get("rodada") or 0)
+    except (TypeError, ValueError):
+        rodada = 0
+    mandante = nome_time(jogo.get("mandante")).strip().lower()
+    visitante = nome_time(jogo.get("visitante")).strip().lower()
+    if rodada <= 0 or not mandante or not visitante:
+        return ""
+    return f"{TEMPORADA}|{rodada}|{mandante}|{visitante}"
+
+
 def mapa_calendario_por_times() -> dict[str, dict[str, Any]]:
     calendario = carregar_json("dados-br/calendario-completo.json", {}).get("jogos", []) or []
     return {
@@ -295,6 +308,9 @@ def resultado_mapa(jogos: Iterable[dict[str, Any]]) -> dict[str, dict[str, Any]]
         confronto = chave_confronto(jogo)
         if confronto:
             mapa[confronto] = resultado
+        uid = jogo_uid_canonico(jogo)
+        if uid:
+            mapa[uid] = resultado
     return mapa
 
 
@@ -318,7 +334,14 @@ def calcular(palpite: dict[str, Any], resultado: dict[str, Any]) -> dict[str, An
 
 
 def palpite_valido_no_prazo(palpite: dict[str, Any]) -> bool:
-    atualizado = parse_dt(palpite.get("atualizado_em") or palpite.get("criado_em"))
+    # `atualizado_em` pode mudar por sincronizações técnicas (hash/deadline).
+    # Desde a Execução 21, a edição real do participante é registrada em campo
+    # próprio e deve prevalecer na validação temporal.
+    atualizado = parse_dt(
+        palpite.get("palpite_atualizado_em")
+        or palpite.get("atualizado_em")
+        or palpite.get("criado_em")
+    )
     fecha = parse_dt(palpite.get("fecha_em"))
     if not atualizado or not fecha:
         return True
@@ -803,7 +826,8 @@ def apurar_rodada(
             if not membro or not participante_id:
                 continue
             eid = str(palpite.get("event_id") or palpite.get("jogo_chave") or "")
-            resultado = resultados.get(eid) or resultados.get(chave_confronto(palpite))
+            uid = str(palpite.get("jogo_uid") or jogo_uid_canonico(palpite) or "")
+            resultado = resultados.get(uid) or resultados.get(eid) or resultados.get(chave_confronto(palpite))
             if not resultado:
                 continue
             if not palpite_valido_no_prazo(palpite):
@@ -839,14 +863,15 @@ def apurar_rodada(
                     "tipo": detalhe["tipo"],
                     "hash_fechamento": palpite.get("hash_fechamento"),
                     "hash_bloco": palpite.get("hash_bloco"),
-                    "atualizado_em": palpite.get("atualizado_em"),
+                    "atualizado_em": palpite.get("palpite_atualizado_em") or palpite.get("atualizado_em"),
                 }
             )
 
     # A quantidade de partidas encerradas independe de haver palpite para elas.
     for jid, jogo in jogos_rodada.items():
         resultado = (
-            resultados.get(jid)
+            resultados.get(jogo_uid_canonico(jogo))
+            or resultados.get(jid)
             or resultados.get(str(jogo.get("event_id") or ""))
             or resultados.get(chave_confronto(jogo))
         )
@@ -1305,7 +1330,13 @@ def executar_self_tests() -> None:
         "placar_visitante": 0,
     }
     assert mapa_confronto[chave_confronto(palpite_sintetico)]["event_id"] == "401999999"
-    assert calcular(palpite_sintetico, mapa_confronto[chave_confronto(palpite_sintetico)]) == {
+    uid_sintetico = jogo_uid_canonico(palpite_sintetico)
+    assert uid_sintetico == "2026|21|atlético-mg|bragantino"
+    assert mapa_confronto[uid_sintetico]["event_id"] == "401999999"
+    # Mesmo que a ESPN troque o event_id após um adiamento, o jogo_uid preserva
+    # a identidade da aposta e o placar continua sendo creditado no bloco original.
+    palpite_sintetico["jogo_uid"] = uid_sintetico
+    assert calcular(palpite_sintetico, mapa_confronto[palpite_sintetico["jogo_uid"]]) == {
         "pontos": 5,
         "tipo": "exato",
     }
@@ -1330,6 +1361,19 @@ def executar_self_tests() -> None:
     assert vencedores_ranking(ranking) == ["A"]
 
     passado = (agora_brt() - timedelta(hours=2)).isoformat()
+    # Uma sincronização técnica posterior ao novo deadline não pode invalidar
+    # um palpite que o participante havia editado antes do prazo.
+    assert palpite_valido_no_prazo({
+        "palpite_atualizado_em": "2026-08-21T13:00:00-03:00",
+        "atualizado_em": "2026-08-21T15:30:00-03:00",
+        "fecha_em": "2026-08-21T15:00:00-03:00",
+    })
+    assert not palpite_valido_no_prazo({
+        "palpite_atualizado_em": "2026-08-21T15:01:00-03:00",
+        "atualizado_em": "2026-08-21T15:30:00-03:00",
+        "fecha_em": "2026-08-21T15:00:00-03:00",
+    })
+
     futuro_publicacao = (agora_brt() + timedelta(hours=2)).isoformat()
     assert config_publica(
         {
