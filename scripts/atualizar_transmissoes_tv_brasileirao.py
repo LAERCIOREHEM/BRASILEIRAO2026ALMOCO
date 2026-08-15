@@ -618,28 +618,51 @@ def ge_entries_from_page(
     return out
 
 
+TRANSMISSION_INTENT_TERMS = (
+    "onde assistir", "onde ver", "transmissao", "transmissoes",
+    "vai passar", "onde passa", "onde vai passar", "como assistir",
+)
+TRANSMISSION_ARTICLE_EXCLUSIONS = (
+    "/cartola/", "/gato-mestre/", "craque-da-rodada", "maior-publico",
+    "publico-da-rodada", "publicos-da-rodada", "palpites", "classificacao",
+    "estatisticas", "escalacao", "provaveis-escalacoes",
+)
+
+
+def _tem_intencao_transmissao(label: str) -> bool:
+    n = norm(label)
+    return any(norm(term) in n for term in TRANSMISSION_INTENT_TERMS)
+
+
+def _artigo_ge_transmissao_elegivel(url: str, anchor: str = "") -> bool:
+    cleaned = str(url or "").replace("\\/", "/")
+    if not cleaned.startswith("https://ge.globo.com/") or not cleaned.endswith(".ghtml"):
+        return False
+    lower = cleaned.lower()
+    if any(term in lower for term in TRANSMISSION_ARTICLE_EXCLUSIONS):
+        return False
+    return _tem_intencao_transmissao(anchor + " " + cleaned)
+
+
 def article_links_from_page(page: str, base_url: str, limit: int) -> list[str]:
+    """Descobre somente guias com intenção explícita de transmissão.
+
+    Termos genéricos como ``rodada`` não qualificam uma matéria. Isso impede
+    que páginas de público, Cartola ou estatísticas virem evidência de canal.
+    """
     parser = _ScriptAndLinkParser()
     parser.feed(page)
     parser.close()
     candidates: list[str] = []
     for href, anchor in parser.links:
         absolute = urllib.parse.urljoin(base_url, href)
-        if not absolute.startswith("https://ge.globo.com/") or not absolute.endswith(".ghtml"):
-            continue
-        label = norm(anchor + " " + absolute)
-        if any(term in label for term in (
-            "onde assistir", "transmissao", "transmissoes", "jogos da rodada", "brasileirao 2026 veja",
-        )) and absolute not in candidates:
+        if _artigo_ge_transmissao_elegivel(absolute, anchor) and absolute not in candidates:
             candidates.append(absolute)
-    # Também reconhece links embutidos em JSON/minificação.
     for url in re.findall(r"https?:\\?/\\?/ge\.globo\.com/[^\"'<> ]+?\.ghtml", page):
         cleaned = url.replace("\\/", "/")
-        label = norm(cleaned)
-        if any(term in label for term in ("onde assistir", "transmiss", "rodada")) and cleaned not in candidates:
+        if _artigo_ge_transmissao_elegivel(cleaned) and cleaned not in candidates:
             candidates.append(cleaned)
     return candidates[:limit]
-
 
 def merge_evidence(target: dict[str, list[Evidence]], source: Mapping[str, Sequence[Evidence]]) -> None:
     for event_id, evidences in source.items():
@@ -949,8 +972,10 @@ def collect(
                     if error or page is None:
                         errors.append(f"GE artigo {url}: {error}")
                         continue
+                    if not _artigo_ge_transmissao_elegivel(url):
+                        continue
                     found = ge_entries_from_page(
-                        page, games, source_name="GE guia editorial", reference=url,
+                        page, games, source_name="GE guia de transmissão", reference=url,
                         captured_at=captured_at, authority=85,
                     )
                     merge_evidence(found_all, found)
@@ -1018,7 +1043,7 @@ def collect(
     payload = {
         "descricao": "Transmissões oficiais por TV ou streaming do Brasileirão Série A.",
         "politica": {
-            "fontes": ["CBF oficial", "GE Agenda", "GE guias editoriais", "ESPN", "override manual"],
+            "fontes": ["CBF oficial", "GE Agenda", "GE guias de transmissão", "ESPN", "override manual"],
             "regra_preservacao": "resposta vazia ou falha de uma fonte nunca apaga transmissão válida já publicada",
             "regra_publicacao": "somente canais oficiais da lista permitida; evidências ficam registradas por jogo",
             "youtube_exato": "links exatos de GE TV/CazéTV permanecem em dados-br/transmissoes-aovivo.json",
@@ -1129,7 +1154,16 @@ def selftest() -> None:
     parsed_blobs = json_candidates_from_html(ge_html)
     assert structured_channels_for_game(parsed_blobs, "Santos", "Chapecoense") == ["Premiere", "SporTV"]
     assert structured_channels_for_game(parsed_blobs, "Vasco da Gama", "Mirassol") == ["Record", "CazéTV"]
-    print("SELFTEST OK: CBF, GE, ESPN, manual, preservação, auditoria e links editoriais")
+    index_html = """
+    <a href="https://ge.globo.com/gato-mestre/noticia/2026/08/09/flamengo-x-vitoria-tem-o-maior-publico-da-22a-rodada-do-brasileirao-veja-a-lista.ghtml">Públicos da rodada</a>
+    <a href="https://ge.globo.com/cartola/craque-da-rodada/noticia/2026/08/10/cartola-2026-craque-da-rodada-22.ghtml">Craque da rodada</a>
+    <a href="https://ge.globo.com/futebol/brasileirao-serie-a/noticia/2026/08/15/brasileirao-onde-assistir-aos-jogos-da-rodada.ghtml">Onde assistir aos jogos</a>
+    """
+    links = article_links_from_page(index_html, GE_BRASILEIRAO, 10)
+    assert links == ["https://ge.globo.com/futebol/brasileirao-serie-a/noticia/2026/08/15/brasileirao-onde-assistir-aos-jogos-da-rodada.ghtml"], links
+    assert not _artigo_ge_transmissao_elegivel("https://ge.globo.com/gato-mestre/noticia/2026/08/09/publico-da-rodada.ghtml")
+    assert _artigo_ge_transmissao_elegivel("https://ge.globo.com/futebol/brasileirao-serie-a/noticia/2026/08/15/onde-assistir-aos-jogos.ghtml")
+    print("SELFTEST OK: CBF, GE, ESPN, manual, preservação, auditoria e filtro estrito de guias de transmissão")
 
 
 def main() -> int:

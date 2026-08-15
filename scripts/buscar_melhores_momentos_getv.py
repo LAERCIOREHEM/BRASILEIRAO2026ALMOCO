@@ -314,14 +314,14 @@ def pontuar_match(jogo: Jogo, video: Dict[str, Any], config: Dict[str, Any]) -> 
     motivos: List[str] = []
     score = 0.0
 
-    if rodada_playlist == jogo.rodada:
+    if rodada_playlist is not None:
+        if rodada_playlist != jogo.rodada:
+            return 0.0, ["rodada da playlist diferente"]
         score += 0.32
         motivos.append("rodada da playlist confere")
     elif rodada_titulo == jogo.rodada:
         score += 0.22
         motivos.append("rodada no título confere")
-    elif rodada_playlist is not None:
-        return 0.0, ["rodada da playlist diferente"]
 
     mand = time_no_titulo(titulo, jogo.mandante, config)
     vist = time_no_titulo(titulo, jogo.visitante, config)
@@ -363,6 +363,10 @@ def escolher_videos(jogos: List[Jogo], videos: List[Dict[str, Any]], config: Dic
     for jogo in jogos:
         candidatos: List[Tuple[float, Dict[str, Any], List[str]]] = []
         for video in videos:
+            # Nunca publica entrevista/bastidores/podcast só porque os dois
+            # clubes aparecem no título e a playlist é da rodada correta.
+            if not video_tem_melhores_momentos(video):
+                continue
             # Se a playlist tem rodada, restringe fortemente.
             rp = video.get("rodada_playlist")
             if rp is not None and rp != jogo.rodada:
@@ -435,6 +439,66 @@ def rodadas_alvo(args: argparse.Namespace, jogos: List[Jogo], config: Dict[str, 
     return max(1, max_rodada - recentes + 1), max_rodada
 
 
+def self_test() -> int:
+    config = {
+        "min_confianca_publicar": 0.86,
+        "aliases_clubes": {
+            "Atlético-MG": ["Atletico MG", "Galo"],
+            "Grêmio": ["Gremio"],
+        },
+    }
+    jogo = Jogo(
+        chave="401-test", event_id="401-test", rodada=23,
+        mandante="Atlético-MG", visitante="Grêmio",
+        placar_mandante=1, placar_visitante=0, estado="post", concluido=True,
+    )
+    assert rodada_do_texto("Brasileirão | 23ª rodada") == 23
+    assert rodada_do_texto("R23 - melhores momentos") == 23
+
+    bom = {
+        "video_id": "ok",
+        "titulo": "Atlético-MG 1 x 0 Grêmio | melhores momentos | Brasileirão | 23ª rodada",
+        "url": "https://www.youtube.com/watch?v=ok",
+        "thumbnail": "https://i.ytimg.com/vi/ok/hqdefault.jpg",
+        "playlist_id": "PL-R23",
+        "rodada_playlist": 23,
+        "published_at": "2026-08-16T21:00:00Z",
+    }
+    score, motivos = pontuar_match(jogo, bom, config)
+    assert score >= 0.86, (score, motivos)
+    assert "mandante no título" in motivos and "visitante no título" in motivos
+    assert "placar confere" in motivos
+
+    rodada_errada = dict(bom, video_id="wrong-round", rodada_playlist=22)
+    score_errado, _ = pontuar_match(jogo, rodada_errada, config)
+    assert score_errado == 0.0
+
+    bastidores = dict(bom, video_id="backstage", titulo="Bastidores Atlético-MG x Grêmio", rodada_playlist=23)
+    assert video_tem_melhores_momentos(bastidores) is False
+
+    um_time = dict(bom, video_id="one-team", titulo="Atlético-MG | melhores momentos | Brasileirão", rodada_playlist=23)
+    score_um, _ = pontuar_match(jogo, um_time, config)
+    assert score_um < 0.86
+
+    vinculados, duvidosos, sem_video = escolher_videos([jogo], [rodada_errada, um_time, bom], config)
+    assert list(vinculados) == [jogo.chave]
+    assert vinculados[jogo.chave]["video_id"] == "ok"
+    assert not duvidosos and not sem_video
+
+    vinculados2, _, sem_video2 = escolher_videos([jogo], [rodada_errada, bastidores], config)
+    assert not vinculados2 and len(sem_video2) == 1
+
+    # A janela incremental acompanha a última rodada realmente disputada, não
+    # a maior rodada apenas agendada no calendário.
+    agendado = Jogo("future", "future", 38, "Bahia", "Vitória", estado="pre", concluido=False)
+    args = argparse.Namespace(rodada_inicio=None, rodada_fim=None, modo="incremental")
+    ini, fim = rodadas_alvo(args, [jogo, agendado], {"incremental": {"rodadas_recentes": 4}})
+    assert (ini, fim) == (20, 23)
+
+    print("SELFTEST OK: rodada, clubes, placar, rejeição de falsos positivos e janela incremental de melhores momentos")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Busca melhores momentos da GE TV no YouTube e vincula aos jogos do Brasileirão.")
     ap.add_argument("--root", default=".", help="raiz do repositório")
@@ -442,8 +506,11 @@ def main() -> int:
     ap.add_argument("--rodada-inicio", type=int, default=None)
     ap.add_argument("--rodada-fim", type=int, default=None)
     ap.add_argument("--dry-run", action="store_true", help="valida estrutura sem chamar YouTube API")
+    ap.add_argument("--self-test", action="store_true", help="executa testes offline e termina")
     ap.add_argument("--sleep", type=float, default=0.05)
     args = ap.parse_args()
+    if args.self_test:
+        return self_test()
 
     root = Path(args.root).resolve()
     config_path = root / "dados-br" / "getv-config.json"

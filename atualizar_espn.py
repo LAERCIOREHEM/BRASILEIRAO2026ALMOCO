@@ -43,8 +43,10 @@ from typing import Any
 
 from fontes_brasileirao import (
     CBF_TABELA_DETALHADA_URL,
+    buscar_agenda_cbf,
     buscar_tabela_detalhada_cbf,
     fetch_api_football_fixtures,
+    localizar_agenda_cbf,
     localizar_fixture_api_football,
     localizar_partida_cbf,
 )
@@ -69,6 +71,7 @@ ESPN_VARREDURA_COMPLETA_INTERVALO_DIAS = max(0, int(os.environ.get("ESPN_VARREDU
 ESPN_HORA_VARREDURA_COMPLETA_BRT = max(0, min(23, int(os.environ.get("ESPN_HORA_VARREDURA_COMPLETA_BRT", "3"))))
 URL_RESUMO_EVENTO = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary"
 ARQ_AJUSTES_CALENDARIO = Path("dados-br/ajustes-calendario.json")
+ARQ_CALENDARIO_CANONICO = Path("dados-br/calendario-completo.json")
 ARQ_RESULTADOS_MANUAIS = Path("dados-br/resultados-manuais.json")
 MAX_TENTATIVAS_SINCRONIA = max(1, int(os.environ.get("ESPN_MAX_TENTATIVAS_SINCRONIA", "3")))
 ESPERA_SINCRONIA_SEGUNDOS = max(0, int(os.environ.get("ESPN_ESPERA_SINCRONIA_SEGUNDOS", "45")))
@@ -837,6 +840,170 @@ def _estado_scoreboard_seguro(
     return estado, False
 
 
+def carregar_calendario_canonico_por_mando() -> dict[tuple[str, str], dict[str, Any]]:
+    """Lê a matriz estrutural de 380 jogos indexada pelo mando."""
+    try:
+        payload = json.loads(ARQ_CALENDARIO_CANONICO.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return {}
+    jogos = payload.get("jogos") or payload.get("partidas") or []
+    if not isinstance(jogos, list) or len(jogos) != 380:
+        return {}
+    out: dict[tuple[str, str], dict[str, Any]] = {}
+    for raw in jogos:
+        if not isinstance(raw, dict):
+            continue
+        home = para_canonico(raw.get("mandante"))
+        away = para_canonico(raw.get("visitante"))
+        rodada = int(raw.get("rodada") or 0)
+        if home and away and home != away and 1 <= rodada <= 38:
+            item = dict(raw)
+            item["mandante"] = home
+            item["visitante"] = away
+            out[(home, away)] = item
+    return out if len(out) == 380 else {}
+
+
+def carregar_rodadas_canonicas_por_mando() -> dict[tuple[str, str], int]:
+    """Corrige metadados ``week`` da ESPN pela estrutura real da competição."""
+    return {
+        key: int(item.get("rodada") or 0)
+        for key, item in carregar_calendario_canonico_por_mando().items()
+    }
+
+
+def aplicar_rodadas_canonicas(eventos: list[dict[str, Any]]) -> int:
+    mapa = carregar_rodadas_canonicas_por_mando()
+    if not mapa:
+        return 0
+    alterados = 0
+    for evento in eventos:
+        home = str(evento.get("mandante_nome") or "")
+        away = str(evento.get("visitante_nome") or "")
+        rodada = mapa.get((home, away))
+        if not rodada:
+            continue
+        anterior = int(evento.get("rodada") or 0)
+        if anterior == rodada:
+            continue
+        if anterior:
+            evento["rodada_corrigida_de"] = anterior
+        evento["rodada"] = rodada
+        motivo = str(evento.get("motivo_ajuste") or "").strip()
+        nota = "rodada reconciliada pela matriz canônica de 380 jogos"
+        evento["motivo_ajuste"] = f"{motivo}; {nota}".strip("; ") if motivo else nota
+        alterados += 1
+    return alterados
+
+
+def complementar_eventos_futuros_cbf(eventos: list[dict[str, Any]], rows: list[Any]) -> int:
+    """Restaura jogo futuro omitido pela ESPN somente quando CBF + matriz + ID conhecido concordam."""
+    if not rows:
+        return 0
+    canon = carregar_calendario_canonico_por_mando()
+    if not canon:
+        return 0
+    existentes = {(str(e.get("mandante_nome") or ""), str(e.get("visitante_nome") or "")) for e in eventos}
+    agora = agora_brt()
+    adicionados = 0
+    for oficial in rows:
+        matchup = (oficial.mandante, oficial.visitante)
+        if matchup in existentes:
+            continue
+        base = canon.get(matchup)
+        if not base:
+            continue
+        event_id = str(base.get("event_id") or "").strip()
+        if not event_id:
+            continue
+        dt = parse_iso_brt(oficial.data_iso)
+        if not dt or dt < agora - timedelta(hours=6):
+            continue
+        anterior = str(base.get("data_iso") or "")
+        eventos.append({
+            "event_id": event_id, "rodada": int(base.get("rodada") or 0),
+            "data_dt": dt, "data_iso": dt.strftime("%Y-%m-%dT%H:%M"),
+            "mandante_nome": oficial.mandante, "visitante_nome": oficial.visitante,
+            "mandante": info_time(oficial.mandante), "visitante": info_time(oficial.visitante),
+            "estadio": str(base.get("estadio") or ""), "transmissao": "",
+            "status": "Pré-jogo", "estado": "pre", "concluido": False, "adiado": False,
+            "data_definir": False, "placar_mandante": None, "placar_visitante": None,
+            "_sort": dt.timestamp(), "fonte_evento": "CBF oficial + calendário canônico",
+            "fonte_calendario": "CBF oficial — agenda de credenciamento",
+            "origem_calendario": oficial.origem,
+            "data_espn_original": anterior if anterior and anterior != oficial.data_iso else "",
+        })
+        existentes.add(matchup)
+        adicionados += 1
+    eventos.sort(key=lambda e: float(e.get("_sort") or 0))
+    return adicionados
+
+
+def aplicar_agenda_oficial_cbf(eventos: list[dict[str, Any]], rows: list[Any]) -> int:
+    """Confirma/reconcilia kickoffs futuros com a agenda operacional oficial da CBF."""
+    if not rows:
+        return 0
+    agora = agora_brt()
+    alterados = 0
+    for evento in eventos:
+        if evento.get("concluido") is True or str(evento.get("estado") or "").lower() == "post":
+            continue
+        home = str(evento.get("mandante_nome") or "")
+        away = str(evento.get("visitante_nome") or "")
+        oficial = localizar_agenda_cbf(rows, mandante=home, visitante=away)
+        if not oficial:
+            continue
+        dt = parse_iso_brt(oficial.data_iso)
+        if not dt or dt < agora - timedelta(hours=6):
+            continue
+        anterior = str(evento.get("data_iso") or "")
+        novo = dt.strftime("%Y-%m-%dT%H:%M")
+        if anterior != novo:
+            if not str(evento.get("data_espn_original") or "").strip():
+                evento["data_espn_original"] = anterior
+            evento["data_iso"] = novo
+            evento["data_dt"] = dt
+            evento["_sort"] = dt.timestamp()
+            evento["data_definir"] = False
+            alterados += 1
+        evento["fonte_calendario"] = "CBF oficial — agenda de credenciamento"
+        evento["origem_calendario"] = oficial.origem
+    eventos.sort(key=lambda e: float(e.get("_sort") or 0))
+    return alterados
+
+
+def marcar_kickoffs_provisorios_espn(eventos: list[dict[str, Any]]) -> int:
+    """Marca lotes futuros incompletos no mesmo timestamp como data a definir."""
+    por_rodada: dict[int, list[dict[str, Any]]] = {}
+    for evento in eventos:
+        rodada = int(evento.get("rodada") or 0)
+        if not (1 <= rodada <= 38):
+            continue
+        if evento.get("concluido") is True or str(evento.get("estado") or "").lower() == "post":
+            continue
+        if "CBF oficial" in str(evento.get("fonte_calendario") or ""):
+            continue
+        data_iso = str(evento.get("data_iso") or "").strip()
+        if not data_iso or evento.get("data_definir") is True:
+            continue
+        por_rodada.setdefault(rodada, []).append(evento)
+    alterados = 0
+    for rodada, itens in por_rodada.items():
+        datas = {str(e.get("data_iso") or "").strip() for e in itens}
+        if not (4 <= len(itens) < 10 and len(datas) == 1):
+            continue
+        timestamp = next(iter(datas))
+        for evento in itens:
+            evento["data_definir"] = True
+            evento.setdefault("data_fonte_anterior", evento.get("data_iso"))
+            motivo = str(evento.get("motivo_ajuste") or "").strip()
+            nota = f"kickoff ESPN provisório ({len(itens)} jogos da R{rodada} em {timestamp})"
+            if nota not in motivo:
+                evento["motivo_ajuste"] = f"{motivo}; {nota}".strip("; ") if motivo else nota
+            alterados += 1
+    return alterados
+
+
 def normalizar_eventos_scoreboard(
     eventos: list[dict[str, Any]], *, finalizar: bool = True
 ) -> list[dict[str, Any]]:
@@ -908,6 +1075,9 @@ def normalizar_eventos_scoreboard(
 def finalizar_eventos_normalizados(eventos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     eventos.sort(key=lambda e: float(e.get("_sort") or 0))
     inferir_rodadas_faltantes(eventos)
+    corrigidas = aplicar_rodadas_canonicas(eventos)
+    if corrigidas:
+        print(f"Rodadas reconciliadas pela matriz canônica: {corrigidas}")
     aplicar_ajustes_calendario(eventos)
     return sanear_eventos_por_rodada(eventos)
 
@@ -943,6 +1113,7 @@ def _evento_snapshot_para_normalizado(item: dict[str, Any]) -> dict[str, Any] | 
     }
     for campo in (
         "finalizado_em", "rodada_corrigida_de", "motivo_ajuste",
+        "fonte_calendario", "origem_calendario", "data_espn_original", "data_fonte_anterior", "fonte_evento",
         "resultado_manual", "resultado_fallback", "fonte_resultado",
         "origem_resultado", "motivo_fallback", "motivo_resultado_manual",
     ):
@@ -1799,6 +1970,11 @@ def gerar_jogos_resultados_eventos(eventos_brutos: list[dict[str, Any]],
                 "finalizado_em": e.get("finalizado_em", ""),
                 "rodada_corrigida_de": e.get("rodada_corrigida_de"),
                 "motivo_ajuste": e.get("motivo_ajuste", ""),
+                "fonte_calendario": e.get("fonte_calendario", ""),
+                "origem_calendario": e.get("origem_calendario", ""),
+                "data_espn_original": e.get("data_espn_original", ""),
+                "data_fonte_anterior": e.get("data_fonte_anterior", ""),
+                "fonte_evento": e.get("fonte_evento", ""),
                 "resultado_manual": bool(e.get("resultado_manual") is True),
                 "resultado_fallback": bool(e.get("resultado_fallback") is True),
                 "fonte_resultado": e.get("fonte_resultado", "ESPN"),
@@ -2542,7 +2718,10 @@ def selftest_execucao_6() -> None:
     ids_consolidados = {item.get("event_id") for item in consolidados}
     assert ids_consolidados == {"historico-1", "agenda-nova"}
     atualizado = next(item for item in consolidados if item.get("event_id") == "agenda-nova")
-    assert atualizado["rodada"] == 22
+    rodada_canonica_teste = carregar_rodadas_canonicas_por_mando().get(("Flamengo", "Bahia"), 22)
+    assert atualizado["rodada"] == rodada_canonica_teste
+    if rodada_canonica_teste != 22:
+        assert atualizado.get("rodada_corrigida_de") == 22
     assert atualizado["estadio"] == "Maracanã"
     assert atualizado["transmissao"] == "Premiere"
 
@@ -2567,6 +2746,42 @@ def selftest_execucao_6() -> None:
             os.environ.pop("ESPN_COLETA_COMPLETA", None)
         else:
             os.environ["ESPN_COLETA_COMPLETA"] = env_completa
+
+    # Kickoffs provisórios: lote futuro incompleto no mesmo timestamp não pode
+    # virar horário confirmado. Rodada completa e jogo confirmado pela CBF não
+    # são rebaixados.
+    provis = []
+    for i in range(7):
+        dtp = datetime(2026, 9, 5, 15, 0, tzinfo=FUSO_BRASILIA)
+        provis.append({
+            "event_id": f"prov-{i}", "rodada": 26, "data_iso": "2026-09-05T15:00",
+            "data_dt": dtp, "_sort": dtp.timestamp(), "mandante_nome": f"M{i}",
+            "visitante_nome": f"V{i}", "estado": "pre", "concluido": False,
+            "data_definir": False, "fonte_calendario": "ESPN",
+        })
+    assert marcar_kickoffs_provisorios_espn(provis) == 7
+    assert all(x.get("data_definir") is True for x in provis)
+    confirm = copy.deepcopy(provis[:1])
+    confirm[0]["data_definir"] = False
+    confirm[0]["fonte_calendario"] = "CBF oficial — agenda de credenciamento"
+    assert marcar_kickoffs_provisorios_espn(confirm) == 0
+    assert confirm[0]["data_definir"] is False
+
+    # Proveniência da CBF precisa sobreviver ao espn_eventos.json; sem isso a
+    # execução seguinte perderia a informação de que o kickoff foi confirmado.
+    prov_event = {
+        **evento_novo,
+        "event_id": "prov-cbf",
+        "fonte_calendario": "CBF oficial — agenda de credenciamento",
+        "origem_calendario": "https://credencial.cbf.com.br/teste",
+        "data_espn_original": "2026-08-11T20:00",
+    }
+    _, _, prov_json = gerar_jogos_resultados_eventos(
+        [prov_event], eventos_ja_normalizados=True, aplicar_manuais=False
+    )
+    prov_out = prov_json["eventos"][0]
+    assert prov_out["fonte_calendario"].startswith("CBF oficial")
+    assert prov_out["data_espn_original"] == "2026-08-11T20:00"
 
     fetch_original = globals()["fetch_json"]
     chamadas_teste: list[str] = []
@@ -2604,6 +2819,32 @@ def main() -> None:
                 eventos_atualizados
             )
             coleta_scoreboard.update(estatisticas_mesclagem)
+
+            # A ESPN continua principal, mas a CBF confirma kickoffs futuros e
+            # recupera omissões sem inventar jogos/IDs. Falha da CBF nunca
+            # impede a atualização esportiva principal.
+            try:
+                agenda_cbf = buscar_agenda_cbf(resolver=para_canonico)
+            except Exception as exc:  # noqa: BLE001
+                agenda_cbf = []
+                print(f"::warning::Agenda CBF indisponível para reconciliação de horários: {type(exc).__name__}: {exc}")
+            if agenda_cbf:
+                horarios_cbf = aplicar_agenda_oficial_cbf(eventos_normalizados, agenda_cbf)
+                adicionados_cbf = complementar_eventos_futuros_cbf(eventos_normalizados, agenda_cbf)
+                if horarios_cbf or adicionados_cbf:
+                    eventos_normalizados = finalizar_eventos_normalizados(eventos_normalizados)
+                coleta_scoreboard["horarios_reconciliados_cbf"] = horarios_cbf
+                coleta_scoreboard["jogos_restaurados_cbf"] = adicionados_cbf
+                print(f"Agenda CBF: {horarios_cbf} horário(s) reconciliado(s), {adicionados_cbf} jogo(s) restaurado(s).")
+            else:
+                coleta_scoreboard["horarios_reconciliados_cbf"] = 0
+                coleta_scoreboard["jogos_restaurados_cbf"] = 0
+
+            provisoria = marcar_kickoffs_provisorios_espn(eventos_normalizados)
+            coleta_scoreboard["kickoffs_provisorios_suprimidos"] = provisoria
+            if provisoria:
+                print(f"Kickoffs provisórios suprimidos: {provisoria}")
+
             aplicar_transmissoes_manuais(eventos_normalizados)
             print(
                 "Snapshot consolidado: "

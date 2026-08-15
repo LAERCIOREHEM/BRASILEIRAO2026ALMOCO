@@ -20,6 +20,7 @@ import html
 import json
 import os
 import re
+import ssl
 import time
 import unicodedata
 import urllib.error
@@ -39,6 +40,13 @@ CBF_TABELA_DETALHADA_URLS = tuple(dict.fromkeys(filter(None, (
     CBF_TABELA_DETALHADA_URL,
     "https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada",
 ))))
+# A página de credenciamento da própria CBF expõe a agenda operacional já
+# desdobrada por data/hora. Ela é usada exclusivamente para confirmar/reconciliar
+# kickoffs futuros quando o scoreboard da ESPN omite ou mantém um horário antigo.
+CBF_CREDENCIAMENTO_SERIE_A_URL = os.environ.get(
+    "CBF_CREDENCIAMENTO_SERIE_A_URL",
+    "https://credencial.cbf.com.br/competicoes/listar/42/1/",
+)
 API_FOOTBALL_BASE = "https://v3.football.api-sports.io"
 
 HEADERS_HTML = {
@@ -68,12 +76,33 @@ class CBFPartida:
         return asdict(self)
 
 
+@dataclass(frozen=True)
+class CBFAgendaPartida:
+    """Kickoff oficial publicado na agenda operacional da CBF."""
+
+    mandante: str
+    visitante: str
+    data_iso: str
+    origem: str = CBF_CREDENCIAMENTO_SERIE_A_URL
+
+    def public(self) -> dict[str, Any]:
+        return asdict(self)
+
+
 def normalizar_texto(valor: Any) -> str:
     texto = unicodedata.normalize("NFD", str(valor or ""))
     texto = "".join(ch for ch in texto if unicodedata.category(ch) != "Mn")
     texto = texto.lower().replace("&", " e ")
     texto = re.sub(r"[^a-z0-9+:/.' -]+", " ", texto)
     return re.sub(r"\s+", " ", texto).strip()
+
+
+def _cbf_official_host(url: str) -> bool:
+    try:
+        host = (urllib.parse.urlparse(url).hostname or "").lower()
+    except Exception:
+        return False
+    return host == "cbf.com.br" or host.endswith(".cbf.com.br")
 
 
 def fetch_text(url: str, *, timeout: int = 30, tentativas: int = 2) -> str:
@@ -91,14 +120,30 @@ def fetch_text(url: str, *, timeout: int = 30, tentativas: int = 2) -> str:
         try:
             from curl_cffi import requests as curl_requests  # type: ignore
 
-            response = curl_requests.get(
-                cache_url,
-                impersonate="chrome",
-                timeout=timeout + (tentativa - 1) * 8,
-                headers={"Accept-Language": HEADERS_HTML["Accept-Language"]},
-            )
-            response.raise_for_status()
-            return response.text
+            try:
+                response = curl_requests.get(
+                    cache_url,
+                    impersonate="chrome",
+                    timeout=timeout + (tentativa - 1) * 8,
+                    headers={"Accept-Language": HEADERS_HTML["Accept-Language"]},
+                )
+                response.raise_for_status()
+                return response.text
+            except Exception as first_exc:
+                # A cadeia TLS pública da CBF já falhou em runners GitHub por
+                # problema de certificado intermediário. O fallback sem
+                # verificação fica estritamente limitado a hosts oficiais CBF.
+                if not _cbf_official_host(cache_url):
+                    raise
+                response = curl_requests.get(
+                    cache_url,
+                    impersonate="chrome",
+                    timeout=timeout + (tentativa - 1) * 8,
+                    headers={"Accept-Language": HEADERS_HTML["Accept-Language"]},
+                    verify=False,
+                )
+                response.raise_for_status()
+                return response.text
         except ImportError:
             pass
         except Exception as exc:  # noqa: BLE001
@@ -112,6 +157,15 @@ def fetch_text(url: str, *, timeout: int = 30, tentativas: int = 2) -> str:
                 return response.read().decode(charset, errors="replace")
         except Exception as exc:  # noqa: BLE001
             erros_tentativa.append(f"urllib={type(exc).__name__}: {exc}")
+            if _cbf_official_host(cache_url):
+                try:
+                    context = ssl._create_unverified_context()
+                    req = urllib.request.Request(cache_url, headers=HEADERS_HTML)
+                    with urllib.request.urlopen(req, timeout=timeout + (tentativa - 1) * 8, context=context) as response:
+                        charset = response.headers.get_content_charset() or "utf-8"
+                        return response.read().decode(charset, errors="replace")
+                except Exception as insecure_exc:  # noqa: BLE001
+                    erros_tentativa.append(f"urllib-cbf-fallback={type(insecure_exc).__name__}: {insecure_exc}")
             ultimo = RuntimeError(" | ".join(erros_tentativa))
             if tentativa < tentativas:
                 time.sleep(2 * tentativa)
@@ -254,6 +308,137 @@ def _parse_transmission(cells: list[str], row_text: str) -> str:
     return value
 
 
+class _VisibleTextParser(HTMLParser):
+    """Extrai todo o texto visível sem depender do markup da página."""
+
+    BREAK_TAGS = {"br", "p", "div", "li", "tr", "td", "th", "article", "section", "a"}
+    SKIP_TAGS = {"script", "style", "noscript"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self._skip_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
+        tag = tag.lower()
+        if tag in self.SKIP_TAGS:
+            self._skip_depth += 1
+            return
+        if self._skip_depth:
+            return
+        if tag == "img":
+            alt = dict(attrs).get("alt") or ""
+            if alt:
+                self.parts.append(alt)
+        if tag in self.BREAK_TAGS:
+            self.parts.append(" \n ")
+
+    def handle_endtag(self, tag: str) -> None:
+        tag = tag.lower()
+        if tag in self.SKIP_TAGS:
+            if self._skip_depth:
+                self._skip_depth -= 1
+            return
+        if self._skip_depth:
+            return
+        if tag in self.BREAK_TAGS:
+            self.parts.append(" \n ")
+
+    def handle_data(self, data: str) -> None:
+        if not self._skip_depth:
+            self.parts.append(data)
+
+    def text(self) -> str:
+        value = html.unescape(" ".join(self.parts)).replace("\xa0", " ")
+        value = re.sub(r"[ \t\r\f\v]+", " ", value)
+        value = re.sub(r" *\n+ *", " \n ", value)
+        return value.strip()
+
+
+def parse_cbf_agenda_credencial(
+    html_text: str,
+    *,
+    resolver: Callable[[Any], Optional[str]],
+    origem: str = CBF_CREDENCIAMENTO_SERIE_A_URL,
+) -> list[CBFAgendaPartida]:
+    """Lê a agenda de credenciamento da CBF para confirmar datas/horários.
+
+    O parser não depende de classes CSS. Cada kickoff ``dd/mm/aaaa às hh:mm``
+    é associado ao par de clubes ao redor do separador ``x``. O mandante é o
+    último clube reconhecido antes do separador e o visitante é o primeiro
+    depois dele; assim nomes de estádio como ``São Januário`` não podem virar
+    falsamente ``São Paulo``.
+    """
+    parser = _VisibleTextParser()
+    parser.feed(html_text)
+    parser.close()
+    text = parser.text()
+    out: list[CBFAgendaPartida] = []
+    seen: set[tuple[str, str, str]] = set()
+
+    kickoff_re = re.compile(
+        r"\b(\d{2}/\d{2}/\d{4})\b\s*(?:às|as)\s*(\d{1,2})[:h](\d{2})\s*(?:hs?|horas?)?",
+        flags=re.IGNORECASE,
+    )
+    for match in kickoff_re.finditer(text):
+        line_start = text.rfind("\n", 0, match.start()) + 1
+        line_end = text.find("\n", match.end())
+        if line_end < 0:
+            line_end = len(text)
+        line = text[line_start:line_end].strip()
+        prefix = line[: max(0, match.start() - line_start)]
+        separators = list(re.finditer(r"\s+[xX×]\s+", prefix))
+        if not separators:
+            # Fallback para markup que colapse blocos: limita a janela e usa o
+            # último separador antes do kickoff.
+            window_start = max(0, match.start() - 320)
+            prefix = text[window_start:match.start()]
+            separators = list(re.finditer(r"\s+[xX×]\s+", prefix))
+        if not separators:
+            continue
+        sep = separators[-1]
+        home_candidates = _find_teams(prefix[:sep.start()], resolver)
+        away_candidates = _find_teams(prefix[sep.end():], resolver)
+        if not home_candidates or not away_candidates:
+            continue
+        home = home_candidates[-1][1]
+        away = away_candidates[0][1]
+        if not home or not away or home == away:
+            continue
+        kickoff = _parse_datetime_brt(line) or _parse_datetime_brt(text[max(0, match.start()-100):match.end()])
+        if not kickoff:
+            continue
+        item = CBFAgendaPartida(
+            mandante=home,
+            visitante=away,
+            data_iso=kickoff.strftime("%Y-%m-%dT%H:%M"),
+            origem=origem,
+        )
+        key = (item.mandante, item.visitante, item.data_iso)
+        if key not in seen:
+            out.append(item)
+            seen.add(key)
+    out.sort(key=lambda x: (x.data_iso, x.mandante, x.visitante))
+    return out
+
+
+def buscar_agenda_cbf(
+    *, resolver: Callable[[Any], Optional[str]], url: str = CBF_CREDENCIAMENTO_SERIE_A_URL
+) -> list[CBFAgendaPartida]:
+    page = fetch_text(url)
+    rows = parse_cbf_agenda_credencial(page, resolver=resolver, origem=url)
+    if not rows:
+        raise RuntimeError(f"agenda oficial da CBF carregada sem partidas reconhecíveis: {url}")
+    return rows
+
+
+def localizar_agenda_cbf(
+    rows: Iterable[CBFAgendaPartida], *, mandante: str, visitante: str
+) -> Optional[CBFAgendaPartida]:
+    matches = [row for row in rows if row.mandante == mandante and row.visitante == visitante]
+    return matches[0] if len(matches) == 1 else None
+
+
 def parse_cbf_tabela_detalhada(
     html_text: str,
     *,
@@ -266,22 +451,31 @@ def parse_cbf_tabela_detalhada(
 
     rows = parser.rows
     # Proteção para mudanças de markup: o buscador da CBF também pode devolver
-    # os registros sem <tr>. Neste caso, separa pelo marcador "Ref:".
+    # os registros sem <tr>. Aceita tanto o marcador histórico "Ref:" quanto
+    # o atual "Jogo:" e "Rodada" com ou sem dois-pontos.
     if not rows:
         raw = parser.fallback_text()
-        rows = [[chunk] for chunk in re.split(r"(?=\bRef:\s*\d+)", raw) if "Rodada:" in chunk]
+        rows = [
+            [chunk]
+            for chunk in re.split(r"(?=\b(?:Ref|Jogo)\s*:?\s*\d+)", raw, flags=re.IGNORECASE)
+            if re.search(r"\bRodada\b", chunk, flags=re.IGNORECASE)
+        ]
 
     out: list[CBFPartida] = []
     seen: set[tuple[int, str, str, str]] = set()
     for cells in rows:
         row_text = " | ".join(cells)
-        if "rodada" not in normalizar_texto(row_text) or "ref" not in normalizar_texto(row_text):
+        normalized_row = normalizar_texto(row_text)
+        if "rodada" not in normalized_row or not ("ref" in normalized_row or "jogo" in normalized_row):
             continue
-        round_match = re.search(r"Rodada\s*:\s*(\d+)", row_text, flags=re.IGNORECASE)
-        ref_match = re.search(r"Ref\s*:\s*(\d+)", row_text, flags=re.IGNORECASE)
+        round_match = re.search(r"Rodada\s*:?\s*(\d+)", row_text, flags=re.IGNORECASE)
+        round_label_match = re.search(r"Rodada\s*:?\s*([^|]+)", row_text, flags=re.IGNORECASE)
+        round_label = normalizar_texto(round_label_match.group(1) if round_label_match else "")
+        round_number = int(round_match.group(1)) if round_match else (1 if "ida" in round_label else (2 if "volta" in round_label else 0))
+        ref_match = re.search(r"(?:Ref|Jogo)\s*:?\s*(\d+)", row_text, flags=re.IGNORECASE)
         kickoff = _parse_datetime_brt(row_text)
         teams = _find_teams(row_text, resolver)
-        if not round_match or not kickoff or len(teams) < 2:
+        if not kickoff or len(teams) < 2:
             continue
         # Escolhe os dois primeiros clubes distintos. Títulos/cabeçalhos não têm
         # data e rodada juntos, então não entram aqui.
@@ -291,7 +485,7 @@ def parse_cbf_tabela_detalhada(
         home_score, away_score = _parse_score(row_text)
         item = CBFPartida(
             referencia=ref_match.group(1) if ref_match else "",
-            rodada=int(round_match.group(1)),
+            rodada=round_number,
             mandante=home,
             visitante=away,
             data_iso=kickoff.strftime("%Y-%m-%dT%H:%M"),
@@ -354,23 +548,25 @@ def localizar_partida_cbf(
     tolerancia_horas: int = 36,
 ) -> Optional[CBFPartida]:
     target_dt = _parse_iso_brt(data_iso)
-    candidates: list[tuple[float, CBFPartida]] = []
+    candidates: list[tuple[float, int, CBFPartida]] = []
     for row in rows:
         if row.mandante != mandante or row.visitante != visitante:
             continue
-        if rodada and row.rodada != rodada:
-            continue
+        # No Brasileirão o par ordenado mandante/visitante é único. A rodada
+        # pode divergir entre ESPN e CBF após adiamento/reagendamento, portanto
+        # ela é critério de desempate e nunca filtro eliminatório.
+        round_penalty = 0 if not rodada or row.rodada == rodada else 1
         row_dt = _parse_iso_brt(row.data_iso)
         distance = 0.0
         if target_dt and row_dt:
             distance = abs((row_dt - target_dt).total_seconds())
             if distance > tolerancia_horas * 3600:
                 continue
-        candidates.append((distance, row))
+        candidates.append((distance, round_penalty, row))
     if not candidates:
         return None
-    candidates.sort(key=lambda item: item[0])
-    return candidates[0][1]
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    return candidates[0][2]
 
 
 def fetch_api_football_fixtures(
@@ -441,6 +637,9 @@ def localizar_fixture_api_football(
 
 
 def _selftest() -> None:
+    assert _cbf_official_host("https://www.cbf.com.br/x")
+    assert _cbf_official_host("https://cbf-hml.cbf.com.br/x")
+    assert not _cbf_official_host("https://example.com/x")
     aliases = {
         "botafogo": "Botafogo",
         "vitoria": "Vitória",
@@ -450,6 +649,10 @@ def _selftest() -> None:
         "mirassol": "Mirassol",
         "bahia": "Bahia",
         "corinthians": "Corinthians",
+        "atletico mineiro": "Atlético-MG",
+        "gremio": "Grêmio",
+        "santos": "Santos",
+        "santos fc": "Santos",
     }
 
     def resolver(value: Any) -> Optional[str]:
@@ -474,11 +677,53 @@ def _selftest() -> None:
         rows, mandante="Botafogo", visitante="Vitória", rodada=4, data_iso="2026-07-23T19:30"
     )
     assert first and (first.placar_mandante, first.placar_visitante) == (0, 0)
+    # A ESPN pode mover a rodada editorial de um jogo reagendado. O fallback
+    # oficial da CBF deve reconhecer o mesmo mando pela dupla de clubes/data.
+    first_round_changed = localizar_partida_cbf(
+        rows, mandante="Botafogo", visitante="Vitória", rodada=99, data_iso="2026-07-23T19:30"
+    )
+    assert first_round_changed is first
     second = localizar_partida_cbf(
         rows, mandante="Vasco da Gama", visitante="Mirassol", rodada=20, data_iso="2026-07-25T20:30"
     )
     assert second and second.transmissao == "Premiere, Record, YouTube / Cazé TV"
     assert second.placar_mandante is None and second.placar_visitante is None
+
+    copa_sample = """
+    <div>Ref: 139 Rodada: Volta | Juventude Atlético Mineiro |
+      Data: 04/08/2026 - terça-feira às 19h30 |
+      Transmissão: Amazon Prime
+    </div>
+    """
+    aliases.update({"juventude": "Juventude", "atletico mineiro": "Atlético-MG"})
+    copa_rows = parse_cbf_tabela_detalhada(copa_sample, resolver=resolver, origem="teste-copa")
+    assert len(copa_rows) == 1, copa_rows
+    assert copa_rows[0].rodada == 2 and copa_rows[0].transmissao == "Amazon Prime"
+
+    current_markup_sample = """
+    <div>Jogo: 226 Rodada 23 Atlético Mineiro Grêmio
+      Data: 16/08/2026 - domingo às 16:00 | Transmissão: GE TV, Globo, Premiere
+    </div>
+    """
+    current_rows = parse_cbf_tabela_detalhada(current_markup_sample, resolver=resolver, origem="teste-atual")
+    assert len(current_rows) == 1, current_rows
+    assert current_rows[0].rodada == 23 and current_rows[0].referencia == "226"
+
+    agenda_sample = """
+    <section>
+      <div>X Vasco da Gama Saf / RJ x Santos FC / SP São Januário - , RJ 16/08/2026 às 16:00 hs</div>
+      <div>Encerrado 13/08/2026 18:00h</div>
+      <div>X Atlético Mineiro / MG x Grêmio / RS ARENA MRV - , MG 16/08/2026 às 16:00 hs</div>
+      <div>Encerrado 13/08/2026 18:00h</div>
+    </section>
+    """
+    aliases.update({"santos fc": "Santos", "santos": "Santos", "gremio": "Grêmio"})
+    agenda_rows = parse_cbf_agenda_credencial(agenda_sample, resolver=resolver, origem="teste-agenda")
+    assert len(agenda_rows) == 2, agenda_rows
+    vasco_santos = localizar_agenda_cbf(agenda_rows, mandante="Vasco da Gama", visitante="Santos")
+    assert vasco_santos and vasco_santos.data_iso == "2026-08-16T16:00", agenda_rows
+    atletico_gremio = localizar_agenda_cbf(agenda_rows, mandante="Atlético-MG", visitante="Grêmio")
+    assert atletico_gremio and atletico_gremio.data_iso == "2026-08-16T16:00"
     print("Selftest fontes complementares do Brasileirão OK")
 
 

@@ -47,6 +47,7 @@ PUBLIC_AUDIT_PATH = ROOT / "dados-br" / "auditoria-publicos.json"
 MM_PATH = ROOT / "dados-br" / "melhores-momentos.json"
 MM_MANUAL_PATH = ROOT / "dados-br" / "melhores-momentos-manual.json"
 TV_AUDIT_PATH = ROOT / "dados-br" / "auditoria-transmissoes-tv.json"
+GENERAL_AUDIT_PATH = ROOT / "dados-br" / "auditoria-geral.json"
 
 WORKFLOW_MAIN = "Atualizar Brasileirao (ESPN)"
 WORKFLOW_APURAR = "Apurar Apostas Brasileirão"
@@ -102,6 +103,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
         ],
     },
     "transmissoes": {"tv_diaria_apos": "06:30"},
+    "artefatos": {
+        "auditoria_geral_max_horas": 30,
+        "auditoria_transmissoes_max_horas": 36,
+    },
     "github": {"branch": "main", "historico_runs": 200, "bloquear_se_writer_ativo": True},
 }
 
@@ -578,6 +583,48 @@ def mm_decision(config: Mapping[str, Any], now: datetime, runs: Sequence[Mapping
     return None
 
 
+def artifact_age_hours(path: Path, now: datetime, tz: ZoneInfo, *fields: str) -> float | None:
+    payload = load_json(path, {})
+    if not isinstance(payload, Mapping):
+        return None
+    for field in fields:
+        stamp = parse_dt(payload.get(field), tz)
+        if stamp is not None:
+            return max(0.0, (now - stamp).total_seconds() / 3600.0)
+    return None
+
+
+def artifact_health_decision(config: Mapping[str, Any], now: datetime, runs: Sequence[Mapping[str, Any]], tz: ZoneInfo) -> Decision | None:
+    """Recupera artefatos que ficaram velhos apesar dos workflows normais.
+
+    A checagem é deliberadamente simples e local: não cria novas fontes nem
+    substitui as decisões esportivas. Ela só detecta quando uma auditoria que
+    deveria acompanhar o site parou de ser renovada.
+    """
+    cfg = config.get("artefatos") or {}
+    geral_max = float(cfg.get("auditoria_geral_max_horas") or 30)
+    tv_max = float(cfg.get("auditoria_transmissoes_max_horas") or 36)
+
+    geral_age = artifact_age_hours(GENERAL_AUDIT_PATH, now, tz, "gerado_em", "atualizado_em")
+    if geral_age is None or geral_age > geral_max:
+        last_main, _ = last_run(runs, WORKFLOW_MAIN, tz)
+        # Evita martelar o workflow quando ele acabou de tentar regenerar a auditoria.
+        if minutes_since(last_main, now) >= 60:
+            motivo = (
+                "Auditoria geral ainda não existe; executar atualização completa para criá-la."
+                if geral_age is None
+                else f"Auditoria geral está envelhecida ({geral_age:.1f}h > {geral_max:.0f}h); regenerar o snapshot e a auditoria."
+            )
+            return Decision("atualizar_brasileirao", motivo)
+
+    tv_age = artifact_age_hours(TV_AUDIT_PATH, now, tz, "atualizado_em", "gerado_em")
+    if tv_age is not None and tv_age > tv_max and time_reached(now, str(config["transmissoes"].get("tv_diaria_apos") or "06:30")):
+        last_tv, _ = last_run(runs, WORKFLOW_TV, tz)
+        if minutes_since(last_tv, now) >= 60:
+            return Decision("transmissoes_tv", f"Auditoria de transmissões está envelhecida ({tv_age:.1f}h > {tv_max:.0f}h); refazer grade futura.", mode="tv")
+    return None
+
+
 def tv_decision(config: Mapping[str, Any], now: datetime, runs: Sequence[Mapping[str, Any]], tz: ZoneInfo) -> Decision | None:
     after = str(config["transmissoes"].get("tv_diaria_apos") or "06:30")
     if not time_reached(now, after):
@@ -604,6 +651,9 @@ def decide(config: Mapping[str, Any], now: datetime, games: Sequence[Game], stat
     af = af_decision(config, now, runs, tz)
     if af:
         return af
+    health = artifact_health_decision(config, now, runs, tz)
+    if health:
+        return health
     pub = public_decision(config, now, runs, tz)
     if pub:
         return pub
@@ -647,7 +697,31 @@ def self_test() -> int:
     assert dec and dec.action == "atualizar_brasileirao"
     # Writer ativo bloqueia novo dispatch.
     assert active_writer(recent + [{"name": WORKFLOW_MM, "status": "in_progress", "id": 3}]) is not None
-    print("OK self-test: FINAL, gol sem pipeline, backoff e exclusão mútua validados.")
+
+    # Saúde de artefatos: ausente/velho recupera, recente não interfere.
+    import tempfile
+    global GENERAL_AUDIT_PATH, TV_AUDIT_PATH
+    old_general, old_tv = GENERAL_AUDIT_PATH, TV_AUDIT_PATH
+    with tempfile.TemporaryDirectory() as td:
+        base = Path(td)
+        GENERAL_AUDIT_PATH = base / "auditoria-geral.json"
+        TV_AUDIT_PATH = base / "auditoria-tv.json"
+        sem_run_recente: list[dict[str, Any]] = []
+        health = artifact_health_decision(config, now, sem_run_recente, tz)
+        assert health and health.action == "atualizar_brasileirao"
+        GENERAL_AUDIT_PATH.write_text(json.dumps({"gerado_em": now.isoformat()}), encoding="utf-8")
+        TV_AUDIT_PATH.write_text(json.dumps({"atualizado_em": now.isoformat()}), encoding="utf-8")
+        assert artifact_health_decision(config, now, sem_run_recente, tz) is None
+        GENERAL_AUDIT_PATH.write_text(json.dumps({"gerado_em": (now - timedelta(hours=31)).isoformat()}), encoding="utf-8")
+        health = artifact_health_decision(config, now, sem_run_recente, tz)
+        assert health and health.action == "atualizar_brasileirao"
+        GENERAL_AUDIT_PATH.write_text(json.dumps({"gerado_em": now.isoformat()}), encoding="utf-8")
+        TV_AUDIT_PATH.write_text(json.dumps({"atualizado_em": (now - timedelta(hours=37)).isoformat()}), encoding="utf-8")
+        health = artifact_health_decision(config, now, sem_run_recente, tz)
+        assert health and health.action == "transmissoes_tv"
+    GENERAL_AUDIT_PATH, TV_AUDIT_PATH = old_general, old_tv
+
+    print("OK self-test: FINAL, gol sem pipeline, backoff, artefatos envelhecidos e exclusão mútua validados.")
     return 0
 
 

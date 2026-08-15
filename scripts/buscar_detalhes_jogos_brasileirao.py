@@ -3,7 +3,7 @@
 """
 buscar_detalhes_jogos_brasileirao.py
 
-Busca incrementalmente o summary da ESPN para jogos finalizados do Brasileirão e gera:
+Busca incrementalmente summary + scoreboard da ESPN para jogos finalizados do Brasileirão e gera:
   - dados-br/jogos-detalhes.json
   - dados-br/auditoria-jogos-detalhes.json
 
@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 BASE_SUMMARY = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event={event_id}"
+BASE_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard"
 FUSO_BRASILIA = timezone(timedelta(hours=-3))
 ROOT = Path(__file__).resolve().parents[1]
 RESULTADOS = ROOT / "resultados.json"
@@ -260,6 +261,75 @@ def parse_summary(summary: dict[str, Any], jogo: dict[str, Any]) -> list[dict[st
     for item in saida:
         item.pop("_order", None)
     return saida
+
+
+def parse_scoreboard_stats(evento: dict[str, Any], jogo: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extrai do scoreboard as mesmas estatísticas que o AO VIVO já exibe.
+
+    O front mistura ``competition.competitors[].statistics`` com o ``summary``.
+    O coletor pós-jogo antigo lia apenas ``summary.boxscore.teams``; quando a ESPN
+    retinha o boxscore final, as métricas vistas ao vivo desapareciam em Resultados.
+    """
+    competitions = evento.get("competitions") or []
+    comp = competitions[0] if competitions and isinstance(competitions[0], dict) else {}
+    competitors = [x for x in (comp.get("competitors") or []) if isinstance(x, dict)]
+    if len(competitors) < 2:
+        return []
+    pseudo_summary = {
+        "header": {"competitions": [{"competitors": competitors}]},
+        "boxscore": {"teams": competitors},
+    }
+    return parse_summary(pseudo_summary, jogo)
+
+
+def mesclar_estatisticas(primarias: list[dict[str, Any]], complementares: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Une métricas por nome, preservando o summary e completando pelo scoreboard."""
+    merged: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    for conjunto in (primarias or [], complementares or []):
+        for origem in conjunto:
+            if not isinstance(origem, dict):
+                continue
+            label = str(origem.get("nome") or origem.get("label") or "").strip()
+            if not label:
+                continue
+            key = normalizar(label)
+            if key not in merged:
+                merged[key] = dict(origem)
+                order.append(key)
+                continue
+            atual = merged[key]
+            for campo in ("home", "away", "mandante", "visitante", "note"):
+                if atual.get(campo) in (None, "") and origem.get(campo) not in (None, ""):
+                    atual[campo] = origem[campo]
+    # Mantém a ordem canônica de METRIC_RULES quando possível.
+    metric_order = {normalizar(r["label"]): int(r["order"]) for r in METRIC_RULES}
+    return sorted((merged[k] for k in order), key=lambda x: metric_order.get(normalizar(x.get("nome") or x.get("label")), 999))
+
+
+def _scoreboard_day_key(jogo: dict[str, Any]) -> str:
+    dt = _data_jogo(jogo)
+    return dt.strftime("%Y%m%d") if dt else ""
+
+
+def buscar_evento_scoreboard(
+    jogo: dict[str, Any],
+    event_id: str,
+    cache: dict[str, dict[str, dict[str, Any]]],
+) -> dict[str, Any] | None:
+    """Busca uma vez por dia e reutiliza o scoreboard para todos os jogos da data."""
+    day = _scoreboard_day_key(jogo)
+    if not day:
+        return None
+    if day not in cache:
+        url = f"{BASE_SCOREBOARD}?dates={day}-{day}&limit=100&lang=pt&region=br"
+        payload = fetch_json(url, timeout=25, tentativas=2)
+        by_id: dict[str, dict[str, Any]] = {}
+        for item in payload.get("events") or []:
+            if isinstance(item, dict) and item.get("id") not in (None, ""):
+                by_id[str(item.get("id"))] = item
+        cache[day] = by_id
+    return cache[day].get(str(event_id))
 
 
 
@@ -1298,18 +1368,61 @@ def sanitizar_registro_local(jogo: dict[str, Any], record: dict[str, Any]) -> tu
     return gols, cartoes, validar_eventos(jogo, stats, gols, cartoes)
 
 def fetch_json(url: str, timeout: int = 20, tentativas: int = 2) -> dict[str, Any]:
+    """Busca ESPN com o mesmo transporte robusto do coletor principal.
+
+    Runners compartilhados do GitHub recebem 403 intermitente no ``urllib``.
+    ``curl-cffi`` com impersonação de Chrome é a rota principal; ``urllib`` fica
+    como fallback independente. Isso evita preservar silenciosamente um snapshot
+    antigo quando apenas o cliente HTTP foi bloqueado.
+    """
     ultimo: Exception | None = None
     for i in range(1, tentativas + 1):
+        sep = "&" if "?" in url else "?"
+        cache_url = f"{url}{sep}_={int(time.time())}"
+        erros: list[str] = []
+
         try:
-            sep = "&" if "?" in url else "?"
-            req = urllib.request.Request(f"{url}{sep}_={int(time.time())}", headers=HEADERS)
-            with urllib.request.urlopen(req, timeout=timeout + 6 * (i - 1)) as r:
-                charset = r.headers.get_content_charset() or "utf-8"
-                return json.loads(r.read().decode(charset, errors="replace"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as exc:
+            from curl_cffi import requests as curl_requests  # type: ignore
+
+            response = curl_requests.get(
+                cache_url,
+                impersonate="chrome",
+                timeout=timeout + 8 * (i - 1),
+                headers={
+                    "Accept": HEADERS["Accept"],
+                    "Accept-Language": HEADERS["Accept-Language"],
+                    "Cache-Control": HEADERS["Cache-Control"],
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+            if not isinstance(data, dict):
+                raise ValueError("resposta ESPN sem objeto JSON na raiz")
+            return data
+        except ImportError:
+            erros.append("curl_cffi=indisponível")
+        except Exception as exc:  # noqa: BLE001
+            erros.append(f"curl_cffi={type(exc).__name__}: {exc}")
             ultimo = exc
-            if i < tentativas:
-                time.sleep(1.5 * i)
+
+        try:
+            req = urllib.request.Request(cache_url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=timeout + 10 * (i - 1)) as r:
+                charset = r.headers.get_content_charset() or "utf-8"
+                bruto = r.read().decode(charset, errors="replace")
+            data = json.loads(bruto)
+            if not isinstance(data, dict):
+                raise ValueError("resposta ESPN sem objeto JSON na raiz")
+            return data
+        except Exception as exc:  # noqa: BLE001
+            erros.append(f"urllib={type(exc).__name__}: {exc}")
+            ultimo = exc
+
+        if i < tentativas:
+            time.sleep(1.5 * i)
+        if erros:
+            print(f"[WARN] tentativa {i}/{tentativas} falhou em {url}: {' | '.join(erros)}")
+
     raise RuntimeError(f"falha ao buscar {url}: {type(ultimo).__name__}: {ultimo}")
 
 
@@ -1427,6 +1540,7 @@ def montar_registro(
     publico_fonte: str = "",
     publico_tipo: str = "",
     event_id_fonte_detalhes: str = "",
+    fonte_detalhes: str = "",
 ) -> dict[str, Any]:
     return {
         "event_id": event_id,
@@ -1449,7 +1563,7 @@ def montar_registro(
         "jogadores": jogadores or [],
         "jogadores_preservados_de_execucao_anterior": bool(jogadores_preservados),
         "validacao_eventos": validacao or validar_eventos(jogo, stats, gols or [], cartoes or []),
-        "fonte": "ESPN summary" if not jogo.get("resultado_manual") else "Resultado confirmado; detalhes ESPN",
+        "fonte": (fonte_detalhes or "ESPN summary") if not jogo.get("resultado_manual") else "Resultado confirmado; detalhes ESPN",
         "resultado_manual": bool(jogo.get("resultado_manual") is True),
         "origem_resultado": str(jogo.get("origem_resultado") or ""),
         "motivo_resultado_manual": str(jogo.get("motivo_resultado_manual") or ""),
@@ -1542,6 +1656,17 @@ def self_test() -> None:
     assert any(x["nome"] == "Desarmes" and x["home"] == "18" and x["away"] == "20" for x in stats)
     assert any(x["nome"] == "Interceptações" and x["home"] == "11" and x["away"] == "9" for x in stats)
     assert any(x["nome"] == "Cruzamentos" and x["home"] == "22" and x["away"] == "15" for x in stats)
+    scoreboard = {
+        "competitions": [{"competitors": summary["boxscore"]["teams"]}],
+    }
+    stats_scoreboard = parse_scoreboard_stats(scoreboard, jogo)
+    assert any(x["nome"] == "Posse" and x["home"] == "60%" and x["away"] == "40%" for x in stats_scoreboard)
+    merged = mesclar_estatisticas(
+        [{"nome": "Posse", "home": "60%", "away": "40%"}],
+        stats_scoreboard,
+    )
+    assert any(x["nome"] == "Passes" and x["home"] == "500" and x["away"] == "410" for x in merged)
+    assert sum(1 for x in merged if x["nome"] == "Posse") == 1
     jogadores = parse_jogadores(summary, jogo)
     assert {(x["nome"], x["time"]) for x in jogadores} == {
         ("Pedro", "Flamengo"), ("Samuel Lino", "Flamengo"), ("Jogador X", "Palmeiras")
@@ -1591,7 +1716,7 @@ def self_test() -> None:
     mapa_ids = carregar_event_ids_detalhes()
     if RESULTADOS_MANUAIS.exists():
         assert mapa_ids.get("401840998") == "401879459", mapa_ids
-    print("SELF-TEST OK: público, escalações, eventos, deduplicação, ID alternativo e fallback manual sem inventar detalhes.")
+    print("SELF-TEST OK: público, scoreboard, merge de estatísticas, escalações, eventos, deduplicação, ID alternativo e fallback manual.")
 
 
 def _build_payload(jogos_saida: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -1599,7 +1724,7 @@ def _build_payload(jogos_saida: dict[str, dict[str, Any]]) -> dict[str, Any]:
     return {
         "_comentario": "Gerado por scripts/buscar_detalhes_jogos_brasileirao.py. Gols e cartões são deduplicados e validados contra placar/boxscore.",
         "gerado_em": iso_agora_brt(),
-        "fonte": "ESPN summary",
+        "fonte": "ESPN summary + scoreboard",
         "total_jogos": len(jogos_saida),
         "total_com_estatisticas": total_com,
         "total_com_publico": sum(1 for j in jogos_saida.values() if j.get("publico") not in (None, "")),
@@ -1616,6 +1741,8 @@ def _build_payload(jogos_saida: dict[str, dict[str, Any]]) -> dict[str, Any]:
 def _build_audit(
     base_resultados: dict[str, Any], resultados: list[dict[str, Any]], jogos_saida: dict[str, dict[str, Any]],
     *, buscados: int, preservados: int, falhas: list[dict[str, Any]], sem_estatisticas: list[dict[str, Any]], modo: str,
+    cache_utilizados: int = 0, scoreboard_complementados: int = 0,
+    falhas_refresh_preservadas: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     pendentes_detalhes = [
         {"event_id": eid, "jogo": f"{j.get('mandante')} x {j.get('visitante')}", "validacao": j.get("validacao_eventos")}
@@ -1629,10 +1756,17 @@ def _build_audit(
         and not (j.get("validacao_eventos") or {}).get("pendente_detalhes")
     ]
     return {
-        "gerado_em": iso_agora_brt(), "fonte": "ESPN summary", "modo": modo,
+        "gerado_em": iso_agora_brt(), "fonte": "ESPN summary + scoreboard", "modo": modo,
         "total_resultados_lidos": len(base_resultados.get("resultados") or []),
         "total_processados": len(resultados), "total_buscados_na_espn": buscados,
+        "total_cache_incremental": int(cache_utilizados),
+        "total_complementados_scoreboard": int(scoreboard_complementados),
+        "total_falhas_refresh_preservadas": len(falhas_refresh_preservadas or []),
+        "falhas_refresh_preservadas": falhas_refresh_preservadas or [],
         "total_com_estatisticas": sum(1 for j in jogos_saida.values() if j.get("stats")),
+        "total_sem_estatisticas_no_snapshot": sum(1 for j in jogos_saida.values() if not j.get("stats")),
+        "total_sem_estatisticas": sum(1 for j in jogos_saida.values() if not j.get("stats")),
+        "total_sem_estatisticas_nesta_execucao": len(sem_estatisticas),
         "total_com_publico": sum(1 for j in jogos_saida.values() if j.get("publico") not in (None, "")),
         "total_sem_publico": sum(1 for j in jogos_saida.values() if j.get("publico") in (None, "")),
         "total_com_eventos": sum(1 for j in jogos_saida.values() if j.get("gols") or j.get("cartoes")),
@@ -1641,9 +1775,14 @@ def _build_audit(
         "eventos_pendentes_detalhes": pendentes_detalhes,
         "total_inconsistencias_eventos": len(inconsistencias),
         "inconsistencias_eventos": inconsistencias,
-        "total_sem_estatisticas": len(sem_estatisticas),
         "total_preservados_de_execucao_anterior": preservados,
-        "total_falhas": len(falhas), "sem_estatisticas": sem_estatisticas, "falhas": falhas,
+        "total_falhas": len(falhas),
+        "sem_estatisticas": [
+            {"event_id": eid, "jogo": f"{j.get('mandante')} x {j.get('visitante')}"}
+            for eid, j in jogos_saida.items() if not j.get("stats")
+        ],
+        "sem_estatisticas_nesta_execucao": sem_estatisticas,
+        "falhas": falhas,
         "total_com_jogadores": sum(1 for j in jogos_saida.values() if j.get("jogadores")),
         "jogos_sem_escalacoes": [
             {"event_id": eid, "jogo": f"{j.get('mandante')} x {j.get('visitante')}"}
@@ -1691,6 +1830,10 @@ def main() -> None:
     sem_estatisticas: list[dict[str, Any]] = []
     preservados = 0
     buscados = 0
+    cache_utilizados = 0
+    scoreboard_complementados = 0
+    falhas_refresh_preservadas: list[dict[str, Any]] = []
+    scoreboard_cache: dict[str, dict[str, dict[str, Any]]] = {}
 
     for i, jogo in enumerate(resultados, 1):
         event_id = str(jogo.get("event_id") or "")
@@ -1708,7 +1851,8 @@ def main() -> None:
                 cached.update(publico=manual_publico, publico_fonte=manual_fonte, publico_tipo=manual_tipo)
             jogos_saida[event_id] = cached
             preservados += 1
-            print(f"[{i:03d}/{len(resultados):03d}] CACHE {label}: summary final íntegro preservado")
+            cache_utilizados += 1
+            print(f"[{i:03d}/{len(resultados):03d}] CACHE {label}: ficha final íntegra preservada")
             continue
 
         if args.reparar_local:
@@ -1734,9 +1878,80 @@ def main() -> None:
             print(f"[{i:03d}/{len(resultados):03d}] LOCAL {label}: gols={len(gols)} · cartões={len(cartoes)} · ok={validacao['ok']}")
             continue
 
+        summary: dict[str, Any] | None = None
+        summary_error: Exception | None = None
         try:
             summary = fetch_json(BASE_SUMMARY.format(event_id=event_id_fonte))
-            stats = parse_summary(summary, jogo)
+        except Exception as exc:  # noqa: BLE001
+            summary_error = exc
+
+        scoreboard_event: dict[str, Any] | None = None
+        scoreboard_error: Exception | None = None
+        try:
+            scoreboard_event = buscar_evento_scoreboard(jogo, event_id_fonte, scoreboard_cache)
+        except Exception as exc:  # noqa: BLE001
+            scoreboard_error = exc
+
+        if summary is None and scoreboard_event is None:
+            detalhe_erro = f"summary={summary_error}; scoreboard={scoreboard_error}"
+            if antigo:
+                stats = list((antigo or {}).get("stats") or (antigo or {}).get("estatisticas") or [])
+                gols, cartoes, validacao = sanitizar_registro_local(jogo, antigo)
+                jogadores = list((antigo or {}).get("jogadores") or [])
+                validacao = _ajustar_validacao_manual_sem_eventos(
+                    jogo, validacao, gols, cartoes, f"Falha ao atualizar ESPN: {detalhe_erro}"
+                )
+                preservados += 1
+                falhas_refresh_preservadas.append({
+                    "event_id": event_id, "jogo": label, "erro": detalhe_erro[:500],
+                })
+                manual_publico, manual_fonte, manual_tipo = publico_complementar(event_id, publicos_complementares)
+                valor_publico = (antigo or {}).get("publico")
+                fonte_publico = str((antigo or {}).get("publico_fonte") or "")
+                tipo_publico = str((antigo or {}).get("publico_tipo") or "")
+                if valor_publico in (None, "", 0, "0") and manual_publico is not None:
+                    valor_publico, fonte_publico, tipo_publico = manual_publico, manual_fonte, manual_tipo
+                jogos_saida[event_id] = montar_registro(
+                    event_id, jogo, stats, publico=valor_publico,
+                    estadio=str((antigo or {}).get("estadio") or jogo.get("estadio") or ""),
+                    arbitro=str((antigo or {}).get("arbitro") or ""), gols=gols, cartoes=cartoes, jogadores=jogadores,
+                    preservado=True, validacao=validacao, publico_fonte=fonte_publico, publico_tipo=tipo_publico,
+                    event_id_fonte_detalhes=event_id_fonte, fonte_detalhes="ESPN indisponível; snapshot anterior preservado",
+                )
+            else:
+                if jogo.get("resultado_manual") is True:
+                    sem_estatisticas.append({"event_id": event_id, "jogo": label, "motivo": "detalhes ESPN pendentes"})
+                    validacao = validacao_resultado_manual_pendente(jogo, f"Falha ao buscar ESPN: {detalhe_erro}")
+                    jogos_saida[event_id] = montar_registro(
+                        event_id, jogo, [], validacao=validacao, event_id_fonte_detalhes=event_id_fonte,
+                        fonte_detalhes="ESPN indisponível",
+                    )
+                else:
+                    falhas.append({"event_id": event_id, "jogo": label, "erro": detalhe_erro[:500]})
+                    jogos_saida[event_id] = montar_registro(
+                        event_id, jogo, [], validacao=validar_eventos(jogo, [], [], []),
+                        event_id_fonte_detalhes=event_id_fonte, fonte_detalhes="ESPN indisponível",
+                    )
+            print(f"[WARN] {label}: {detalhe_erro}")
+            time.sleep(max(0.0, args.sleep))
+            continue
+
+        stats_summary = parse_summary(summary or {}, jogo)
+        stats_scoreboard = parse_scoreboard_stats(scoreboard_event or {}, jogo)
+        stats = mesclar_estatisticas(stats_summary, stats_scoreboard)
+        if stats_scoreboard and len(stats) > len(stats_summary):
+            scoreboard_complementados += 1
+
+        # Um refresh parcial nunca deve apagar estatísticas já válidas. O dado
+        # anterior só entra quando as duas fontes atuais vierem sem métricas.
+        stats_preservadas = False
+        stats_anteriores = list((antigo or {}).get("stats") or (antigo or {}).get("estatisticas") or [])
+        if not stats and stats_anteriores:
+            stats = stats_anteriores
+            stats_preservadas = True
+
+        registro_preservado = False
+        if summary is not None:
             publico = parse_publico(summary)
             publico_fonte = "ESPN summary" if publico is not None else ""
             publico_tipo = "presente" if publico is not None else ""
@@ -1753,55 +1968,69 @@ def main() -> None:
             validacao = _ajustar_validacao_manual_sem_eventos(
                 jogo, validacao, gols, cartoes, "Summary ESPN respondeu sem eventos compatíveis com o placar confirmado."
             )
+            fonte_detalhes = "ESPN summary + scoreboard" if stats_scoreboard else "ESPN summary"
+            if stats_preservadas:
+                fonte_detalhes += "; estatísticas anteriores preservadas"
+                registro_preservado = True
+                preservados += 1
+                motivo_stats = "summary e scoreboard responderam sem estatísticas; snapshot anterior preservado"
+                if scoreboard_error is not None:
+                    motivo_stats = f"summary sem estatísticas; scoreboard indisponível: {scoreboard_error}; snapshot anterior preservado"
+                falhas_refresh_preservadas.append({
+                    "event_id": event_id, "jogo": label, "erro": motivo_stats[:500],
+                })
             buscados += 1
-        except Exception as exc:  # noqa: BLE001
-            stats = list((antigo or {}).get("stats") or (antigo or {}).get("estatisticas") or [])
+        else:
+            # O scoreboard é exatamente a rota usada pelo AO VIVO para as métricas.
+            # Se o summary falhar, atualizamos as estatísticas sem apagar eventos,
+            # escalações, público ou arbitragem já validados em execução anterior.
+            stats = mesclar_estatisticas(
+                list((antigo or {}).get("stats") or (antigo or {}).get("estatisticas") or []),
+                stats_scoreboard,
+            )
             if antigo:
                 gols, cartoes, validacao = sanitizar_registro_local(jogo, antigo)
                 jogadores = list((antigo or {}).get("jogadores") or [])
-                validacao = _ajustar_validacao_manual_sem_eventos(
-                    jogo, validacao, gols, cartoes, f"Falha ao atualizar summary ESPN: {exc}"
-                )
-                preservados += 1
-                manual_publico, manual_fonte, manual_tipo = publico_complementar(event_id, publicos_complementares)
-                valor_publico = (antigo or {}).get("publico")
-                fonte_publico = str((antigo or {}).get("publico_fonte") or "")
-                tipo_publico = str((antigo or {}).get("publico_tipo") or "")
-                if valor_publico in (None, "", 0, "0") and manual_publico is not None:
-                    valor_publico, fonte_publico, tipo_publico = manual_publico, manual_fonte, manual_tipo
-                jogos_saida[event_id] = montar_registro(
-                    event_id, jogo, stats, publico=valor_publico,
-                    estadio=str((antigo or {}).get("estadio") or jogo.get("estadio") or ""),
-                    arbitro=str((antigo or {}).get("arbitro") or ""), gols=gols, cartoes=cartoes, jogadores=jogadores,
-                    preservado=True, validacao=validacao, publico_fonte=fonte_publico, publico_tipo=tipo_publico,
-                    event_id_fonte_detalhes=event_id_fonte,
-                )
             else:
-                if jogo.get("resultado_manual") is True:
-                    sem_estatisticas.append({"event_id": event_id, "jogo": label, "motivo": "detalhes ESPN pendentes"})
-                    validacao = validacao_resultado_manual_pendente(
-                        jogo, f"Falha ao buscar summary ESPN: {exc}"
-                    )
-                    jogos_saida[event_id] = montar_registro(
-                        event_id, jogo, [], validacao=validacao, event_id_fonte_detalhes=event_id_fonte
-                    )
-                else:
-                    falhas.append({"event_id": event_id, "jogo": label, "erro": str(exc)[:300]})
-                    jogos_saida[event_id] = montar_registro(
-                        event_id, jogo, [], validacao=validar_eventos(jogo, [], [], []),
-                        event_id_fonte_detalhes=event_id_fonte,
-                    )
-            print(f"[WARN] {label}: {exc}")
-            time.sleep(max(0.0, args.sleep))
-            continue
+                gols, cartoes = [], []
+                validacao = validar_eventos(jogo, stats, gols, cartoes)
+                jogadores = []
+            jogadores_preservados = bool(jogadores)
+            validacao = _ajustar_validacao_manual_sem_eventos(
+                jogo, validacao, gols, cartoes, f"Summary ESPN indisponível; métricas recuperadas do scoreboard: {summary_error}"
+            )
+            manual_publico, manual_fonte, manual_tipo = publico_complementar(event_id, publicos_complementares)
+            publico = (antigo or {}).get("publico")
+            publico_fonte = str((antigo or {}).get("publico_fonte") or "")
+            publico_tipo = str((antigo or {}).get("publico_tipo") or "")
+            if publico in (None, "", 0, "0") and manual_publico is not None:
+                publico, publico_fonte, publico_tipo = manual_publico, manual_fonte, manual_tipo
+            comp = ((scoreboard_event or {}).get("competitions") or [{}])[0]
+            estadio = str(((comp or {}).get("venue") or {}).get("fullName") or (antigo or {}).get("estadio") or jogo.get("estadio") or "")
+            arbitro = str((antigo or {}).get("arbitro") or "")
+            fonte_detalhes = "ESPN scoreboard; detalhes anteriores preservados" if antigo else "ESPN scoreboard"
+            registro_preservado = bool(antigo)
+            preservados += 1 if antigo else 0
+            buscados += 1
+            recuperou_metricas = bool(stats_scoreboard)
+            if recuperou_metricas:
+                motivo_refresh = f"summary indisponível; scoreboard recuperou as métricas: {summary_error}"
+            else:
+                motivo_refresh = f"summary indisponível; scoreboard respondeu sem métricas: {summary_error}"
+            falhas_refresh_preservadas.append({
+                "event_id": event_id, "jogo": label,
+                "erro": motivo_refresh[:500],
+                "recuperado_por_scoreboard": recuperou_metricas,
+            })
 
         if not stats:
             sem_estatisticas.append({"event_id": event_id, "jogo": label})
         jogos_saida[event_id] = montar_registro(
             event_id, jogo, stats, publico=publico, estadio=estadio, arbitro=arbitro,
             gols=gols, cartoes=cartoes, jogadores=jogadores, jogadores_preservados=jogadores_preservados,
-            validacao=validacao, publico_fonte=publico_fonte, publico_tipo=publico_tipo,
-            event_id_fonte_detalhes=event_id_fonte,
+            preservado=registro_preservado, validacao=validacao,
+            publico_fonte=publico_fonte, publico_tipo=publico_tipo,
+            event_id_fonte_detalhes=event_id_fonte, fonte_detalhes=fonte_detalhes,
         )
         print(
             f"[{i:03d}/{len(resultados):03d}] {label}: {len(stats)} estatística(s) · "
@@ -1814,6 +2043,8 @@ def main() -> None:
     auditoria = _build_audit(
         base_resultados, resultados, jogos_saida, buscados=buscados, preservados=preservados,
         falhas=falhas, sem_estatisticas=sem_estatisticas, modo="reparo-local" if args.reparar_local else "rede",
+        cache_utilizados=cache_utilizados, scoreboard_complementados=scoreboard_complementados,
+        falhas_refresh_preservadas=falhas_refresh_preservadas,
     )
     gravar_json(SAIDA, payload)
     gravar_json(AUDITORIA, auditoria)
