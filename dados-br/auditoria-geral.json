@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "gerado_em": "2026-08-15T17:03:40-03:00",
+  "status": "warning",
+  "fingerprint_critico": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "resumo": {
+    "criticos": 0,
+    "avisos": 1,
+    "informativos": 0,
+    "calendario_partidas": 380,
+    "resultados_registros": 215,
+    "resultados_fisicos": 215,
+    "tabela_partidas": 215,
+    "jogos_finais_bolao_desde_r20": 26,
+    "jogos_apurados_bolao": 26,
+    "jogos_sem_estatisticas": 0,
+    "partidas_sem_publico": 0,
+    "melhores_momentos_sem_video_24_48h": 0,
+    "melhores_momentos_sem_video_mais_48h": 1,
+    "auditoria_tv_idade_horas": 0.2
+  },
+  "criticos": [],
+  "avisos": [
+    {
+      "codigo": "MELHORES_MOMENTOS_48H",
+      "mensagem": "1 jogo(s) estão sem vídeo há mais de 48h.",
+      "detalhes": {
+        "exemplos": [
+          {
+            "event_id": "401879459",
+            "jogo": "Bahia x Chapecoense",
+            "horas": 278.1
+          }
+        ]
+      }
+    }
+  ],
+  "informativos": [],
+  "rodadas_divergentes_por_artefato": {
+    "eventos": [],
+    "jogos": [],
+    "resultados": []
+  },
+  "politica": {
+    "melhores_momentos": "0-24h não é falha; 24-48h aviso; >48h só é crítico em lote de 3 ou mais.",
+    "email": "Somente status critical novo/diferente dispara e-mail; ok/warning ficam silenciosos.",
+    "fontes": "Auditoria local; nenhum dado esportivo é inventado ou recalculado pela auditoria."
+  },
+  "alerta_email": "dispensado: sem problema crítico"
+}

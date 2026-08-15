@@ -1,5 +1,5 @@
 {
-  "gerado_em": "2026-08-15T15:50:54.321925-03:00",
+  "gerado_em": "2026-08-15T17:00:59.887017-03:00",
   "fonte": "auditoria local sobre JSONs normalizados da ESPN",
   "escopo": "módulo Brasileirão; nenhum arquivo da Copa",
   "resumo": {
@@ -9,16 +9,30 @@
     "rodadas_com_10_jogos": 38,
     "clubes_com_38_jogos": 20,
     "confrontos_com_ida_e_volta": 190,
-    "partidas_com_data_confirmada": 301,
-    "partidas_com_data_a_definir": 79,
+    "partidas_com_data_confirmada": 325,
+    "partidas_com_data_a_definir": 55,
     "resultados_publicados": 215,
-    "proximos_publicados": 40,
-    "eventos_espn_na_janela": 313,
+    "proximos_publicados": 50,
+    "eventos_espn_na_janela": 330,
     "ajustes_calendario_configurados": 3,
-    "jogos_adiados_sem_data": 1,
+    "jogos_adiados_sem_data": 5,
+    "jogos_com_data_a_definir": 5,
     "rodadas_espn_com_clube_repetido": 0,
+    "rodadas_preservadas_do_calendario_anterior": 0,
+    "kickoffs_confirmados_cbf": 27,
+    "kickoffs_preservados_sem_confirmacao_atual": 0,
+    "kickoffs_espn_provisorios_suprimidos_da_agenda": 4,
+    "kickoffs_herdados_provisorios_suprimidos": 0,
     "falhas_graves": 0
   },
+  "avisos": [
+    {
+      "tipo": "kickoff_espn_provisorio",
+      "rodada": 21,
+      "data_iso": "2026-07-29T15:00",
+      "jogos": 4
+    }
+  ],
   "distribuicao_jogos_disputados": {
     "22": 10,
     "21": 10
@@ -106,6 +120,34 @@
     }
   ],
   "jogos_adiados_sem_data": [
+    {
+      "event_id": "401841168",
+      "rodada": 21,
+      "mandante": "Atlético-MG",
+      "visitante": "Bragantino",
+      "status": "0'"
+    },
+    {
+      "event_id": "401841176",
+      "rodada": 21,
+      "mandante": "Botafogo",
+      "visitante": "Grêmio",
+      "status": "0'"
+    },
+    {
+      "event_id": "401841175",
+      "rodada": 21,
+      "mandante": "Chapecoense",
+      "visitante": "Vasco da Gama",
+      "status": "0'"
+    },
+    {
+      "event_id": "401841169",
+      "rodada": 21,
+      "mandante": "São Paulo",
+      "visitante": "Santos",
+      "status": "0'"
+    },
     {
       "event_id": "401841006",
       "rodada": 4,
@@ -539,65 +581,52 @@
     },
     {
       "rodada": 23,
-      "jogos_mapeados": 9,
+      "jogos_mapeados": 10,
       "clubes_repetidos": [],
-      "clubes_ausentes": [
-        "Bahia",
-        "Chapecoense"
-      ],
-      "integra": false
+      "clubes_ausentes": [],
+      "integra": true
     },
     {
       "rodada": 24,
-      "jogos_mapeados": 8,
+      "jogos_mapeados": 10,
       "clubes_repetidos": [],
-      "clubes_ausentes": [
-        "Athletico-PR",
-        "Botafogo",
-        "Corinthians",
-        "Coritiba"
-      ],
-      "integra": false
+      "clubes_ausentes": [],
+      "integra": true
     },
     {
       "rodada": 25,
-      "jogos_mapeados": 6,
+      "jogos_mapeados": 10,
       "clubes_repetidos": [],
       "clubes_ausentes": [],
-      "integra": false
+      "integra": true
     },
     {
       "rodada": 26,
-      "jogos_mapeados": 7,
+      "jogos_mapeados": 10,
       "clubes_repetidos": [],
       "clubes_ausentes": [],
-      "integra": false
+      "integra": true
     },
     {
       "rodada": 27,
-      "jogos_mapeados": 7,
+      "jogos_mapeados": 10,
       "clubes_repetidos": [],
       "clubes_ausentes": [],
-      "integra": false
+      "integra": true
     },
     {
       "rodada": 28,
-      "jogos_mapeados": 7,
+      "jogos_mapeados": 10,
       "clubes_repetidos": [],
       "clubes_ausentes": [],
-      "integra": false
+      "integra": true
     },
     {
       "rodada": 29,
-      "jogos_mapeados": 8,
+      "jogos_mapeados": 10,
       "clubes_repetidos": [],
-      "clubes_ausentes": [
-        "Botafogo",
-        "Chapecoense",
-        "Fluminense",
-        "São Paulo"
-      ],
-      "integra": false
+      "clubes_ausentes": [],
+      "integra": true
     },
     {
       "rodada": 30,
@@ -626,16 +655,9 @@
       "clubes_repetidos": [],
       "clubes_ausentes": [],
       "integra": true
-    },
-    {
-      "rodada": 38,
-      "jogos_mapeados": 1,
-      "clubes_repetidos": [],
-      "clubes_ausentes": [],
-      "integra": false
     }
   ],
   "duplicados_entre_resultados_e_proximos": [],
   "falhas": [],
-  "observacao": "A ESPN é consultada de 1º de janeiro até 60 dias à frente. O calendario-completo.json preserva datas conhecidas e completa os 380 confrontos pela inversão obrigatória dos mandos do primeiro turno."
+  "observacao": "O calendário só é substituído depois de validar 380 partidas, 38 rodadas íntegras, 20 clubes com 38 jogos e 190 confrontos de ida e volta."
 }
