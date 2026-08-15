@@ -12,7 +12,8 @@ Fluxo:
 3. recomenda abertura 7 dias antes e fechamento 60 min antes;
 4. delega a mutação segura à RPC service_role da Execução 21;
 5. envia um único e-mail quando um bloco entra em ABERTA;
-6. grava auditoria agregada sem expor palpites/placares dos participantes.
+6. envia um único e-mail quando um bloco chega a 30/30, com vencedor e pontos;
+7. grava auditoria agregada sem expor palpites/placares dos participantes.
 """
 from __future__ import annotations
 
@@ -33,6 +34,8 @@ TEMPORADA = int(os.environ.get("BRASILEIRAO_TEMPORADA", "2026"))
 CALENDAR_PATH = ROOT / "dados-br" / "calendario-completo.json"
 CONFIG_PATH = ROOT / "dados-br" / "apostas-config.json"
 AUDIT_PATH = ROOT / "dados-br" / "auditoria-blocos-apostas.json"
+APURACAO_PATH = ROOT / "dados-br" / "apuracao.json"
+SITE_RANKING_URL = "https://brasileirao2026almoco.com.br/apostas.html?aba=ranking"
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 DEFAULT_SENDER = "Bolão Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>"
@@ -105,6 +108,7 @@ def auto_policy(config: Mapping[str, Any]) -> dict[str, Any]:
         "fechamento_minutos": int(raw.get("fechamentoAntesPrimeiroJogoMinutos") or 60),
         "exigir_canonicos": int(raw.get("exigirConfrontosCanonicos") or 30),
         "email_ao_abrir": bool(raw.get("emailAoAbrir", True)),
+        "email_ao_concluir": bool(raw.get("emailAoConcluir", True)),
     }
 
 
@@ -225,9 +229,9 @@ def email_opening(block: Mapping[str, Any]) -> tuple[bool, str]:
     end = int(block.get("rodada_fim") or 0)
     close = parse_dt(block.get("fecha_em"))
     close_text = close.strftime("%d/%m/%Y às %H:%M") if close else "horário configurado no site"
-    subject = f"Brasileirão 2026 Almoço — Bloco {start}–{end} aberto"
+    subject = f"Brasileirão 2026 Almoço — Rodadas {start}–{end} abertas"
     html = (
-        f"<h2>Bloco {start}–{end} está aberto!</h2>"
+        f"<h2>Rodadas {start}–{end} estão abertas!</h2>"
         "<p><strong>Envie mensagem no grupo para fazerem seus palpites.</strong></p>"
         f"<p>São 30 jogos, das rodadas {start}, {start + 1} e {end}. O prazo atual termina em <strong>{close_text}</strong>.</p>"
         "<p>Um bloco anterior ainda em apuração por causa de jogo adiado não impede este bloco de funcionar normalmente.</p>"
@@ -248,12 +252,102 @@ def email_opening(block: Mapping[str, Any]) -> tuple[bool, str]:
         return False, f"{type(exc).__name__}: {exc}"[:500]
 
 
+
+def completion_details(block: Mapping[str, Any], apuracao: Mapping[str, Any]) -> dict[str, Any] | None:
+    start = int(block.get("rodada_inicio") or 0)
+    end = int(block.get("rodada_fim") or 0)
+    item = next((row for row in (apuracao.get("blocos") or []) if isinstance(row, Mapping)
+                 and int(row.get("rodada_inicio") or 0) == start
+                 and int(row.get("rodada_fim") or 0) == end), None)
+    if not item or not item.get("concluido") or int(item.get("jogos_apurados") or 0) != 30:
+        return None
+    ranking = [row for row in (item.get("ranking") or []) if isinstance(row, Mapping)]
+    if not ranking:
+        return None
+    top_points = int(ranking[0].get("pontos") or 0)
+    winners = [str(name).strip() for name in (item.get("vencedores") or []) if str(name).strip()]
+    if not winners:
+        winners = [str(ranking[0].get("membro") or "").strip()]
+    winners = [name for name in winners if name]
+    if not winners:
+        return None
+    return {
+        "rodada_inicio": start,
+        "rodada_fim": end,
+        "vencedores": winners,
+        "pontos": top_points,
+        "jogos_apurados": 30,
+    }
+
+
+def email_completion(block: Mapping[str, Any], details: Mapping[str, Any]) -> tuple[bool, str]:
+    key = os.environ.get("RESEND_API_KEY", "").strip()
+    destination = os.environ.get("EMAIL_DESTINO", "").strip()
+    sender = os.environ.get("EMAIL_REMETENTE", DEFAULT_SENDER).strip() or DEFAULT_SENDER
+    if not key or not destination:
+        return False, "RESEND_API_KEY/EMAIL_DESTINO não configurados"
+    start = int(details.get("rodada_inicio") or block.get("rodada_inicio") or 0)
+    end = int(details.get("rodada_fim") or block.get("rodada_fim") or 0)
+    winners = [str(x).strip() for x in (details.get("vencedores") or []) if str(x).strip()]
+    points = int(details.get("pontos") or 0)
+    if not winners:
+        return False, "ranking concluído sem vencedor identificável"
+    if len(winners) == 1:
+        winner_text = f"Vencedor: {winners[0]} — {points} pontos."
+        subject_suffix = winners[0]
+    else:
+        winner_text = f"Vencedores: {', '.join(winners[:-1])} e {winners[-1]} — {points} pontos."
+        subject_suffix = "empate no 1º lugar"
+    link = f"{SITE_RANKING_URL}&bloco={start}-{end}"
+    subject = f"Brasileirão 2026 Almoço — Bloco {start}–{end} concluído · {subject_suffix}"
+    html = (
+        f"<h2>Bloco {start}–{end} concluído!</h2>"
+        f"<p><strong>{winner_text}</strong></p>"
+        f'<p><a href="{link}">Confira o ranking no site</a>.</p>'
+    )
+    body = json.dumps({"from": sender, "to": [destination], "subject": subject, "html": html}, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json", "User-Agent": "Brasileirao2026Almoco-Blocos/1.1"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=25) as response:
+            return 200 <= response.status < 300, response.read().decode("utf-8", errors="replace")[:500]
+    except urllib.error.HTTPError as exc:
+        return False, f"HTTP {exc.code}: {exc.read().decode('utf-8', errors='replace')[:500]}"
+    except Exception as exc:  # noqa: BLE001
+        return False, f"{type(exc).__name__}: {exc}"[:500]
+
+
+def merge_completion_email_state(db_blocks: Sequence[Mapping[str, Any]], states: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    by_id = {str(row.get("bloco_id") or ""): row for row in states if isinstance(row, Mapping)}
+    by_start = {int(row.get("rodada_inicio") or 0): row for row in states if isinstance(row, Mapping)}
+    merged: list[dict[str, Any]] = []
+    for original in db_blocks:
+        block = dict(original)
+        state = by_id.get(str(block.get("bloco_id") or "")) or by_start.get(int(block.get("rodada_inicio") or 0)) or {}
+        for key in (
+            "email_conclusao_pendente",
+            "conclusao_email_enviado_em",
+            "conclusao_email_ultima_tentativa_em",
+            "apurado_em",
+        ):
+            if key in state:
+                block[key] = state.get(key)
+        merged.append(block)
+    return merged
+
+
 def build_audit(
     proposals: Sequence[Mapping[str, Any]],
     db_blocks: Sequence[Mapping[str, Any]] | None,
     now: datetime,
     sync_error: str = "",
+    email_state_error: str = "",
     emails: Sequence[Mapping[str, Any]] = (),
+    completion_emails: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     by_start = {int(row.get("rodada_inicio") or 0): dict(row) for row in (db_blocks or []) if isinstance(row, Mapping)}
     blocks: list[dict[str, Any]] = []
@@ -297,10 +391,14 @@ def build_audit(
             "apuracao_concluida": bool(db.get("apuracao_concluida")),
             "email_abertura_pendente": bool(db.get("email_abertura_pendente")),
             "email_abertura_enviado_em": db.get("abertura_email_enviado_em"),
+            "email_conclusao_pendente": bool(db.get("email_conclusao_pendente")),
+            "email_conclusao_enviado_em": db.get("conclusao_email_enviado_em"),
             "sincronizado": bool(db),
         })
     if sync_error:
         critical.append(f"Sincronização dos blocos indisponível: {sync_error}")
+    if email_state_error:
+        warnings.append(f"Estado de deduplicação do e-mail de conclusão indisponível: {email_state_error}")
     status = "critical" if critical else "warning" if warnings else "ok"
     return {
         "schema_version": 1,
@@ -319,6 +417,7 @@ def build_audit(
         "criticos": critical,
         "avisos": warnings,
         "emails_abertura": list(emails),
+        "emails_conclusao": list(completion_emails),
         "proximo_evento_em": min(next_events).isoformat() if next_events else None,
         "politica": {
             "composicao": "30 jogos pela rodada canônica; jogo adiado nunca muda de bloco.",
@@ -327,11 +426,12 @@ def build_audit(
             "apos_primeiro_palpite": "deadline pode encurtar por antecipação; nunca é estendido automaticamente.",
             "reabertura": "proibida automaticamente.",
             "independencia": "bloco seguinte pode abrir com bloco anterior ainda em apuração.",
+            "email_conclusao": "uma única vez quando o bloco chega a 30/30; vencedor e pontos vêm exclusivamente da apuração determinística.",
         },
     }
 
 
-def run(*, dry_run: bool = False, moment: datetime | None = None, notify_opening: bool = True) -> dict[str, Any]:
+def run(*, dry_run: bool = False, moment: datetime | None = None, notify_opening: bool = True, notify_completion: bool = True) -> dict[str, Any]:
     now = (moment or now_brt()).astimezone(TZ).replace(microsecond=0)
     config = load_json(CONFIG_PATH, {})
     calendar = load_json(CALENDAR_PATH, {})
@@ -367,7 +467,15 @@ def run(*, dry_run: bool = False, moment: datetime | None = None, notify_opening
         "p_origem": os.environ.get("GITHUB_WORKFLOW", "pipeline-exec21")[:200],
     })
     db_blocks = list((response or {}).get("blocos") or []) if isinstance(response, Mapping) else []
+    completion_state_error = ""
+    try:
+        completion_states_raw = rpc_service("br_pipeline_status_emails_conclusao_v1", {"p_temporada": TEMPORADA})
+        completion_states = list(completion_states_raw or []) if isinstance(completion_states_raw, list) else []
+        db_blocks = merge_completion_email_state(db_blocks, completion_states)
+    except Exception as exc:  # noqa: BLE001
+        completion_state_error = str(exc)[:500]
     email_results: list[dict[str, Any]] = []
+    completion_email_results: list[dict[str, Any]] = []
     if notify_opening and policy["email_ao_abrir"]:
         for block in db_blocks:
             if not block.get("email_abertura_pendente"):
@@ -396,7 +504,43 @@ def run(*, dry_run: bool = False, moment: datetime | None = None, notify_opening
                 "detalhe": detail,
             })
 
-    audit = build_audit(proposals, db_blocks, now, emails=email_results)
+    if notify_completion and policy["email_ao_concluir"] and not completion_state_error:
+        apuracao = load_json(APURACAO_PATH, {})
+        for block in db_blocks:
+            if not block.get("email_conclusao_pendente"):
+                continue
+            label = f"{block.get('rodada_inicio')}–{block.get('rodada_fim')}"
+            details = completion_details(block, apuracao if isinstance(apuracao, Mapping) else {})
+            if not details:
+                completion_email_results.append({"bloco": label, "enviado": False, "detalhe": "30/30 no banco, mas apuração local ainda não contém ranking final validado"})
+                continue
+            last_try = parse_dt(block.get("conclusao_email_ultima_tentativa_em"))
+            if last_try and (now - last_try).total_seconds() < 3600:
+                completion_email_results.append({"bloco": label, "enviado": False, "detalhe": "tentativa recente; aguardando 60 min"})
+                continue
+            rpc_service("br_pipeline_marcar_tentativa_email_conclusao_v1", {
+                "p_temporada": TEMPORADA,
+                "p_bloco_id": block.get("bloco_id"),
+                "p_tentativa_em": now.isoformat(),
+            })
+            sent, detail = email_completion(block, details)
+            if sent:
+                rpc_service("br_pipeline_marcar_email_conclusao_v1", {
+                    "p_temporada": TEMPORADA,
+                    "p_bloco_id": block.get("bloco_id"),
+                    "p_enviado_em": now.isoformat(),
+                })
+                block["email_conclusao_pendente"] = False
+                block["conclusao_email_enviado_em"] = now.isoformat()
+            completion_email_results.append({
+                "bloco": label,
+                "enviado": sent,
+                "vencedores": details.get("vencedores"),
+                "pontos": details.get("pontos"),
+                "detalhe": detail,
+            })
+
+    audit = build_audit(proposals, db_blocks, now, email_state_error=completion_state_error, emails=email_results, completion_emails=completion_email_results)
     save_json(AUDIT_PATH, audit)
     print(json.dumps(audit["resumo"], ensure_ascii=False, indent=2))
     return audit
@@ -456,7 +600,19 @@ def self_test() -> int:
         datetime(2026, 8, 15, 16, 0, tzinfo=TZ),
         datetime(2026, 8, 22, 15, 0, tzinfo=TZ),
     ) == "aberta"
-    print("SELFTEST OK: 30 jogos/bloco, primeiro kickoff global, placeholders, antecipação, não-extensão e não-reabertura.")
+    final_payload = {"blocos": [{
+        "rodada_inicio": 21, "rodada_fim": 23, "concluido": True, "jogos_apurados": 30,
+        "vencedores": ["Fulano"], "ranking": [{"membro": "Fulano", "pontos": 77}, {"membro": "Beltrano", "pontos": 72}],
+    }]}
+    details = completion_details({"rodada_inicio": 21, "rodada_fim": 23}, final_payload)
+    assert details == {"rodada_inicio": 21, "rodada_fim": 23, "vencedores": ["Fulano"], "pontos": 77, "jogos_apurados": 30}
+    assert completion_details({"rodada_inicio": 21, "rodada_fim": 23}, {"blocos": [{"rodada_inicio":21,"rodada_fim":23,"concluido":False,"jogos_apurados":29,"ranking":[]}]} ) is None
+    merged_states = merge_completion_email_state(
+        [{"bloco_id":"x","rodada_inicio":21}],
+        [{"bloco_id":"x","rodada_inicio":21,"email_conclusao_pendente":True,"conclusao_email_enviado_em":None}],
+    )
+    assert merged_states[0]["email_conclusao_pendente"] is True
+    print("SELFTEST OK: 30 jogos/bloco, janela automática, não-reabertura e e-mail final 30/30 validados.")
     return 0
 
 
@@ -465,12 +621,19 @@ def main() -> int:
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--agora", default="")
-    parser.add_argument("--sem-email", action="store_true")
+    parser.add_argument("--sem-email", action="store_true", help="Não enviar e-mails de abertura nem conclusão")
+    parser.add_argument("--sem-email-abertura", action="store_true")
+    parser.add_argument("--sem-email-conclusao", action="store_true")
     args = parser.parse_args()
     if args.self_test:
         return self_test()
     moment = parse_dt(args.agora) if args.agora else None
-    run(dry_run=args.dry_run, moment=moment, notify_opening=not args.sem_email)
+    run(
+        dry_run=args.dry_run,
+        moment=moment,
+        notify_opening=not (args.sem_email or args.sem_email_abertura),
+        notify_completion=not (args.sem_email or args.sem_email_conclusao),
+    )
     return 0
 
 

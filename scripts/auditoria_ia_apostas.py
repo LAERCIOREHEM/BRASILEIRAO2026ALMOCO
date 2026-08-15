@@ -67,6 +67,7 @@ def safe_block(row: Mapping[str, Any]) -> dict[str, Any]:
         "jogos_apurados": int(row.get("jogos_apurados") or 0),
         "apuracao_concluida": bool(row.get("apuracao_concluida")),
         "email_abertura_pendente": bool(row.get("email_abertura_pendente")),
+        "email_conclusao_pendente": bool(row.get("email_conclusao_pendente")),
     }
 
 
@@ -89,10 +90,11 @@ def build_dossier(root: Path = ROOT) -> dict[str, Any]:
                     "sigilosa": bool(row.get("sigilosa")),
                 })
     return {
-        "regra_essencial": "Bloco seguinte aberto com bloco anterior ainda parcial por jogos adiados é estado ESPERADO, não erro.",
+        "regra_essencial": "O contexto atual é o bloco mais novo cuja janela já começou. Bloco anterior ainda parcial por jogos adiados é estado ESPERADO, não erro.",
         "restricoes_ia": [
             "não alterar palpites, pontos, ranking, placares, deadlines ou vínculo jogo/bloco",
-            "não considerar dois blocos simultâneos (um parcial e outro aberto) como anomalia",
+            "não considerar dois blocos simultâneos (um parcial e outro atual/aberto) como anomalia",
+            "não exigir ranking global: os únicos contextos competitivos são R20 e os blocos R21–23, R24–26, R27–29, R30–32, R33–35 e R36–38",
             "sinalizar somente inconsistência de integridade/automação realmente acionável",
         ],
         "auditoria_blocos": {
@@ -163,7 +165,8 @@ def call_openai(dossier: Mapping[str, Any], model: str) -> tuple[dict[str, Any],
     instructions = (
         "Você é a última camada de auditoria do bolão recreativo Brasileirão 2026 Almoço. "
         "Analise SOMENTE o dossiê agregado. Não invente fatos e não solicite dados individuais. "
-        "É normal um bloco antigo estar 28/30 enquanto o próximo está aberto: jogos adiados permanecem no bloco original. "
+        "É normal um bloco antigo estar 28/30 enquanto o bloco mais novo cuja janela já começou é o contexto atual: jogos adiados permanecem no bloco original. "
+        "Não existe ranking global; R20 e cada bloco de três rodadas são disputas independentes. "
         "Só classifique como crítico algo que ameace integridade das apostas/apuração ou exija intervenção. "
         "Não proponha alterar palpites, pontuação, ranking, placar, deadline ou vínculo jogo/bloco."
     )
