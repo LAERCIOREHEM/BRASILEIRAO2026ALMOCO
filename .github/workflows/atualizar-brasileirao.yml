@@ -77,6 +77,8 @@ jobs:
             scripts/gerar_estatisticas_brasileirao.py \
             scripts/gerar_estatisticas_competicao_brasileirao.py \
             scripts/gerar_auditoria_estatisticas_brasileirao.py \
+            scripts/gerar_auditoria_calendario.py \
+            scripts/gerar_auditoria_geral.py \
             scripts/af_previsao_backtest.py \
             scripts/af_previsao_continental.py \
             scripts/atualizar_competicoes_af_previsao.py \
@@ -90,6 +92,8 @@ jobs:
           python scripts/buscar_lideres_jogadores_espn.py --self-test
           python scripts/buscar_detalhes_jogos_brasileirao.py --self-test
           python scripts/gerar_auditoria_estatisticas_brasileirao.py --self-test
+          python scripts/gerar_auditoria_calendario.py --self-test
+          python scripts/gerar_auditoria_geral.py --self-test
           python scripts/atualizar_competicoes_af_previsao.py --self-test
           python scripts/af_previsao_continental.py --self-test
           python scripts/gerar_probabilidades_brasileirao.py --self-test
@@ -515,12 +519,19 @@ jobs:
         if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_auditoria_cobertura_resultados.py
 
+      - name: Gerar auditoria geral e alertar somente se crítico
+        if: steps.espn.outputs.sincronizado == 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
+        run: python scripts/gerar_auditoria_geral.py --notify-critical
+
       - name: Conferir e validar JSONs gerados
         if: steps.espn.outputs.sincronizado == 'true'
         run: |
           set -euo pipefail
           echo "Arquivos JSON presentes e validos:"
-          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/status-atualizacao.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
+          for arq in tabela.json espn_eventos.json jogos.json resultados.json dados-br/ajustes-calendario.json dados-br/resultados-manuais.json dados-br/publicos-complementares.json dados-br/status-atualizacao.json dados-br/calendario-completo.json dados-br/auditoria-calendario.json dados-br/auditoria-geral.json dados-br/estatisticas.json dados-br/ranking-desempenho.json dados-br/historico-ranking-desempenho.json dados-br/auditoria-ranking-desempenho.json dados-br/jogadores.json dados-br/lideres-jogadores.json dados-br/auditoria-lideres-jogadores.json dados-br/jogos-detalhes.json dados-br/auditoria-jogos-detalhes.json dados-br/estatisticas-competicao.json dados-br/auditoria-estatisticas.json dados-br/auditoria-cobertura-resultados.json dados-br/competicoes-af-previsao/copa-do-brasil.json dados-br/competicoes-af-previsao/libertadores.json dados-br/competicoes-af-previsao/sul-americana.json dados-br/auditoria-competicoes-af-previsao.json dados-br/probabilidades-brasileirao.json dados-br/probabilidades-por-pontuacao.json dados-br/probabilidades-jogos.json dados-br/auditoria-probabilidades-jogos.json dados-br/probabilidades-bolao.json dados-br/participantes-bolao-classificacao.json dados-br/auditoria-probabilidades.json dados-br/historico-probabilidades.json dados-br/avaliacao-af-previsao.json; do
             if [ ! -f "$arq" ]; then
               echo "ERRO: $arq nao foi gerado."
               exit 1
@@ -589,6 +600,14 @@ jobs:
           auditoria = json.load(open('dados-br/auditoria-jogos-detalhes.json', encoding='utf-8'))
           assert isinstance(auditoria.get('falhas'), list), 'auditoria-jogos-detalhes.json sem lista falhas'
           assert 'total_com_publico' in auditoria, 'auditoria-jogos-detalhes sem contagem de público'
+          sem_stats_snapshot = sum(
+              1 for item in (detalhes.get('jogos') or {}).values()
+              if not (item.get('stats') or item.get('estatisticas'))
+          )
+          assert int(auditoria.get('total_sem_estatisticas_no_snapshot') or 0) == sem_stats_snapshot, (
+              'auditoria-jogos-detalhes diverge da cobertura real de estatísticas: '
+              f"audit={auditoria.get('total_sem_estatisticas_no_snapshot')} snapshot={sem_stats_snapshot}"
+          )
           assert auditoria.get('total_inconsistencias_eventos') == 0, 'há gols/cartões inconsistentes'
           validados = int(detalhes.get('total_eventos_validados') or 0)
           pendentes = int(detalhes.get('total_eventos_pendentes_detalhes') or 0)
@@ -618,6 +637,14 @@ jobs:
           assert resumo_cal.get('rodadas_com_10_jogos') == 38, 'calendário não tem 38 rodadas íntegras'
           assert resumo_cal.get('clubes_com_38_jogos') == 20, 'há clube sem 38 jogos'
           assert resumo_cal.get('confrontos_com_ida_e_volta') == 190, 'ida e volta incompletas'
+          auditoria_geral = json.load(open('dados-br/auditoria-geral.json', encoding='utf-8'))
+          assert auditoria_geral.get('status') in {'ok', 'warning', 'critical'}, 'auditoria geral com status inválido'
+          assert isinstance(auditoria_geral.get('criticos'), list), 'auditoria geral sem lista de críticos'
+          assert isinstance(auditoria_geral.get('avisos'), list), 'auditoria geral sem lista de avisos'
+          assert isinstance(auditoria_geral.get('resumo'), dict), 'auditoria geral sem resumo'
+          assert not (auditoria_geral.get('rodadas_divergentes_por_artefato') or {}).get('eventos'), 'espn_eventos diverge da rodada canônica após atualização'
+          assert not (auditoria_geral.get('rodadas_divergentes_por_artefato') or {}).get('jogos'), 'jogos.json diverge da rodada canônica após atualização'
+          assert not (auditoria_geral.get('rodadas_divergentes_por_artefato') or {}).get('resultados'), 'resultados.json diverge da rodada canônica após atualização'
           completo = json.load(open('dados-br/calendario-completo.json', encoding='utf-8'))
           assert completo.get('total_partidas') == 380, 'calendario-completo.json sem 380 partidas'
           competicoes = {}
@@ -857,6 +884,7 @@ jobs:
             "dados-br/auditoria-cobertura-resultados.json"
             "dados-br/calendario-completo.json"
             "dados-br/auditoria-calendario.json"
+            "dados-br/auditoria-geral.json"
             "dados-br/competicoes-af-previsao/copa-do-brasil.json"
             "dados-br/competicoes-af-previsao/libertadores.json"
             "dados-br/competicoes-af-previsao/sul-americana.json"

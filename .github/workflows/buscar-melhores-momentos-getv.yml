@@ -63,6 +63,7 @@ jobs:
       - name: Validar scripts offline
         run: |
           python -m py_compile scripts/buscar_melhores_momentos_getv.py
+          python scripts/buscar_melhores_momentos_getv.py --self-test
           python -m py_compile scripts/substituir_fontes_preferidas_mm.py
           python -m py_compile scripts/gerar_auditoria_cobertura_resultados.py
           python -m py_compile scripts/gerar_relatorio_fontes_melhores_momentos.py

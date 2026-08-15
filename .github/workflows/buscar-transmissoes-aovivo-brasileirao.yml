@@ -58,6 +58,8 @@ jobs:
       - name: Validar scripts e configuração
         run: |
           set -euo pipefail
+          python -m py_compile fontes_brasileirao.py
+          python fontes_brasileirao.py --selftest
           python -m py_compile scripts/buscar_transmissoes_aovivo_brasileirao.py
           python scripts/buscar_transmissoes_aovivo_brasileirao.py --selftest
           python -m py_compile scripts/atualizar_transmissoes_tv_brasileirao.py
