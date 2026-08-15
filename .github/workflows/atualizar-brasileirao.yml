@@ -236,7 +236,7 @@ jobs:
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
           EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
           BRASILEIRAO_TEMPORADA: '2026'
-        run: python scripts/sincronizar_blocos_apostas.py --sem-email
+        run: python scripts/sincronizar_blocos_apostas.py
 
       - name: Validar resultado e ranking parcial essenciais
         if: steps.espn.outputs.sincronizado == 'true' && steps.resultado_gate.outputs.mudou == 'true' && steps.apurar_essencial.outcome == 'success'

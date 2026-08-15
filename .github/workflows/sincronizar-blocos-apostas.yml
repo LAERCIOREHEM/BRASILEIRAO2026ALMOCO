@@ -33,7 +33,7 @@ jobs:
           python scripts/sincronizar_blocos_apostas.py --self-test
           python -m json.tool dados-br/apostas-config.json >/dev/null
 
-      - name: Sincronizar janelas e avisar abertura
+      - name: Sincronizar janelas e avisar abertura/conclusão
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

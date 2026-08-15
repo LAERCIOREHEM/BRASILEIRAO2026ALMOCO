@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Validar regras da Execução 21
+      - name: Validar regras da Execução 22
         run: |
           python -m py_compile scripts/apurar_rodada.py scripts/sincronizar_blocos_apostas.py
           python scripts/apurar_rodada.py --self-test
@@ -73,7 +73,7 @@ jobs:
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
           EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
           BRASILEIRAO_TEMPORADA: '2026'
-        run: python scripts/sincronizar_blocos_apostas.py --sem-email
+        run: python scripts/sincronizar_blocos_apostas.py
 
       - name: Validar JSONs gerados
         run: |
