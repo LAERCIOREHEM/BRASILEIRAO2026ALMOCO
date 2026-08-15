@@ -507,7 +507,13 @@
   function janelaPadrao(rodada) {
     const jogos = jogosDaRodada(rodada);
     const datas = jogos.filter(jogoTemHorarioConfiavel).map(j => parseData(j.data_iso)).filter(Boolean).sort((a, b) => a - b);
-    const primeira = datas[0] || new Date();
+    // Nunca inventar uma janela usando "agora" quando a rodada ainda não possui
+    // kickoff confiável. Esse fallback fazia especialmente o admin enxergar blocos
+    // distantes (como R36–38) como se já fossem o contexto atual.
+    if (!datas.length) {
+      return { rodada: Number(rodada), abre_em: null, fecha_em: null, status: "futura", origem: "sem-kickoff-confiavel" };
+    }
+    const primeira = datas[0];
     const js = CFG.janelaPadrao || {};
     let sabado;
     if ([0, 1, 2, 3].includes(primeira.getDay())) sabado = setWeekdayAround(primeira, js.fechaDiaSemana ?? 6, false);
@@ -1355,17 +1361,43 @@
     const ap = apuracaoBlocoPorInicio(start);
     const jogosApurados = Number(ap?.jogos_apurados ?? bloco?.jogos_apurados ?? cfg?.bloco_jogos_apurados ?? 0);
     const concluido = Boolean(ap?.concluido || ap?.concluida || bloco?.apuracao_concluida || cfg?.bloco_apuracao_concluida || jogosApurados >= 30);
-    const primeiroConfiavel = parseData(bloco.primeiro_jogo_em || cfg.bloco_primeiro_jogo_em) || primeiroJogoDetectadoBloco(bloco);
     const antecedenciaDias = Number(state.configLocal?.blocosAutomaticos?.antecedenciaAberturaDias || 7);
     const antecedenciaFechamentoMin = Number(state.configLocal?.blocosAutomaticos?.fechamentoAntesPrimeiroJogoMinutos || 60);
-    const abre = parseData(bloco.abre_em || cfg.abre_em) || (primeiroConfiavel ? new Date(primeiroConfiavel.getTime() - antecedenciaDias * 86400000) : null);
-    const fecha = parseData(bloco.fecha_em || cfg.fecha_em) || (primeiroConfiavel ? new Date(primeiroConfiavel.getTime() - antecedenciaFechamentoMin * 60000) : null);
+
+    // A seleção AUTOMÁTICA do bloco nunca confia cegamente em uma janela antiga
+    // gravada no Supabase. Ela precisa ser sustentada pelo calendário canônico que
+    // o navegador acabou de carregar. Isso impede que um bloco futuro sem kickoff
+    // confirmado (ex.: R36–38) vire "rodada atual" por causa de configuração stale.
+    const primeiroCanonico = primeiroJogoDetectadoBloco(bloco);
+    const totalCanonicos = jogosDoBloco(bloco).length;
+    const automaticoElegivel = Boolean(primeiroCanonico && totalCanonicos === 30);
+    const abreCanonica = automaticoElegivel ? new Date(primeiroCanonico.getTime() - antecedenciaDias * 86400000) : null;
+    const fechaCanonica = automaticoElegivel ? new Date(primeiroCanonico.getTime() - antecedenciaFechamentoMin * 60000) : null;
+
+    const primeiroBanco = parseData(bloco.primeiro_jogo_em || cfg.bloco_primeiro_jogo_em);
+    const abreBanco = parseData(bloco.abre_em || cfg.abre_em);
+    const fechaBanco = parseData(bloco.fecha_em || cfg.fecha_em);
+    const primeiroConfiavel = primeiroCanonico || primeiroBanco;
+    const abre = abreCanonica || abreBanco;
+    const fecha = fechaCanonica || fechaBanco;
+
     let statusApostas = String(bloco.status || cfg.bloco_status || cfg.status || "futura").toLowerCase();
-    if (rodadaAberta(start)) statusApostas = "aberta";
-    else if (fecha && new Date() >= fecha && !["bloqueada", "publicada", "apurada"].includes(statusApostas)) statusApostas = "fechada";
+    const agora = new Date();
+    if (automaticoElegivel) {
+      if (agora < abreCanonica) statusApostas = "programada";
+      else if (agora < fechaCanonica) statusApostas = "aberta";
+      else if (!["bloqueada", "publicada", "apurada"].includes(statusApostas)) statusApostas = "fechada";
+    } else if (start >= 21 && !concluido && !["publicada", "apurada", "bloqueada"].includes(statusApostas)) {
+      // Sem 30 jogos + kickoff canônico confiável, o bloco pode ser exibido como
+      // futuro, mas jamais assumir automaticamente a navegação principal.
+      statusApostas = "futura";
+    }
+
     return {
       inicio: start, fim: Number(bloco.rodada_fim || start + 2), bloco, cfg, ap,
       statusApostas, jogosApurados, concluido, abre, fecha,
+      primeiroConfiavel, primeiroCanonico, abreCanonica, fechaCanonica,
+      automaticoElegivel, totalCanonicos,
       parcial: jogosApurados > 0 && jogosApurados < 30 && !concluido
     };
   }
@@ -1378,19 +1410,23 @@
     const agora = new Date();
     const blocos = blocosResumoOrdenados();
 
-    // O contexto principal é o bloco MAIS NOVO cuja janela já começou.
-    // Isso resolve o cenário essencial do bolão: R21–23 pode continuar em
-    // apuração por adiamentos enquanto R24–26 já é o bloco corrente.
-    const jaIniciados = blocos
-      .filter(b => b.abre && b.abre <= agora)
+    // REGRA ÚNICA DE NAVEGAÇÃO AUTOMÁTICA:
+    // só um bloco sustentado por 30 jogos canônicos e kickoff confiável pode virar
+    // "bloco atual". Datas antigas de banco não promovem bloco futuro sozinhas.
+    const elegiveis = blocos.filter(b => b.automaticoElegivel && b.abreCanonica && b.fechaCanonica);
+
+    // Depois que um bloco abre, ele continua sendo o contexto principal mesmo
+    // após o fechamento das apostas, até a abertura canônica do bloco seguinte.
+    // Assim R21–23 pode seguir em apuração enquanto R24–26 já é a ação corrente.
+    const jaIniciados = elegiveis
+      .filter(b => b.abreCanonica <= agora)
       .sort((a, b) => b.inicio - a.inicio);
     if (jaIniciados.length) return jaIniciados[0];
 
-    // Antes da primeira abertura da temporada, mostramos apenas o próximo bloco
-    // real. Um bloco futuro NÃO toma o lugar de outro que já abriu/fechou.
-    const futuros = blocos
-      .filter(b => b.abre && b.abre > agora)
-      .sort((a, b) => a.abre - b.abre);
+    // Antes da primeira abertura, aponta somente para o próximo bloco real.
+    const futuros = elegiveis
+      .filter(b => b.abreCanonica > agora)
+      .sort((a, b) => a.abreCanonica - b.abreCanonica);
     if (futuros.length) return futuros[0];
 
     const publicados = blocosRanking()
@@ -1786,7 +1822,18 @@
     const porLiga = obj.rankings_por_liga || obj.ranking_por_liga || {};
     const liga = ligaAtualObj();
     const chaves = [liga?.liga_id, liga?.slug, normalizarTexto(liga?.nome || ""), "liga-geral"].filter(Boolean).map(String);
-    for (const chave of chaves) if (Array.isArray(porLiga[chave])) return porLiga[chave];
+
+    // Um alias/UUID de liga pode existir no payload com array vazio enquanto o
+    // slug canônico (almoco-de-sexta) contém o ranking válido. Não interromper a
+    // busca no primeiro array vazio: isso foi o que zerou visualmente R21–23.
+    for (const chave of chaves) {
+      const candidato = porLiga[chave];
+      if (Array.isArray(candidato) && candidato.length) return candidato;
+    }
+    if (Array.isArray(obj.ranking) && obj.ranking.length) return obj.ranking;
+    for (const chave of chaves) {
+      if (Array.isArray(porLiga[chave])) return porLiga[chave];
+    }
     return Array.isArray(obj.ranking) ? obj.ranking : [];
   }
 
@@ -3090,6 +3137,7 @@
       palpitesParticipanteRodada,
       palpitesParticipanteBloco,
       rankingCardsHtml,
+      rankingObjetoPorLiga,
       renderRankingBloco
     };
   }
