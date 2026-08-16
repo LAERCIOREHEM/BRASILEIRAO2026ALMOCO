@@ -333,19 +333,125 @@ def calcular(palpite: dict[str, Any], resultado: dict[str, Any]) -> dict[str, An
     return {"pontos": 2, "tipo": "resultado"}
 
 
-def palpite_valido_no_prazo(palpite: dict[str, Any]) -> bool:
-    # `atualizado_em` pode mudar por sincronizações técnicas (hash/deadline).
-    # Desde a Execução 21, a edição real do participante é registrada em campo
-    # próprio e deve prevalecer na validação temporal.
+ACOES_AUDITORIA_EDICAO = {
+    "insert", "update",
+    "insert_bloco", "update_bloco",
+    "insert_bloco_uid", "update_bloco_uid",
+}
+
+
+def _referencias_palpite(item: dict[str, Any], rodada_padrao: int | None = None) -> set[str]:
+    refs: set[str] = set()
+    event_id = str(item.get("event_id") or item.get("id") or "").strip()
+    if event_id:
+        refs.add(f"event:{event_id}")
+    jogo_uid = str(item.get("jogo_uid") or "").strip()
+    if jogo_uid:
+        refs.add(f"uid:{jogo_uid}")
+    base = dict(item)
+    if not base.get("rodada") and rodada_padrao:
+        base["rodada"] = rodada_padrao
+    uid_calculado = jogo_uid_canonico(base)
+    if uid_calculado:
+        refs.add(f"uid:{uid_calculado}")
+    confronto = chave_confronto(base)
+    if confronto:
+        refs.add(f"confronto:{confronto}")
+    return refs
+
+
+def indice_auditoria_edicoes(auditoria: Iterable[dict[str, Any]]) -> dict[tuple[int, str, str], list[datetime]]:
+    indice: dict[tuple[int, str, str], list[datetime]] = defaultdict(list)
+    for evento in auditoria:
+        if str(evento.get("acao") or "").lower() not in ACOES_AUDITORIA_EDICAO:
+            continue
+        try:
+            rodada = int(evento.get("rodada") or 0)
+        except (TypeError, ValueError):
+            continue
+        participante = str(evento.get("participante_id") or evento.get("membro") or "").strip()
+        instante = parse_dt(evento.get("criado_em"))
+        if rodada <= 0 or not participante or not instante:
+            continue
+        refs = _referencias_palpite(evento, rodada)
+        for campo in ("depois", "antes"):
+            payload = evento.get(campo)
+            if isinstance(payload, dict):
+                refs.update(_referencias_palpite(payload, rodada))
+        for ref in refs:
+            indice[(rodada, participante, ref)].append(instante)
+    for tempos in indice.values():
+        tempos.sort()
+    return indice
+
+
+def auditoria_edicoes_do_palpite(
+    palpite: dict[str, Any],
+    indice: dict[tuple[int, str, str], list[datetime]] | None,
+) -> list[datetime]:
+    if not indice:
+        return []
+    try:
+        rodada = int(palpite.get("rodada") or 0)
+    except (TypeError, ValueError):
+        rodada = 0
+    participante = str(palpite.get("participante_id") or palpite.get("membro") or "").strip()
+    if rodada <= 0 or not participante:
+        return []
+    encontrados: set[datetime] = set()
+    for ref in _referencias_palpite(palpite, rodada):
+        encontrados.update(indice.get((rodada, participante, ref), []))
+    return sorted(encontrados)
+
+
+def avaliar_palpite_no_prazo(
+    palpite: dict[str, Any],
+    indice_auditoria: dict[tuple[int, str, str], list[datetime]] | None = None,
+) -> tuple[bool, str]:
+    """Valida prazo sem confundir atualização técnica com edição do participante.
+
+    A Execução 21 criou `palpite_atualizado_em`, mas o backfill histórico partiu
+    de `atualizado_em`, coluna cujo trigger também muda em sincronizações técnicas.
+    Se esse campo histórico ficou posterior ao deadline, a trilha imutável de
+    `br_palpites_auditoria` é a autoridade para recuperar o último envio real.
+    """
+    fecha = parse_dt(palpite.get("fecha_em"))
+    if not fecha:
+        return True, "sem-deadline"
+
     atualizado = parse_dt(
         palpite.get("palpite_atualizado_em")
         or palpite.get("atualizado_em")
         or palpite.get("criado_em")
     )
-    fecha = parse_dt(palpite.get("fecha_em"))
-    if not atualizado or not fecha:
-        return True
-    return atualizado <= fecha
+    edicoes = auditoria_edicoes_do_palpite(palpite, indice_auditoria)
+    # Uma edição de participante realmente registrada depois do prazo invalida.
+    if any(dt > fecha for dt in edicoes):
+        return False, "auditoria-pos-prazo"
+    if atualizado and atualizado <= fecha:
+        return True, "timestamp-proprio"
+    if edicoes:
+        antes = [dt for dt in edicoes if dt <= fecha]
+        if antes:
+            return True, "recuperado-auditoria"
+
+    # Fallback estritamente legado: Execuções anteriores já bloqueavam gravação
+    # após o prazo, mas o trigger técnico podia alterar `atualizado_em` depois.
+    # Para origens antigas, `criado_em` prova que a linha já existia no prazo.
+    origem = str(palpite.get("origem") or "").lower()
+    criado = parse_dt(palpite.get("criado_em"))
+    if origem in {"site-logado", "site-logado-bloco"} and criado and criado <= fecha:
+        return True, "recuperado-criacao-legada"
+    if not atualizado:
+        return True, "sem-timestamp"
+    return False, "timestamp-pos-prazo"
+
+
+def palpite_valido_no_prazo(
+    palpite: dict[str, Any],
+    indice_auditoria: dict[tuple[int, str, str], list[datetime]] | None = None,
+) -> bool:
+    return avaliar_palpite_no_prazo(palpite, indice_auditoria)[0]
 
 
 def cabecalhos_supabase() -> dict[str, str]:
@@ -532,7 +638,7 @@ def resumo_auditoria(
             },
         )
         item["total_palpites"] += 1
-        for campo in ("criado_em", "atualizado_em"):
+        for campo in ("criado_em", "palpite_atualizado_em", "atualizado_em"):
             dt = parse_dt(palpite.get(campo))
             if not dt:
                 continue
@@ -807,6 +913,7 @@ def apurar_rodada(
     palpites: list[dict[str, Any]],
     comprovantes: list[dict[str, Any]],
     auditoria: list[dict[str, Any]],
+    indice_edicoes: dict[tuple[int, str, str], list[datetime]],
     jogos_rodada: dict[str, dict[str, Any]],
     resultados: dict[str, dict[str, Any]],
     ligas_map: dict[str, dict[str, Any]],
@@ -818,6 +925,7 @@ def apurar_rodada(
     detalhes_jogos: dict[str, dict[str, Any]] = {}
     acumulado: dict[str, dict[str, Any]] = {}
     descartados = 0
+    timestamps_recuperados = 0
 
     if publicada:
         for palpite in palpites_rodada:
@@ -830,9 +938,12 @@ def apurar_rodada(
             resultado = resultados.get(uid) or resultados.get(eid) or resultados.get(chave_confronto(palpite))
             if not resultado:
                 continue
-            if not palpite_valido_no_prazo(palpite):
+            valido_prazo, origem_timestamp = avaliar_palpite_no_prazo(palpite, indice_edicoes)
+            if not valido_prazo:
                 descartados += 1
                 continue
+            if origem_timestamp.startswith("recuperado-"):
+                timestamps_recuperados += 1
             detalhe = calcular(palpite, resultado)
             rid = str(resultado.get("event_id") or eid)
             ids_finais.add(rid)
@@ -902,6 +1013,7 @@ def apurar_rodada(
         "jogos_apurados": jogos_apurados,
         "jogos_pendentes": max(0, 10 - jogos_apurados),
         "palpites_descartados_fora_do_prazo": descartados,
+        "palpites_timestamp_recuperados": timestamps_recuperados,
         "lideres_parciais": vencedores_ranking(ranking),
         "vencedores": vencedores_ranking(ranking) if concluida else [],
         "vencedores_por_liga": vencedores_ligas(rankings_por_liga) if concluida else {},
@@ -1089,6 +1201,7 @@ def apurar(dados: dict[str, list[dict[str, Any]]], jogos: list[dict[str, Any]], 
     palpites = dados["palpites"]
     comprovantes = dados["comprovantes"]
     auditoria = dados["auditoria"]
+    indice_edicoes = indice_auditoria_edicoes(auditoria)
     ligas_map, membros_por_liga = gerar_indices_ligas(
         dados.get("ligas", []), dados.get("liga_participantes", [])
     )
@@ -1109,6 +1222,7 @@ def apurar(dados: dict[str, list[dict[str, Any]]], jogos: list[dict[str, Any]], 
             palpites,
             comprovantes,
             auditoria,
+            indice_edicoes,
             mapa_jogos.get(rodada, {}),
             resultados,
             ligas_map,
@@ -1373,6 +1487,41 @@ def executar_self_tests() -> None:
         "atualizado_em": "2026-08-21T15:30:00-03:00",
         "fecha_em": "2026-08-21T15:00:00-03:00",
     })
+
+    # Regressão Execução 24: o backfill da Execução 21 não pode apagar o ranking
+    # histórico quando `atualizado_em` foi tocado pelo pipeline após o deadline.
+    palpite_legado = {
+        "temporada": TEMPORADA,
+        "rodada": 21,
+        "event_id": "401888888",
+        "participante_id": "p-1",
+        "membro": "Teste",
+        "mandante": "Time A",
+        "visitante": "Time B",
+        "origem": "site-logado-bloco",
+        "criado_em": "2026-07-25T12:00:00-03:00",
+        "palpite_atualizado_em": "2026-08-15T18:00:00-03:00",
+        "atualizado_em": "2026-08-15T18:00:00-03:00",
+        "fecha_em": "2026-07-28T15:00:00-03:00",
+    }
+    auditoria_legada = [{
+        "rodada": 21,
+        "event_id": "401888888",
+        "participante_id": "p-1",
+        "membro": "Teste",
+        "acao": "update_bloco",
+        "criado_em": "2026-07-28T14:10:00-03:00",
+        "depois": {"event_id": "401888888", "mandante": "Time A", "visitante": "Time B"},
+    }]
+    idx_legado = indice_auditoria_edicoes(auditoria_legada)
+    valido, motivo = avaliar_palpite_no_prazo(palpite_legado, idx_legado)
+    assert valido and motivo == "recuperado-auditoria"
+    auditoria_tardia = auditoria_legada + [{
+        **auditoria_legada[0],
+        "acao": "update_bloco",
+        "criado_em": "2026-07-28T15:01:00-03:00",
+    }]
+    assert not palpite_valido_no_prazo(palpite_legado, indice_auditoria_edicoes(auditoria_tardia))
 
     futuro_publicacao = (agora_brt() + timedelta(hours=2)).isoformat()
     assert config_publica(

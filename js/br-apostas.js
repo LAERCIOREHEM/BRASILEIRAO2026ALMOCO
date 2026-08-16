@@ -1410,24 +1410,34 @@
     const agora = new Date();
     const blocos = blocosResumoOrdenados();
 
-    // REGRA ÚNICA DE NAVEGAÇÃO AUTOMÁTICA:
-    // só um bloco sustentado por 30 jogos canônicos e kickoff confiável pode virar
-    // "bloco atual". Datas antigas de banco não promovem bloco futuro sozinhas.
-    const elegiveis = blocos.filter(b => b.automaticoElegivel && b.abreCanonica && b.fechaCanonica);
-
-    // Depois que um bloco abre, ele continua sendo o contexto principal mesmo
-    // após o fechamento das apostas, até a abertura canônica do bloco seguinte.
-    // Assim R21–23 pode seguir em apuração enquanto R24–26 já é a ação corrente.
-    const jaIniciados = elegiveis
-      .filter(b => b.abreCanonica <= agora)
+    // AÇÃO DE APOSTA e BLOCO ATUAL são conceitos diferentes.
+    // Um bloco futuro pode abrir 7 dias antes para receber palpites sem virar o
+    // contexto principal do campeonato. Esta função serve apenas aos CTAs de aposta.
+    const abertos = blocos
+      .filter(b => b.automaticoElegivel && b.statusApostas === "aberta" && b.abreCanonica && b.fechaCanonica)
+      .filter(b => b.abreCanonica <= agora && agora < b.fechaCanonica)
       .sort((a, b) => b.inicio - a.inicio);
-    if (jaIniciados.length) return jaIniciados[0];
+    if (abertos.length) return abertos[0];
 
-    // Antes da primeira abertura, aponta somente para o próximo bloco real.
-    const futuros = elegiveis
-      .filter(b => b.abreCanonica > agora)
+    const futuros = blocos
+      .filter(b => b.automaticoElegivel && b.abreCanonica && b.abreCanonica > agora)
       .sort((a, b) => a.abreCanonica - b.abreCanonica);
-    if (futuros.length) return futuros[0];
+    return futuros[0] || null;
+  }
+
+  function blocoCampeonatoAtual() {
+    const agora = new Date();
+    const blocos = blocosResumoOrdenados();
+
+    // REGRA DE UX: o bloco principal só avança quando uma partida daquele bloco
+    // realmente começa. Abrir R24–26 para apostas em 15/08 NÃO tira o usuário de
+    // R21–23 enquanto a R23 ainda está sendo disputada. Quando o primeiro jogo de
+    // R24–26 começar, aí sim o contexto muda, mesmo se R21–23 continuar em apuração
+    // por partidas adiadas.
+    const iniciados = blocos
+      .filter(b => b.automaticoElegivel && b.primeiroCanonico && b.primeiroCanonico <= agora)
+      .sort((a, b) => b.inicio - a.inicio);
+    if (iniciados.length) return iniciados[0];
 
     const publicados = blocosRanking()
       .filter(b => b && b.publicada === true && b.sigilosa !== true)
@@ -1439,11 +1449,10 @@
     const rodadas = (state.rodadas || []).slice().sort((a, b) => a - b);
     if (!rodadas.length) return Number(CFG.rodadaInicialApostas || 20);
 
-    // O contexto automático responde à pergunta "o que o participante precisa fazer agora?".
-    // Um bloco novo pode estar aberto enquanto um bloco anterior continua 28/30 por
-    // causa de jogo adiado; a apuração anterior nunca bloqueia a ação atual.
-    const acao = blocoAcaoAtual();
-    if (acao) return acao.inicio;
+    // "Atual" significa o bloco cuja disputa já começou, não o próximo bloco que
+    // apenas abriu para receber palpites.
+    const campeonato = blocoCampeonatoAtual();
+    if (campeonato) return campeonato.inicio;
 
     const abertas = rodadas.filter(r => !rodadaConcluida(r) && rodadaAberta(r));
     if (abertas.length) return abertas[0];
@@ -1557,18 +1566,20 @@
         else if (resumo?.statusApostas === "aberta") { stateTag = '<span class="round-state open" aria-hidden="true">🟢</span>'; ariaState = ", apostas abertas"; }
         else if (resumo?.parcial) { stateTag = `<span class="round-state partial" aria-hidden="true">⏳ ${resumo.jogosApurados}/30</span>`; ariaState = `, ${resumo.jogosApurados} de 30 jogos apurados`; }
       }
-      return `<button type="button" class="${active ? "active" : ""} ${current ? "current" : ""}" data-rodada="${item.inicio}" role="tab" aria-selected="${active}" aria-label="${item.inicio === 20 ? "Rodada 20" : `Bloco das rodadas ${item.inicio} a ${item.fim}`}${current ? ", contexto de ação atual" : ""}${ariaState}"><span>${label}</span>${stateTag}${current ? `<span class="current-dot" aria-hidden="true"></span>` : ""}</button>`;
+      return `<button type="button" class="${active ? "active" : ""} ${current ? "current" : ""}" data-rodada="${item.inicio}" role="tab" aria-selected="${active}" aria-label="${item.inicio === 20 ? "Rodada 20" : `Bloco das rodadas ${item.inicio} a ${item.fim}`}${current ? ", bloco atual do campeonato" : ""}${ariaState}"><span>${label}</span>${stateTag}${current ? `<span class="current-dot" aria-hidden="true"></span>` : ""}</button>`;
     }).join("");
     tabs.querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => trocarRodada(Number(btn.dataset.rodada), true)));
     const atualLabel = contextoLabel(state.rodadaAutomatica);
+    const acaoApostas = blocoAcaoAtual();
+    const acaoLabel = acaoApostas && acaoApostas.statusApostas === "aberta" ? ` · apostas abertas: <strong>Bloco ${acaoApostas.inicio}–${acaoApostas.fim}</strong>` : "";
     if (contexto) contexto.innerHTML = manual
-      ? `Consultando <strong>${contextoLabel()}</strong> · ação automática atual: <strong>${atualLabel}</strong>`
-      : `Ação atual identificada automaticamente: <strong>${atualLabel}</strong>`;
+      ? `Consultando <strong>${contextoLabel()}</strong> · bloco atual: <strong>${atualLabel}</strong>${acaoLabel}`
+      : `Bloco atual: <strong>${atualLabel}</strong>${acaoLabel}`;
     if (voltar) voltar.hidden = !manual;
-    if (titulo) titulo.textContent = manual ? `Consultando ${contextoLabel().toLowerCase()}` : `Agora: ${atualLabel}`;
+    if (titulo) titulo.textContent = manual ? `Consultando ${contextoLabel().toLowerCase()}` : `${atualLabel}`;
     if (descricao) descricao.textContent = manual
-      ? "Você está consultando outro contexto. Use o botão ao lado para voltar à ação atual."
-      : "O próximo bloco pode abrir mesmo que um bloco anterior ainda esteja aguardando jogos adiados.";
+      ? "Você está consultando outro bloco. Use o botão ao lado para voltar ao bloco atual."
+      : "Um bloco futuro pode estar aberto para palpites sem substituir o bloco que está sendo disputado agora.";
   }
 
   function renderUsuario() {
@@ -1818,7 +1829,8 @@
   }
 
   function rankingObjetoPorLiga(obj) {
-    if (!obj || obj.sigilosa || !payloadPontuacaoConfiavel(state.apuracao)) return [];
+    const pontuacaoConfiavel = payloadPontuacaoConfiavel(state.apuracao) || payloadPontuacaoConfiavel(state.rankingApostas);
+    if (!obj || obj.sigilosa || !pontuacaoConfiavel) return [];
     const porLiga = obj.rankings_por_liga || obj.ranking_por_liga || {};
     const liga = ligaAtualObj();
     const chaves = [liga?.liga_id, liga?.slug, normalizarTexto(liga?.nome || ""), "liga-geral"].filter(Boolean).map(String);
@@ -1986,7 +1998,41 @@
     return `${rankingHeaderHtml({kicker:"Ranking",titulo:"Rodada 20",objeto:ap,ranking,final})}${ranking.length ? `<div class="export-row"><button class="btn secondary" type="button" id="export-ranking">⬇️ Exportar CSV</button></div><div class="rk-list">${rankingCardsHtml(ranking,{final,rodadaDetalhe:20,estiloRodada20:true})}</div>` : '<div class="panel"><div class="panel-inner empty">Nenhum resultado apurado na Rodada 20.</div></div>'}`;
   }
 
-  function blocosRanking() { return (state.apuracao?.blocos || state.rankingApostas?.ranking_blocos || []); }
+  function objetoTemRanking(obj) {
+    if (!obj) return false;
+    if (Array.isArray(obj.ranking) && obj.ranking.length) return true;
+    const porLiga = obj.rankings_por_liga || obj.ranking_por_liga || {};
+    return Object.values(porLiga).some(v => Array.isArray(v) && v.length);
+  }
+
+  function mesclarBlocoRanking(apuracao, publico) {
+    if (!apuracao) return publico || null;
+    if (!publico) return apuracao;
+    // Metadados de progresso vêm preferencialmente da apuração mais recente; os
+    // arrays de ranking podem vir do artefato público quando ele for o único dos
+    // dois a possuir dados. Isso evita um JSON parcial/transitório zerar a tela.
+    const principal = Number(apuracao.jogos_apurados || 0) >= Number(publico.jogos_apurados || 0) ? apuracao : publico;
+    const auxiliar = principal === apuracao ? publico : apuracao;
+    const out = { ...auxiliar, ...principal };
+    if (!objetoTemRanking(principal) && objetoTemRanking(auxiliar)) {
+      out.ranking = auxiliar.ranking;
+      out.rankings_por_liga = auxiliar.rankings_por_liga || auxiliar.ranking_por_liga || {};
+      out.ranking_por_liga = auxiliar.ranking_por_liga || auxiliar.rankings_por_liga || {};
+    }
+    if ((!Array.isArray(out.rodadas) || !out.rodadas.length) && Array.isArray(auxiliar.rodadas)) out.rodadas = auxiliar.rodadas;
+    if ((!Array.isArray(out.pendencias) || !out.pendencias.length) && Array.isArray(auxiliar.pendencias)) out.pendencias = auxiliar.pendencias;
+    return out;
+  }
+
+  function blocosRanking() {
+    const a = Array.isArray(state.apuracao?.blocos) ? state.apuracao.blocos : [];
+    const b = Array.isArray(state.rankingApostas?.ranking_blocos) ? state.rankingApostas.ranking_blocos : [];
+    const inicios = new Set([...a, ...b].map(x => Number(x?.rodada_inicio || 0)).filter(Boolean));
+    return Array.from(inicios).sort((x, y) => x - y).map(inicio => mesclarBlocoRanking(
+      a.find(x => Number(x?.rodada_inicio || 0) === inicio) || null,
+      b.find(x => Number(x?.rodada_inicio || 0) === inicio) || null
+    )).filter(Boolean);
+  }
 
   function blocoRankingCronologicoMaisAtual(blocos) {
     return (Array.isArray(blocos) ? blocos : [])
@@ -2005,16 +2051,16 @@
     ) return;
 
     state.destinoCronologicoResolvido = true;
-    const acao = blocoAcaoAtual();
-    if (acao) {
-      state.rodadaAutomatica = acao.inicio;
+    const campeonato = blocoCampeonatoAtual();
+    if (campeonato) {
+      state.rodadaAutomatica = campeonato.inicio;
       state.rodadaAutomaticaResolvida = true;
       state.rodadaEscolhidaManualmente = false;
-      state.rodada = acao.inicio;
-      // Se o bloco já abriu, a prioridade é sempre a tarefa de apostar/revisar.
-      // Depois do fechamento, permanecemos no MESMO bloco corrente; o usuário
-      // escolhe Ranking no menu sem ser jogado para um bloco antigo ou futuro.
-      state.aba = acao.abre && acao.abre > new Date() ? "apostas" : (acao.statusApostas === "aberta" ? "apostas" : "ranking");
+      state.rodada = campeonato.inicio;
+      // O bloco futuro aberto aparece no cartão "AÇÃO AGORA", mas não sequestra
+      // a navegação. Enquanto a R23 está em curso, abrir a página Ranking mostra
+      // R21–23. O avanço para R24–26 ocorre no primeiro kickoff desse bloco.
+      state.aba = "ranking";
       return;
     }
 
@@ -3031,7 +3077,7 @@
     state.publicoFiltro = "bloco";
     resolverRodadaAutomatica(true);
     await refresh();
-    toast(`Você voltou para ${contextoLabel(state.rodadaAutomatica)}.`, "ok");
+    toast(`Você voltou para o bloco atual: ${contextoLabel(state.rodadaAutomatica)}.`, "ok");
   }
 
   async function onLogin(ev) {
@@ -3130,8 +3176,11 @@
       determinarRodadaAtual,
       resolverRodadaAutomatica,
       blocoRankingCronologicoMaisAtual,
+      blocosRanking,
       estadoBlocoResumo,
       blocoAcaoAtual,
+      blocoCampeonatoAtual,
+      renderRodadas,
       aplicarDestinoCronologicoInicial,
       contextoInicialPorUrl,
       palpitesParticipanteRodada,

@@ -74,9 +74,9 @@
           <div>
             <div class="kicker">Controle de apostas</div>
             <h2 id="controle-titulo">Bloco atual</h2>
-            <p id="controle-descricao">O site abre automaticamente no bloco mais atual. Blocos anteriores podem continuar em apuração por jogos adiados.</p>
+            <p id="controle-descricao">O site permanece no bloco que está sendo disputado. O próximo bloco pode abrir para palpites antes de virar o bloco atual.</p>
           </div>
-          <button type="button" class="btn ghost current-round-button" id="voltar-rodada-atual" hidden>↩️ Voltar à rodada atual</button>
+          <button type="button" class="btn ghost current-round-button" id="voltar-rodada-atual" hidden>↩️ Voltar ao bloco atual</button>
         </div>
         <div id="painel-blocos-status" class="block-status-overview" aria-label="Situação dos blocos de apostas" hidden></div>
         <div class="actions tab-actions" role="tablist" aria-label="Ações de apostas">
@@ -88,7 +88,7 @@
         </div>
         <div class="round-nav" aria-label="Selecionar rodada ou bloco">
           <div class="round-nav-head">
-            <span id="rodada-contexto">Selecionando rodada atual…</span>
+            <span id="rodada-contexto">Selecionando bloco atual…</span>
             <small>R20 é histórico; depois dela, cada disputa corresponde a um bloco fixo de três rodadas.</small>
           </div>
           <div class="round-tabs" id="rodadas" role="tablist" aria-label="Rodada 20 e blocos do Brasileirão"></div>
@@ -97,7 +97,7 @@
 
       <section id="conteudo" aria-live="polite"></section>
 
-      <section class="grid-head support-summary" aria-label="Resumo da rodada">
+      <section class="grid-head support-summary" aria-label="Resumo do bloco">
         <article class="panel"><div class="panel-inner">
           <div class="kicker" id="resumo-contexto-label">Rodada selecionada</div>
           <div class="big-number" id="numero-rodada">—</div>
@@ -129,7 +129,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/br-config.js?v=20260712-menu-publico-login-v1"></script>
   <script src="js/br-pontuacao.js?v=20260707-ajustes-finais-v1"></script>
-  <script src="js/br-apostas.js?v=20260815-exec23-hotfix-contexto-ranking-v1"></script>
+  <script src="js/br-apostas.js?v=20260815-exec24-bloco-atual-ranking-v1"></script>
   <script>
     document.querySelectorAll('[data-br-view]').forEach(function(a){
       a.addEventListener('click', function(){ sessionStorage.setItem('brViewInicial', a.getAttribute('data-br-view')); });
