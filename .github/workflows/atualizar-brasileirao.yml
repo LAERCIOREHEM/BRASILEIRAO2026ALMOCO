@@ -277,7 +277,16 @@ jobs:
                   f'Rodada {numero}: apuração não acompanhou resultados finais '
                   f'({rodada.get("jogos_apurados")}/{esperados}).'
               )
-          print('Resultado e apuração parcial validados para publicação conjunta.')
+
+          rodadas_por_numero = {int(r.get('rodada') or 0): r for r in apuracao.get('rodadas') or []}
+          for bloco in apuracao.get('blocos') or []:
+              if not bloco.get('publicada') or int(bloco.get('jogos_apurados') or 0) <= 0:
+                  continue
+              ini, fim = int(bloco.get('rodada_inicio') or 0), int(bloco.get('rodada_fim') or 0)
+              ha_participantes = any(int((rodadas_por_numero.get(r) or {}).get('participantes') or 0) > 0 for r in range(ini, fim + 1))
+              if ha_participantes:
+                  assert bloco.get('ranking'), f'Bloco {ini}–{fim}: ranking vazio apesar de palpites e resultados publicados.'
+          print('Resultado, apuração parcial e integridade dos rankings validados para publicação conjunta.')
           PY
 
       - name: Publicar snapshot essencial de resultado e bolão

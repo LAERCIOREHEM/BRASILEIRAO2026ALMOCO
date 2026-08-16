@@ -5,6 +5,13 @@ on:
   # resultado. Este workflow é a recuperação leve: o orquestrador o chama se a
   # pontuação ficar atrás dos resultados, sem refazer ESPN/AF/estatísticas.
   workflow_dispatch:
+  # Mudanças no motor de apuração precisam recompor imediatamente os JSONs de
+  # ranking. O próprio commit gerado por este workflow altera apenas dados-br/*,
+  # portanto este gatilho não cria loop.
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apurar_rodada.py'
 
 permissions:
   contents: write
@@ -90,6 +97,15 @@ jobs:
           assert len(ap.get('blocos') or []) == 6
           assert (ap.get('validacao_resultados') or {}).get('somente_finalizados') is True
           assert all(not b.get('concluido') or int(b.get('jogos_apurados') or 0) == 30 for b in ap.get('blocos') or [])
+
+          rodadas_por_numero = {int(r.get('rodada') or 0): r for r in ap.get('rodadas') or []}
+          for bloco in ap.get('blocos') or []:
+              if not bloco.get('publicada') or int(bloco.get('jogos_apurados') or 0) <= 0:
+                  continue
+              ini, fim = int(bloco.get('rodada_inicio') or 0), int(bloco.get('rodada_fim') or 0)
+              ha_participantes = any(int((rodadas_por_numero.get(r) or {}).get('participantes') or 0) > 0 for r in range(ini, fim + 1))
+              if ha_participantes:
+                  assert bloco.get('ranking'), f'Bloco {ini}–{fim}: resultados apurados e palpites existentes, mas ranking ficou vazio.'
 
           r20 = next((r for r in ap.get('rodadas') or [] if int(r.get('rodada') or 0) == 20), None)
           finais_r20 = [r for r in resultados.get('resultados') or [] if int(r.get('rodada') or 0) == 20]
