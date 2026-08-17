@@ -1,11 +1,11 @@
 {
   "descricao": "Auditoria da consolidação de transmissões do Brasileirão.",
   "resumo": {
-    "jogos_na_janela": 40,
-    "jogos_com_transmissao": 38,
+    "jogos_na_janela": 41,
+    "jogos_com_transmissao": 37,
     "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 20,
+    "registros_preservados": 4,
     "fontes_com_falha": 1
   },
   "fontes": {
@@ -15,62 +15,25 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 15,
-      "duracao_ms": 6081
+      "jogos_com_canal": 33,
+      "duracao_ms": 18020
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 4,
-      "jogos_com_canal": 9,
-      "duracao_ms": 58440
+      "artigos_consultados": 6,
+      "jogos_com_canal": 2,
+      "duracao_ms": 79528
     },
     "espn": {
       "ok": true,
-      "eventos_na_janela": 40,
+      "eventos_na_janela": 41,
       "scoreboard_com_canal": 0,
       "summary_com_canal": 0,
-      "duracao_ms": 5890
+      "duracao_ms": 2220
     }
   },
   "sem_transmissao": [],
   "preservados": [
-    {
-      "event_id": "401841195",
-      "jogo": "Atlético-MG x Grêmio",
-      "canais": [
-        "Premiere",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841197",
-      "jogo": "Vitória x Botafogo",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841205",
-      "jogo": "Fluminense x Remo",
-      "canais": [
-        "Premiere",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841204",
-      "jogo": "Internacional x Atlético-MG",
-      "canais": [
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841203",
-      "jogo": "Palmeiras x Vasco da Gama",
-      "canais": [
-        "SporTV"
-      ]
-    },
     {
       "event_id": "401841202",
       "jogo": "Bragantino x Grêmio",
@@ -79,102 +42,10 @@
       ]
     },
     {
-      "event_id": "401841200",
-      "jogo": "Vitória x Bahia",
-      "canais": [
-        "Prime Video",
-        "Premiere",
-        "Globo",
-        "GE TV",
-        "SporTV"
-      ]
-    },
-    {
       "event_id": "401841199",
       "jogo": "Chapecoense x São Paulo",
       "canais": [
         "Premiere",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841216",
-      "jogo": "Atlético-MG x Vitória",
-      "canais": [
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841215",
-      "jogo": "Bahia x Internacional",
-      "canais": [
-        "Prime Video",
-        "Premiere",
-        "Globo",
-        "GE TV",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841217",
-      "jogo": "Grêmio x Chapecoense",
-      "canais": [
-        "Premiere",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841211",
-      "jogo": "Mirassol x Palmeiras",
-      "canais": [
-        "Prime Video",
-        "Premiere",
-        "Globo",
-        "GE TV",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841209",
-      "jogo": "São Paulo x Bragantino",
-      "canais": [
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841212",
-      "jogo": "Vasco da Gama x Cruzeiro",
-      "canais": [
-        "Prime Video",
-        "Premiere",
-        "Globo",
-        "GE TV",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841225",
-      "jogo": "Remo x Flamengo",
-      "canais": [
-        "SporTV",
-        "Premiere",
-        "GE TV",
-        "Prime Video",
-        "Globo",
-        "Disney+ / ESPN"
-      ]
-    },
-    {
-      "event_id": "401841226",
-      "jogo": "São Paulo x Atlético-MG",
-      "canais": [
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841222",
-      "jogo": "Vitória x Grêmio",
-      "canais": [
         "SporTV"
       ]
     },
@@ -191,17 +62,10 @@
       ]
     },
     {
-      "event_id": "401841234",
-      "jogo": "Palmeiras x São Paulo",
+      "event_id": "401841228",
+      "jogo": "Chapecoense x Internacional",
       "canais": [
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841233",
-      "jogo": "Santos x Cruzeiro",
-      "canais": [
-        "SporTV"
+        "Globo"
       ]
     }
   ],
@@ -209,10 +73,12 @@
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis"
   ],
   "artigos_ge_descobertos": [
-    "https://ge.globo.com/pr/futebol/brasileirao-serie-a/noticia/2026/08/15/athletico-x-bragantino-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/08/15/sao-paulo-x-coritiba-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/rj/futebol/brasileirao-serie-a/noticia/2026/08/15/fluminense-x-palmeiras-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/15/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-23a-rodada.ghtml"
+    "https://ge.globo.com/sp/campinas-e-regiao/futebol/brasileirao-serie-c/noticia/2026/08/17/guarani-x-ypiranga-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/rs/futebol/brasileirao-serie-a/noticia/2026/08/17/internacional-x-remo-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/08/16/corinthians-x-cruzeiro-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/16/vitoria-x-botafogo-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/mg/futebol/brasileirao-serie-a/noticia/2026/08/16/atletico-mg-x-gremio-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/sp/tem-esporte/futebol/brasileirao-serie-a/noticia/2026/08/16/mirassol-x-flamengo-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
   ],
-  "atualizado_em": "2026-08-15T16:50:44-03:00"
+  "atualizado_em": "2026-08-17T06:30:49-03:00"
 }
