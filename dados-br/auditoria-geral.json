@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "gerado_em": "2026-08-16T21:33:43-03:00",
+  "gerado_em": "2026-08-17T05:13:42-03:00",
   "status": "warning",
   "fingerprint_critico": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "resumo": {
     "criticos": 0,
-    "avisos": 2,
+    "avisos": 4,
     "informativos": 0,
     "calendario_partidas": 380,
     "resultados_registros": 224,
@@ -18,9 +18,9 @@
     "blocos_apostas_concluidos": 0,
     "jogos_sem_estatisticas": 0,
     "partidas_sem_publico": 0,
-    "melhores_momentos_sem_video_24_48h": 0,
+    "melhores_momentos_sem_video_24_48h": 1,
     "melhores_momentos_sem_video_mais_48h": 1,
-    "auditoria_tv_idade_horas": 28.7
+    "auditoria_tv_idade_horas": 36.4
   },
   "criticos": [],
   "avisos": [
@@ -34,6 +34,19 @@
       }
     },
     {
+      "codigo": "MELHORES_MOMENTOS_24H",
+      "mensagem": "1 jogo(s) estão sem vídeo há mais de 24h.",
+      "detalhes": {
+        "exemplos": [
+          {
+            "event_id": "401841189",
+            "jogo": "São Paulo x Coritiba",
+            "horas": 30.3
+          }
+        ]
+      }
+    },
+    {
       "codigo": "MELHORES_MOMENTOS_48H",
       "mensagem": "1 jogo(s) estão sem vídeo há mais de 48h.",
       "detalhes": {
@@ -41,9 +54,16 @@
           {
             "event_id": "401879459",
             "jogo": "Bahia x Chapecoense",
-            "horas": 306.6
+            "horas": 314.2
           }
         ]
+      }
+    },
+    {
+      "codigo": "AUDITORIA_TV_ANTIGA",
+      "mensagem": "A grade de transmissões está sem auditoria há mais de 36h.",
+      "detalhes": {
+        "horas": 36.4
       }
     }
   ],
