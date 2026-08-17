@@ -1,15 +1,574 @@
 {
   "_comentario": "Gerado por scripts/buscar_detalhes_jogos_brasileirao.py. Gols e cartões são deduplicados e validados contra placar/boxscore.",
-  "gerado_em": "2026-08-16T20:31:09.900798-03:00",
+  "gerado_em": "2026-08-16T21:31:10.813114-03:00",
   "fonte": "ESPN summary + scoreboard",
-  "total_jogos": 223,
-  "total_com_estatisticas": 223,
+  "total_jogos": 224,
+  "total_com_estatisticas": 224,
   "total_com_publico": 216,
-  "total_com_eventos": 223,
-  "total_com_jogadores": 223,
-  "total_eventos_validados": 223,
+  "total_com_eventos": 224,
+  "total_com_jogadores": 224,
+  "total_eventos_validados": 224,
   "total_eventos_pendentes_detalhes": 0,
   "jogos": {
+    "401841193": {
+      "event_id": "401841193",
+      "event_id_fonte_detalhes": "401841193",
+      "rodada": 23,
+      "data_iso": "2026-08-16T19:30",
+      "mandante": "Corinthians",
+      "visitante": "Cruzeiro",
+      "placar_mandante": 1,
+      "placar_visitante": 2,
+      "estadio": "Neo Química Arena",
+      "publico": null,
+      "publico_tipo": "",
+      "publico_fonte": "",
+      "arbitro": "Davi De Oliveira Lacerda",
+      "stats": [
+        {
+          "nome": "Posse",
+          "home": "53.3%",
+          "away": "46.7%"
+        },
+        {
+          "nome": "Finalizações",
+          "home": "20",
+          "away": "15"
+        },
+        {
+          "nome": "Chutes no gol",
+          "home": "6",
+          "away": "6"
+        },
+        {
+          "nome": "Chutes bloqueados",
+          "home": "9",
+          "away": "6"
+        },
+        {
+          "nome": "Aproveitamento dos chutes",
+          "home": "30%",
+          "away": "40%",
+          "note": "chutes no gol ÷ finalizações"
+        },
+        {
+          "nome": "Escanteios",
+          "home": "3",
+          "away": "8"
+        },
+        {
+          "nome": "Faltas",
+          "home": "16",
+          "away": "14"
+        },
+        {
+          "nome": "Amarelos",
+          "home": "1",
+          "away": "4"
+        },
+        {
+          "nome": "Vermelhos",
+          "home": "0",
+          "away": "0"
+        },
+        {
+          "nome": "Impedimentos",
+          "home": "0",
+          "away": "3"
+        },
+        {
+          "nome": "Defesas",
+          "home": "4",
+          "away": "5"
+        },
+        {
+          "nome": "Passes certos",
+          "home": "393",
+          "away": "337"
+        },
+        {
+          "nome": "Precisão de passe",
+          "home": "90%",
+          "away": "80%"
+        },
+        {
+          "nome": "Passes",
+          "home": "457",
+          "away": "410"
+        },
+        {
+          "nome": "Desarmes",
+          "home": "13",
+          "away": "10"
+        },
+        {
+          "nome": "Interceptações",
+          "home": "8",
+          "away": "11"
+        },
+        {
+          "nome": "Cruzamentos",
+          "home": "9",
+          "away": "15"
+        },
+        {
+          "nome": "Cortes",
+          "home": "23",
+          "away": "23"
+        }
+      ],
+      "estatisticas": [
+        {
+          "nome": "Posse",
+          "home": "53.3%",
+          "away": "46.7%"
+        },
+        {
+          "nome": "Finalizações",
+          "home": "20",
+          "away": "15"
+        },
+        {
+          "nome": "Chutes no gol",
+          "home": "6",
+          "away": "6"
+        },
+        {
+          "nome": "Chutes bloqueados",
+          "home": "9",
+          "away": "6"
+        },
+        {
+          "nome": "Aproveitamento dos chutes",
+          "home": "30%",
+          "away": "40%",
+          "note": "chutes no gol ÷ finalizações"
+        },
+        {
+          "nome": "Escanteios",
+          "home": "3",
+          "away": "8"
+        },
+        {
+          "nome": "Faltas",
+          "home": "16",
+          "away": "14"
+        },
+        {
+          "nome": "Amarelos",
+          "home": "1",
+          "away": "4"
+        },
+        {
+          "nome": "Vermelhos",
+          "home": "0",
+          "away": "0"
+        },
+        {
+          "nome": "Impedimentos",
+          "home": "0",
+          "away": "3"
+        },
+        {
+          "nome": "Defesas",
+          "home": "4",
+          "away": "5"
+        },
+        {
+          "nome": "Passes certos",
+          "home": "393",
+          "away": "337"
+        },
+        {
+          "nome": "Precisão de passe",
+          "home": "90%",
+          "away": "80%"
+        },
+        {
+          "nome": "Passes",
+          "home": "457",
+          "away": "410"
+        },
+        {
+          "nome": "Desarmes",
+          "home": "13",
+          "away": "10"
+        },
+        {
+          "nome": "Interceptações",
+          "home": "8",
+          "away": "11"
+        },
+        {
+          "nome": "Cruzamentos",
+          "home": "9",
+          "away": "15"
+        },
+        {
+          "nome": "Cortes",
+          "home": "23",
+          "away": "23"
+        }
+      ],
+      "gols": [
+        {
+          "minuto": "36'",
+          "jogador": "Bruno Rodrigues",
+          "time": "Cruzeiro",
+          "assistencias": [],
+          "descricao": "Goal 70 Goal! Corinthians 0, Cruzeiro 1. Bruno Rodrigues (Cruzeiro) right footed shot from the right side of the six yard box to the centre of the goal. Bruno Rodrigues Goal"
+        },
+        {
+          "minuto": "58'",
+          "jogador": "Gustavo Henrique",
+          "time": "Corinthians",
+          "assistencias": [],
+          "descricao": "Goal - Volley 173 Goal! Corinthians 1, Cruzeiro 1. Gustavo Henrique (Corinthians) right footed shot from a difficult angle on the left to the high centre of the goal following a set piece situation. Gustavo Henrique Goal - Volley"
+        },
+        {
+          "minuto": "82'",
+          "jogador": "Wanderson",
+          "time": "Cruzeiro",
+          "assistencias": [
+            "Luciano Rodríguez"
+          ],
+          "descricao": "Goal - Header 137 Goal! Corinthians 1, Cruzeiro 2. Wanderson (Cruzeiro) header from the centre of the box to the bottom left corner. Assisted by Luciano Rodríguez with a cross. Wanderson Goal - Header"
+        }
+      ],
+      "cartoes": [
+        {
+          "tipo": "amarelo",
+          "minuto": "51'",
+          "jogador": "Felipe Morais",
+          "time": "Cruzeiro",
+          "descricao": "Yellow Card 94 Felipe Morais (Cruzeiro) is shown the yellow card for a bad foul. Felipe Morais Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "67'",
+          "jogador": "Jonathan Jesus",
+          "time": "Cruzeiro",
+          "descricao": "Yellow Card 94 Jonathan Jesus (Cruzeiro) is shown the yellow card. Jonathan Jesus Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "90'",
+          "jogador": "Lucas Villalba",
+          "time": "Cruzeiro",
+          "descricao": "Yellow Card 94 Lucas Villalba (Cruzeiro) is shown the yellow card for a bad foul. Lucas Villalba Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "90'+1'",
+          "jogador": "Rodrigo Garro",
+          "time": "Corinthians",
+          "descricao": "Yellow Card 94 Rodrigo Garro (Corinthians) is shown the yellow card for a bad foul. Rodrigo Garro Yellow Card"
+        }
+      ],
+      "jogadores": [
+        {
+          "athlete_id": "223437",
+          "nome": "Allan",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "148189",
+          "nome": "André Carrillo",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "338898",
+          "nome": "Breno Bidon",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "192226",
+          "nome": "Gabriel Paulista",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "168981",
+          "nome": "Gustavo Henrique",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "257051",
+          "nome": "Hugo Souza",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "347456",
+          "nome": "Kaio",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "272533",
+          "nome": "Mateuzinho",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "287774",
+          "nome": "Matheus Bidu",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "234070",
+          "nome": "Pedro Raúl",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "270562",
+          "nome": "Rodrigo Garro",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "382944",
+          "nome": "Dieguinho",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "382959",
+          "nome": "Gui Negão",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "169136",
+          "nome": "Jesse Lingard",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "361471",
+          "nome": "João Pedro",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "227737",
+          "nome": "Bruno Rodrigues",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "108342",
+          "nome": "Fagner",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "404202",
+          "nome": "Felipe Morais",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "373806",
+          "nome": "João Costa",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "286558",
+          "nome": "João Marcelo",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "363020",
+          "nome": "Jonathan Jesus",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "280978",
+          "nome": "Kaio Jorge",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "77577",
+          "nome": "Lucas Romero",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "176810",
+          "nome": "Lucas Villalba",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "337996",
+          "nome": "Otávio Costa",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "402423",
+          "nome": "Zé Lucas",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "210135",
+          "nome": "Gerson",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "371534",
+          "nome": "Keny Arroyo",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "118688",
+          "nome": "Luciano Rodríguez",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "216098",
+          "nome": "Matheus Pereira",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "11632",
+          "nome": "Wanderson",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        }
+      ],
+      "jogadores_preservados_de_execucao_anterior": false,
+      "validacao_eventos": {
+        "gols_esperados": {
+          "Corinthians": 1,
+          "Cruzeiro": 2
+        },
+        "gols_extraidos": {
+          "Corinthians": 1,
+          "Cruzeiro": 2
+        },
+        "gols_completos": true,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": true,
+        "cartoes_esperados": {
+          "Corinthians": {
+            "amarelo": 1,
+            "vermelho": 0
+          },
+          "Cruzeiro": {
+            "amarelo": 4,
+            "vermelho": 0
+          }
+        },
+        "cartoes_extraidos": {
+          "Corinthians": {
+            "amarelo": 1,
+            "vermelho": 0
+          },
+          "Cruzeiro": {
+            "amarelo": 3,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": false,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": true,
+        "pendente_detalhes": false,
+        "tipo_pendencia": "",
+        "motivo": ""
+      },
+      "fonte": "ESPN summary + scoreboard",
+      "resultado_manual": false,
+      "origem_resultado": "",
+      "motivo_resultado_manual": "",
+      "preservado_de_execucao_anterior": false,
+      "atualizado_em": "2026-08-16T21:31:06.494659-03:00"
+    },
     "401841190": {
       "event_id": "401841190",
       "event_id_fonte_detalhes": "401841190",
@@ -27,8 +586,8 @@
       "stats": [
         {
           "nome": "Posse",
-          "home": "42.8%",
-          "away": "57.2%"
+          "home": "43.5%",
+          "away": "56.5%"
         },
         {
           "nome": "Finalizações",
@@ -83,7 +642,7 @@
         },
         {
           "nome": "Passes certos",
-          "home": "338",
+          "home": "349",
           "away": "469"
         },
         {
@@ -93,13 +652,13 @@
         },
         {
           "nome": "Passes",
-          "home": "388",
+          "home": "399",
           "away": "540"
         },
         {
           "nome": "Desarmes",
           "home": "7",
-          "away": "25"
+          "away": "26"
         },
         {
           "nome": "Interceptações",
@@ -120,8 +679,8 @@
       "estatisticas": [
         {
           "nome": "Posse",
-          "home": "42.8%",
-          "away": "57.2%"
+          "home": "43.5%",
+          "away": "56.5%"
         },
         {
           "nome": "Finalizações",
@@ -176,7 +735,7 @@
         },
         {
           "nome": "Passes certos",
-          "home": "338",
+          "home": "349",
           "away": "469"
         },
         {
@@ -186,13 +745,13 @@
         },
         {
           "nome": "Passes",
-          "home": "388",
+          "home": "399",
           "away": "540"
         },
         {
           "nome": "Desarmes",
           "home": "7",
-          "away": "25"
+          "away": "26"
         },
         {
           "nome": "Interceptações",
@@ -599,7 +1158,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-16T20:31:05.504438-03:00"
+      "atualizado_em": "2026-08-16T21:31:06.957518-03:00"
     },
     "401841197": {
       "event_id": "401841197",
@@ -1156,7 +1715,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-16T20:31:06.154148-03:00"
+      "atualizado_em": "2026-08-16T21:31:07.428257-03:00"
     },
     "401841195": {
       "event_id": "401841195",
@@ -1739,7 +2298,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-16T20:31:06.881318-03:00"
+      "atualizado_em": "2026-08-16T21:31:07.894998-03:00"
     },
     "401841188": {
       "event_id": "401841188",
@@ -2292,7 +2851,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-16T20:31:07.487124-03:00"
+      "atualizado_em": "2026-08-16T21:31:08.401080-03:00"
     },
     "401841194": {
       "event_id": "401841194",
@@ -2879,7 +3438,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-16T20:31:07.961020-03:00"
+      "atualizado_em": "2026-08-16T21:31:08.881444-03:00"
     },
     "401841189": {
       "event_id": "401841189",
@@ -3426,7 +3985,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-16T20:31:08.720406-03:00"
+      "atualizado_em": "2026-08-16T21:31:09.556773-03:00"
     },
     "401841196": {
       "event_id": "401841196",
@@ -3951,7 +4510,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-16T20:31:09.221980-03:00"
+      "atualizado_em": "2026-08-16T21:31:10.251425-03:00"
     },
     "401841192": {
       "event_id": "401841192",
@@ -4559,7 +5118,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-16T20:31:09.818294-03:00"
+      "atualizado_em": "2026-08-16T21:31:10.730905-03:00"
     },
     "401841187": {
       "event_id": "401841187",
