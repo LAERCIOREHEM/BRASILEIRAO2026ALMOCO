@@ -116,12 +116,6 @@ jobs:
             sincronizar_blocos_apostas)
               gh workflow run sincronizar-blocos-apostas.yml --ref main
               ;;
-            publicos)
-              gh workflow run atualizar-publicos-brasileirao.yml --ref main
-              ;;
-            melhores_momentos)
-              gh workflow run buscar-melhores-momentos-getv.yml --ref main -f modo=incremental
-              ;;
             transmissoes_tv)
               gh workflow run buscar-transmissoes-aovivo-brasileirao.yml --ref main -f modo=tv
               ;;

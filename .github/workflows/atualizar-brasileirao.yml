@@ -888,7 +888,7 @@ jobs:
           print('  OK   Estatísticas, calendário e AF-Previsão gerados')
           PY
 
-      # Estrategia de push ROBUSTA E PADRONIZADA (modelo melhores-momentos):
+      # Estratégia de push robusta e padronizada:
       # guarda os artefatos gerados -> fetch + reset --hard origin/main ->
       # reaplica os arquivos -> commit -> push. Nunca gera conflito artificial
       # de rebase em arquivos-artefato, mesmo sob concorrencia real.
