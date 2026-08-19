@@ -434,7 +434,7 @@
     }
   }
 
-  // ===== Modal de embed YouTube (mesmo layout dos melhores momentos) =====
+  // ===== Modal de embed YouTube (player incorporado) =====
   // Toca a transmissão dentro do próprio site. Fallback: se o canal bloquear
   // a incorporação, o rodapé oferece link direto "Abrir no YouTube ↗".
   function extrairVideoIdYoutube(valor) {
@@ -731,7 +731,7 @@
         ' data-fonte="' + esc(fonteModal) + '"';
       // Botão abre o vídeo dentro do próprio site (modal com iframe embed).
       // Se o canal bloquear a incorporação, o rodapé do modal oferece link
-      // direto para o YouTube — mesmo comportamento dos melhores momentos.
+      // direto para o YouTube — abertura direta no YouTube.
       youtube = '<div class="live-stream-area"><button type="button" class="live-stream-button ' + (liveStyle ? "is-live" : "") + '" onclick="window.__brAovivoAbrirTransmissao(this)"' + btnAttrs + '>' + esc(label) + '</button><div class="live-stream-note">' + esc(note) + '</div></div>';
     }
     return youtube + renderClosedTransmission(game);

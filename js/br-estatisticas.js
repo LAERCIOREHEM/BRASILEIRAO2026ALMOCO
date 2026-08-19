@@ -37,7 +37,7 @@
     probabilityHistoryClub: "",
     probabilityHistoryMetric: "campeao_pct",
     tab: "probabilidades",
-    expanded: { artilheiros: false, assistencias: false, publico: false },
+    expanded: { artilheiros: false, assistencias: false },
     expandedClubGoals: {},
     clubFilter: "",
     gamesLimit: 10,
@@ -405,7 +405,6 @@
     const detail = gameDetail(game) || {};
     const home = game.mandante || teamInfo(detail.mandante);
     const away = game.visitante || teamInfo(detail.visitante);
-    const crowd = Number(detail.publico);
     const goals = uniqueEvents(detail.gols, "goal");
     const cards = uniqueEvents(detail.cartoes, "card");
     return `<details class="stats-game-card" data-game-id="${escapeAttr(game.event_id || game.id || "")}">
@@ -425,7 +424,6 @@
       <div class="stats-game-body">
         <div class="stats-game-info-grid">
           <div><span>Estádio</span><strong>${escapeHtml(detail.estadio || game.estadio || "Não informado")}</strong></div>
-          <div><span>Público</span><strong>${Number.isFinite(crowd) && crowd > 0 ? integer(crowd) : "Não informado"}</strong></div>
           <div><span>Árbitro</span><strong>${escapeHtml(detail.arbitro || "Não informado")}</strong></div>
         </div>
         ${(goals.length || cards.length) ? `<div class="stats-match-events">
@@ -433,7 +431,7 @@
           ${cards.length ? `<section><h4>Cartões</h4><ul>${cards.map(cardLine).join("")}</ul></section>` : ""}
         </div>` : ""}
         ${statisticRows(detail)}
-        <div class="stats-source-note">Fonte: ESPN; público complementado por fonte documental quando ausente. Nenhum campo é estimado.</div>
+        <div class="stats-source-note">Fonte: ESPN. Nenhum campo é estimado.</div>
       </div>
     </details>`;
   }
@@ -525,20 +523,9 @@
     return `<div class="stats-sequence-list">${rows.map((row) => `<div class="stats-sequence-row"><span>${escapeHtml(row.label)}</span><strong>${escapeHtml(row.data?.time || "—")}</strong><b>${integer(row.data?.quantidade)}</b></div>`).join("")}</div>`;
   }
 
-  function attendanceGameRow(game, index) {
-    return `<button type="button" class="stats-attendance-row" data-open-game="${escapeAttr(game.event_id || "")}">
-      <span>${integer(index + 1)}</span>
-      <div><strong>${escapeHtml(game.mandante)} × ${escapeHtml(game.visitante)}</strong><small>R${escapeHtml(game.rodada || "—")} · ${escapeHtml(dateBR(game.data_iso))}</small></div>
-      <b>${integer(game.publico)}</b>
-    </button>`;
-  }
-
   function renderChampionship() {
     const target = $("campeonato-conteudo");
     const performance = state.competition?.performance_por_partida || {};
-    const attendance = state.competition?.publico || {};
-    const ranking = Array.isArray(attendance.ranking) ? attendance.ranking : [];
-    const attendanceShown = state.expanded.publico ? ranking : ranking.slice(0, 5);
     const performanceHtml = [
       performance.mais_gols_mandante,
       performance.mais_gols_visitante,
@@ -549,19 +536,7 @@
     target.innerHTML = `<div class="stats-champ-grid">
       <section class="panel"><div class="panel-inner"><div class="section-head"><div><div class="kicker">📈 Recordes</div><h2>Performance por partida</h2></div></div>${performanceHtml ? `<div class="stats-record-grid">${performanceHtml}</div>` : emptyState("Performance por partida ainda não consolidada.")}</div></section>
       <section class="panel"><div class="panel-inner"><div class="section-head"><div><div class="kicker">🔁 Momento</div><h2>Sequências</h2></div></div>${sequenceRows()}</div></section>
-    </div>
-    <section class="panel stats-attendance-panel"><div class="panel-inner">
-      <div class="section-head"><div><div class="kicker">👥 Torcida</div><h2>Público</h2></div><span class="badge">Jogos com dado oficial</span></div>
-      <div class="stats-attendance-summary">
-        <div><span>Maior público</span><strong>${integer(attendance.maior_publico?.publico)}</strong></div>
-        <div><span>Menor público</span><strong>${integer(attendance.menor_publico?.publico)}</strong></div>
-        <div><span>Média</span><strong>${integer(attendance.media_publico)}</strong></div>
-        <div><span>Total</span><strong>${integer(attendance.total_publico)}</strong></div>
-        <div><span>Jogos informados</span><strong>${integer(attendance.jogos_com_publico)}</strong></div>
-      </div>
-      ${attendanceShown.length ? `<div class="stats-attendance-list">${attendanceShown.map(attendanceGameRow).join("")}</div>${ranking.length > 5 ? `<button class="stats-expand-btn" type="button" data-expand-attendance>${state.expanded.publico ? "Mostrar somente os 5 maiores ↑" : `Ver todos os públicos (${ranking.length}) ↓`}</button>` : ""}` : emptyState("As fontes consultadas ainda não disponibilizaram público para os jogos processados.")}
-      <p class="stats-source-note">${escapeHtml(attendance.observacao || "Média calculada somente sobre partidas com público informado.")}</p>
-    </div></section>`;
+    </div>`;
   }
 
   function metricBar(label, value) {
@@ -1298,12 +1273,6 @@
         renderPlayers(type);
         return;
       }
-      const attendance = event.target.closest("[data-expand-attendance]");
-      if (attendance) {
-        state.expanded.publico = !state.expanded.publico;
-        renderChampionship();
-        return;
-      }
       const probabilityMethod = event.target.closest("[data-probability-method]");
       if (probabilityMethod) {
         event.preventDefault();
@@ -1347,7 +1316,7 @@
 
     const [leaders, competition, details, ranking, rankingHistory, table, results, audit, probabilities, probabilitiesAudit, probabilitiesHistory, probabilityModelsAudit, probabilityEvaluation, pointsThresholds] = await Promise.all([
       fetchJson(FILES.leaders, { status: "aguardando_workflow", artilharia: [], assistencias: [] }),
-      fetchJson(FILES.competition, { resumo: {}, performance_por_partida: {}, sequencias: {}, publico: {}, gols_por_clube: [], jogos: [] }),
+      fetchJson(FILES.competition, { resumo: {}, performance_por_partida: {}, sequencias: {}, gols_por_clube: [], jogos: [] }),
       fetchJson(FILES.details, { jogos: {} }),
       fetchJson(FILES.ranking, { ranking: [] }),
       fetchJson(FILES.rankingHistory, { total_snapshots: 0, snapshots: [] }),

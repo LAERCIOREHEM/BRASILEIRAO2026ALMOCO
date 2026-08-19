@@ -1,5 +1,5 @@
 /* onde-assistir.js — lista de jogos da Copa com data, hora (Brasília), canais,
-   placar, gols, melhores momentos e preparo para jogo completo.
+   placar, gols e preparo para jogo completo.
    Fonte principal: feed ESPN. Lances são carregados sob demanda via summary para
    não pesar a página. */
 (function () {
@@ -11,7 +11,7 @@
     globo: ["Globo", "#0a7cff"], sbt: ["SBT", "#00a651"], sportv: ["SporTV", "#ff7a00"],
     getv: ["ge tv", "#06aa48"], gplay: ["Globoplay", "#fb0234"], caze: ["CazéTV", "#f7d116"]
   };
-  var SEL = {}, ISO = {}, SELECOES = [], TVS = {}, MM = {}, JC = {}, JOGOS = [], LANCES_CACHE = {};
+  var SEL = {}, ISO = {}, SELECOES = [], TVS = {}, JC = {}, JOGOS = [], LANCES_CACHE = {};
   var ESTRUT = null, TERMAP = null, FAIRPLAY = {}, PROJ_EVENT = {};
   var FILTROS = { selecao: "", data: "", campo: "data", direcao: "desc" };
 
@@ -57,10 +57,6 @@
     return '<a class="team-link' + cls + '" href="selecoes.html#' + encodeURIComponent(sig) + '" title="Ver seleção: ' + esc(nome) + '" aria-label="Ver seleção ' + esc(nome) + '">' + conteudo + '</a>';
   }
   function chave(aId, bId) { return [aId, bId].filter(Boolean).sort().join("-"); }
-  function momento(aId, bId) {
-    var k = chave(aId, bId);
-    return MM[k] || null;
-  }
   function jogoCompleto(aId, bId) {
     var k = chave(aId, bId);
     return JC[k] || null;
@@ -675,10 +671,8 @@
     return '<span class="oa-hora">' + fmtHora(j.date) + '</span>';
   }
   function botoesPosJogo(j) {
-    var m = j.state === "post" ? momento(j.a, j.b) : null;
     var jc = j.state === "post" ? jogoCompleto(j.a, j.b) : null;
     var out = "";
-    if (m && m.url) out += '<a class="oa-assista" href="' + esc(m.url) + '" target="_blank" rel="noopener">▶️ Assista como foi (melhores momentos)</a>';
     if (jc && jc.url) out += '<a class="oa-completo" href="' + esc(jc.url) + '" target="_blank" rel="noopener">🎥 JOGO COMPLETO — assista como foi</a>';
     return out;
   }
@@ -749,7 +743,7 @@
 
   function compartilhar() {
     var url = "https://brasileirao2026almoco.com.br/copa2026/onde-assistir.html";
-    var texto = "Acompanhe a Copa 2026: jogos, horários, onde assistir, placares, melhores momentos e jogos completos 🏆⚽";
+    var texto = "Acompanhe a Copa 2026: jogos, horários, onde assistir, placares e jogos completos 🏆⚽";
     if (navigator.share) navigator.share({ title: "Copa 2026 — jogos e onde assistir", text: texto, url: url }).catch(function () {});
     else window.open("https://wa.me/?text=" + encodeURIComponent(texto + " " + url), "_blank");
   }
@@ -759,17 +753,15 @@
       fetch("dados/selecoes.json").then(function (r) { return r.json(); }),
       fetch("dados/transmissoes.json").then(function (r) { return r.json(); }).catch(function () { return {}; }),
       fetch(API + "?dates=20260611-20260719&limit=200&_=" + Date.now()).then(function (r) { return r.json(); }),
-      fetch("dados/melhores-momentos.json?t=" + Date.now()).then(function (r) { return r.json(); }).catch(function () { return {}; }),
       fetch("dados/jogos-completos.json?t=" + Date.now()).then(function (r) { return r.json(); }).catch(function () { return {}; }),
       fetch("dados/estrutura_mata_mata.json?t=" + Date.now()).then(function (r) { return r.json(); }).catch(function () { return null; }),
       fetch("dados/terceiros_map.json?t=" + Date.now()).then(function (r) { return r.json(); }).catch(function () { return null; }),
       fetch("dados/fairplay.json?t=" + Date.now()).then(function (r) { return r.json(); }).catch(function () { return {}; })
     ]).then(function (res) {
-      MM = (res[3] && res[3].jogos) || {};
-      JC = (res[4] && res[4].jogos) || {};
-      ESTRUT = res[5] || null;
-      TERMAP = res[6] || null;
-      FAIRPLAY = (res[7] && res[7].fairplay) || {};
+      JC = (res[3] && res[3].jogos) || {};
+      ESTRUT = res[4] || null;
+      TERMAP = res[5] || null;
+      FAIRPLAY = (res[6] && res[6].fairplay) || {};
       SELECOES = (res[0].selecoes || []);
       SELECOES.forEach(function (s) { SEL[s.id] = s.nome; ISO[s.id] = s.iso2; });
       TVS = res[1] || {};

@@ -4,7 +4,7 @@
   const $ = (sel) => document.querySelector(sel);
   const fmtData = new Intl.DateTimeFormat("pt-BR", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
   const cacheBust = () => "?v=" + Date.now();
-  const state = { clubes: [], tabela: [], ranking: [], rankingHistory: { snapshots: [] }, probabilidades: {}, resultadosManuais: {}, eventos: [], elencos: {}, mascotes: {}, filtroTexto: "", filtroRegiao: "Todas", selecionado: "", jogosExpandidos: false };
+  const state = { clubes: [], tabela: [], ranking: [], rankingHistory: { snapshots: [] }, probabilidades: {}, resultadosManuais: {}, eventos: [], mascotes: {}, filtroTexto: "", filtroRegiao: "Todas", selecionado: "", jogosExpandidos: false };
 
   function escapeHtml(value){
     return String(value ?? "").replace(/[&<>'"]/g, (ch) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[ch]));
@@ -379,7 +379,6 @@
     ativarZoomMascote();
     renderJogos(c.nome);
     renderHistoricoRanking(c.nome);
-    renderElenco(c.nome);
   }
   function renderJogos(nome){
     const eventos = eventosDo(nome);
@@ -415,47 +414,17 @@
     const placar = finalizado ? `${e.placar_mandante ?? "—"} × ${e.placar_visitante ?? "—"}` : "vs";
     return `<div class="row"><span class="date">${escapeHtml(dataCurta(e.data_iso))}</span><span>${escapeHtml(e.mandante)} × ${escapeHtml(e.visitante)}<br><small>${escapeHtml(e.estadio || "estádio a confirmar")}</small></span><span class="score">${escapeHtml(placar)}</span></div>`;
   }
-  function grupoPosicao(posicao){
-    const p = slug(posicao);
-    if (p.includes("goleir")) return "Goleiros";
-    if (p.includes("zagueir") || p.includes("lateral") || p.includes("defensor")) return "Defensores";
-    if (p.includes("volante") || p.includes("meia") || p.includes("meio-campista")) return "Meio-campistas";
-    if (p.includes("atacante") || p.includes("ponta")) return "Atacantes";
-    return "Outros";
-  }
-  function renderElenco(nome){
-    const jogadores = Array.isArray(state.elencos[nome]) ? state.elencos[nome] : [];
-    if (!jogadores.length) {
-      $("#elenco-clube").className = "empty-state";
-      $("#elenco-clube").innerHTML = `Elenco de <strong>${escapeHtml(nome)}</strong> ainda não está preenchido.`;
-      return;
-    }
-    const ordem = ["Goleiros", "Defensores", "Meio-campistas", "Atacantes", "Outros"];
-    const grupos = Object.fromEntries(ordem.map(grupo => [grupo, []]));
-    jogadores.forEach(jogador => grupos[grupoPosicao(jogador.posicao)].push(jogador));
-    $("#elenco-clube").className = "squad-list";
-    $("#elenco-clube").innerHTML = `<div class="squad-summary"><strong>${jogadores.length}</strong><span>jogadores cadastrados</span></div>${ordem.filter(grupo => grupos[grupo].length).map(grupo => `
-      <section class="squad-group">
-        <div class="squad-group-title"><span>${escapeHtml(grupo)}</span><b>${grupos[grupo].length}</b></div>
-        <div class="squad-rows">${grupos[grupo].map(j => `<div class="squad-row">
-          <div class="squad-number"><span>Camisa</span><strong>${escapeHtml(j.numero || "—")}</strong></div>
-          <div class="squad-player"><strong>${escapeHtml(j.nome)}</strong><small>${escapeHtml(j.posicao || "Posição não informada")}</small></div>
-          <div class="squad-age"><span>Idade</span><strong>${escapeHtml(j.idade || "—")}</strong></div>
-        </div>`).join("")}</div>
-      </section>`).join("")}`;
-  }
   function render(){
     renderChips(); renderGrid(); renderDetalhe();
   }
   async function init(){
-    const [clubesData, tabelaData, rankingData, rankingHistoryData, probabilidadesData, eventosData, elencosData, mascotesData, resultadosManuaisData] = await Promise.all([
+    const [clubesData, tabelaData, rankingData, rankingHistoryData, probabilidadesData, eventosData, mascotesData, resultadosManuaisData] = await Promise.all([
       fetchJson("dados-br/clubes.json", { clubes: [] }),
       fetchJson("tabela.json", { tabela: [] }),
       fetchJson("dados-br/ranking-desempenho.json", { ranking: [] }),
       fetchJson("dados-br/historico-ranking-desempenho.json", { snapshots: [] }),
       fetchJson("dados-br/probabilidades-brasileirao.json", { clubes: [] }),
       fetchJson("espn_eventos.json", { eventos: [] }),
-      fetchJson("dados-br/elencos.json", { elencos: {} }),
       fetchJson("dados-br/mascotes.json", { mascotes: {} }),
       fetchJson("dados-br/resultados-manuais.json", { jogos: {} })
     ]);
@@ -465,7 +434,6 @@
     state.rankingHistory = rankingHistoryData || { snapshots: [] };
     state.probabilidades = Object.fromEntries((probabilidadesData.clubes || []).map(item => [slug(item.clube), item]));
     state.eventos = eventosData.eventos || [];
-    state.elencos = elencosData.elencos || {};
     state.mascotes = mascotesData.mascotes || {};
     state.resultadosManuais = manualResultMap(resultadosManuaisData);
     const clubeInicialHash = clubeDoHash();

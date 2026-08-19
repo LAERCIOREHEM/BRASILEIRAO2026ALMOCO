@@ -11,7 +11,6 @@ Princípios:
   scoreboard ESPN para a apresentação live;
 - FINAL ainda não incorporado tem prioridade máxima;
 - apuração e AF possuem recuperação independente se ficarem atrás dos resultados;
-- públicos e melhores momentos usam backoff e só rodam enquanto houver pendência;
 - grade de TV roda no máximo uma vez ao dia; player GE TV/CazéTV não é acionado
   automaticamente;
 - no máximo um workflow escritor é despachado por ciclo.
@@ -42,33 +41,20 @@ APOSTAS_CONFIG_PATH = ROOT / "dados-br" / "apostas-config.json"
 AUD_AF_PATH = ROOT / "dados-br" / "auditoria-probabilidades.json"
 PROB_BOLAO_PATH = ROOT / "dados-br" / "probabilidades-bolao.json"
 DETAILS_PATH = ROOT / "dados-br" / "jogos-detalhes.json"
-PUBLIC_COMPLEMENTS_PATH = ROOT / "dados-br" / "publicos-complementares.json"
-PUBLIC_AUDIT_PATH = ROOT / "dados-br" / "auditoria-publicos.json"
-MM_PATH = ROOT / "dados-br" / "melhores-momentos.json"
-MM_MANUAL_PATH = ROOT / "dados-br" / "melhores-momentos-manual.json"
 TV_AUDIT_PATH = ROOT / "dados-br" / "auditoria-transmissoes-tv.json"
 GENERAL_AUDIT_PATH = ROOT / "dados-br" / "auditoria-geral.json"
 BLOCKS_AUDIT_PATH = ROOT / "dados-br" / "auditoria-blocos-apostas.json"
 
 WORKFLOW_MAIN = "Atualizar Brasileirao (ESPN)"
 WORKFLOW_APURAR = "Apurar Apostas Brasileirão"
-WORKFLOW_PUBLICOS = "Atualizar públicos do Brasileirão"
-WORKFLOW_MM = "Buscar melhores momentos Brasileirão oficiais"
 WORKFLOW_TV = "Buscar transmissões ao vivo do Brasileirão"
 WORKFLOW_BLOCKS = "Sincronizar blocos de apostas"
 
 REPO_WRITERS = {
     "Apurar Apostas Brasileirão",
     "Atualizar Brasileirao (ESPN)",
-    "Atualizar Elencos Brasileirao (ESPN)",
-    "Atualizar tudo (agora somente Copa - ranking de desempenho)",
     "Auditar modelos AF-Previsão",
-    "Buscar melhores momentos Brasileirão oficiais",
     "Buscar transmissões ao vivo do Brasileirão",
-    "Atualizar públicos do Brasileirão",
-    "Atualiza fair play (cartões)",
-    "Buscar melhores momentos (CazéTV)",
-    "Revisar melhores momentos Brasileirão oficiais",
     "Sincronizar blocos de apostas",
 }
 
@@ -84,27 +70,6 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "apuracao": {"tolerancia_atraso_segundos": 20, "retentativa_minutos": 10},
     "af_previsao": {"retentativa_minutos": 20},
-    "publicos": {
-        "primeira_tentativa_apos_final_minutos": 15,
-        "intervalos_retentativa": [
-            {"ate_horas": 2, "minutos": 30},
-            {"ate_horas": 6, "minutos": 60},
-            {"ate_horas": 24, "minutos": 120},
-            {"ate_horas": 72, "minutos": 360},
-            {"ate_horas": 168, "minutos": 720},
-            {"ate_horas": 99999, "minutos": 1440},
-        ],
-    },
-    "melhores_momentos": {
-        "primeira_tentativa_apos_final_minutos": 10,
-        "intervalos_retentativa": [
-            {"ate_horas": 2, "minutos": 10},
-            {"ate_horas": 6, "minutos": 30},
-            {"ate_horas": 24, "minutos": 120},
-            {"ate_horas": 72, "minutos": 360},
-            {"ate_horas": 99999, "minutos": 720},
-        ],
-    },
     "transmissoes": {"tv_diaria_apos": "06:30"},
     "blocos_apostas": {"auditoria_max_horas": 6, "janela_boundary_minutos": 20, "retentativa_minutos": 30},
     "artefatos": {
@@ -352,10 +317,6 @@ def artifact_fallback_runs(tz: ZoneInfo) -> list[dict[str, Any]]:
     add(WORKFLOW_MAIN, status.get("ultimo_sucesso") if isinstance(status, Mapping) else None)
     ap = load_json(APURACAO_PATH, {})
     add(WORKFLOW_APURAR, ap.get("atualizado_em") if isinstance(ap, Mapping) else None)
-    pub = load_json(PUBLIC_AUDIT_PATH, {})
-    add(WORKFLOW_PUBLICOS, pub.get("gerado_em") if isinstance(pub, Mapping) else None)
-    mm = load_json(MM_PATH, {})
-    add(WORKFLOW_MM, mm.get("atualizado_em") if isinstance(mm, Mapping) else None)
     tv = load_json(TV_AUDIT_PATH, {})
     add(WORKFLOW_TV, tv.get("atualizado_em") if isinstance(tv, Mapping) else None, "Transmissões · tv")
     return out
@@ -488,131 +449,6 @@ def af_decision(config: Mapping[str, Any], now: datetime, runs: Sequence[Mapping
     return Decision("atualizar_brasileirao_forcar_af", f"AF/Probabilidade do bolão está defasado: resultados={total}, AF reconhece={count_af}; forçar recomputação.")
 
 
-def attendance_number(value: Any) -> int | None:
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        if isinstance(value, (int, float)):
-            n = int(round(float(value)))
-        else:
-            digits = "".join(ch for ch in str(value) if ch.isdigit())
-            if not digits:
-                return None
-            n = int(digits)
-    except (TypeError, ValueError):
-        return None
-    return n if 100 <= n <= 250000 else None
-
-
-def final_time(row: Mapping[str, Any], tz: ZoneInfo) -> datetime | None:
-    exact = parse_dt(row.get("finalizado_em"), tz)
-    if exact:
-        return exact
-    kickoff = parse_dt(row.get("data_iso"), tz)
-    return kickoff + timedelta(minutes=115) if kickoff else None
-
-
-def retry_interval(age_hours: float, rows: Sequence[Mapping[str, Any]], default: int) -> int:
-    for row in rows:
-        try:
-            if age_hours <= float(row.get("ate_horas")):
-                return int(row.get("minutos"))
-        except (TypeError, ValueError):
-            continue
-    return default
-
-
-def pending_publics(config: Mapping[str, Any], now: datetime, tz: ZoneInfo) -> list[tuple[dict[str, Any], datetime]]:
-    results = load_json(RESULTADOS_PATH, {})
-    details_payload = load_json(DETAILS_PATH, {})
-    comp_payload = load_json(PUBLIC_COMPLEMENTS_PATH, {})
-    details = details_payload.get("jogos") if isinstance(details_payload, Mapping) else {}
-    comps = comp_payload.get("jogos") if isinstance(comp_payload, Mapping) else {}
-    if not isinstance(details, Mapping): details = {}
-    if not isinstance(comps, Mapping): comps = {}
-    min_age = int(config["publicos"].get("primeira_tentativa_apos_final_minutos") or 15)
-    out: list[tuple[dict[str, Any], datetime]] = []
-    for raw in (results.get("resultados") or []) if isinstance(results, Mapping) else []:
-        if not isinstance(raw, Mapping):
-            continue
-        row = dict(raw)
-        eid = str(row.get("event_id") or "").strip()
-        if not eid:
-            continue
-        detail = details.get(eid) if isinstance(details, Mapping) else None
-        comp = comps.get(eid) if isinstance(comps, Mapping) else None
-        if attendance_number((detail or {}).get("publico") if isinstance(detail, Mapping) else None) or attendance_number((comp or {}).get("publico") if isinstance(comp, Mapping) else None):
-            continue
-        finished = final_time(row, tz)
-        if finished and now >= finished + timedelta(minutes=min_age):
-            out.append((row, finished))
-    out.sort(key=lambda x: x[1])
-    return out
-
-
-def public_decision(config: Mapping[str, Any], now: datetime, runs: Sequence[Mapping[str, Any]], tz: ZoneInfo) -> Decision | None:
-    pending = pending_publics(config, now, tz)
-    if not pending:
-        return None
-    last_any, _ = last_run(runs, WORKFLOW_PUBLICOS, tz)
-    oldest_row, oldest_final = pending[0]
-    age_h = max(0.0, (now - oldest_final).total_seconds() / 3600.0)
-    interval = retry_interval(age_h, config["publicos"].get("intervalos_retentativa") or [], 1440)
-    if last_any and last_any >= oldest_final and minutes_since(last_any, now) < interval:
-        return None
-    eid = str(oldest_row.get("event_id") or "")
-    return Decision("publicos", f"Há {len(pending)} jogo(s) FINAL sem público; janela/backoff de coleta vencido ({interval} min).", event_id=eid, mode="incremental")
-
-
-def linked_mm_ids() -> set[str]:
-    out: set[str] = set()
-    for path in (MM_PATH, MM_MANUAL_PATH):
-        payload = load_json(path, {})
-        games = payload.get("jogos") if isinstance(payload, Mapping) else {}
-        if not isinstance(games, Mapping):
-            continue
-        for key, row in games.items():
-            eid = str((row or {}).get("event_id") or key or "").strip() if isinstance(row, Mapping) else str(key)
-            if eid:
-                out.add(eid)
-    return out
-
-
-def pending_mm(config: Mapping[str, Any], now: datetime, tz: ZoneInfo) -> list[tuple[dict[str, Any], datetime]]:
-    results = load_json(RESULTADOS_PATH, {})
-    linked = linked_mm_ids()
-    min_age = int(config["melhores_momentos"].get("primeira_tentativa_apos_final_minutos") or 10)
-    out: list[tuple[dict[str, Any], datetime]] = []
-    for raw in (results.get("resultados") or []) if isinstance(results, Mapping) else []:
-        if not isinstance(raw, Mapping):
-            continue
-        eid = str(raw.get("event_id") or "").strip()
-        if not eid or eid in linked:
-            continue
-        finished = final_time(raw, tz)
-        if finished and now >= finished + timedelta(minutes=min_age):
-            out.append((dict(raw), finished))
-    out.sort(key=lambda x: x[1], reverse=True)
-    return out
-
-
-def mm_decision(config: Mapping[str, Any], now: datetime, runs: Sequence[Mapping[str, Any]], tz: ZoneInfo) -> Decision | None:
-    pending = pending_mm(config, now, tz)
-    if not pending:
-        return None
-    last_any, _ = last_run(runs, WORKFLOW_MM, tz)
-    # Prioriza o FINAL mais recente sem vídeo.
-    row, finished = pending[0]
-    age_h = max(0.0, (now - finished).total_seconds() / 3600.0)
-    interval = retry_interval(age_h, config["melhores_momentos"].get("intervalos_retentativa") or [], 720)
-    # Se nunca houve busca depois deste FINAL, é a primeira tentativa e entra já aos 10 min.
-    if last_any is None or last_any < finished:
-        return Decision("melhores_momentos", f"Primeira busca de melhores momentos após FINAL: {row.get('mandante',{}).get('nome','')} x {row.get('visitante',{}).get('nome','')}.", event_id=str(row.get("event_id") or ""), round_number=str(row.get("rodada") or ""), mode="incremental")
-    if minutes_since(last_any, now) >= interval:
-        return Decision("melhores_momentos", f"Ainda há {len(pending)} jogo(s) sem melhores momentos; backoff atual {interval} min venceu.", event_id=str(row.get("event_id") or ""), round_number=str(row.get("rodada") or ""), mode="incremental")
-    return None
-
-
 def artifact_age_hours(path: Path, now: datetime, tz: ZoneInfo, *fields: str) -> float | None:
     payload = load_json(path, {})
     if not isinstance(payload, Mapping):
@@ -687,12 +523,6 @@ def decide(config: Mapping[str, Any], now: datetime, games: Sequence[Game], stat
     health = artifact_health_decision(config, now, runs, tz)
     if health:
         return health
-    pub = public_decision(config, now, runs, tz)
-    if pub:
-        return pub
-    mm = mm_decision(config, now, runs, tz)
-    if mm:
-        return mm
     tv = tv_decision(config, now, runs, tz)
     if tv:
         return tv
@@ -720,8 +550,6 @@ def self_test() -> int:
     now = datetime(2026, 8, 9, 21, 30, tzinfo=tz)
     game = Game("1", datetime(2026, 8, 9, 19, 30, tzinfo=tz), "Flamengo", "Vitória", 22)
     assert time_reached(now, "06:30")
-    assert retry_interval(1, config["publicos"]["intervalos_retentativa"], 1440) == 30
-    assert retry_interval(3, config["melhores_momentos"]["intervalos_retentativa"], 720) == 30
     recent = [{"name": WORKFLOW_MAIN, "status": "completed", "conclusion": "success", "created_at": "2026-08-10T00:25:00Z"}]
     # Gol AO VIVO não dispara pipeline.
     assert main_decision(config, now, [game], {"1": {"state": "in", "home_score": 1, "away_score": 0}}, [], set(), recent, tz) is None
@@ -729,7 +557,7 @@ def self_test() -> int:
     dec = main_decision(config, now, [game], {"1": {"state": "post", "home_score": 2, "away_score": 0}}, [], set(), recent, tz)
     assert dec and dec.action == "atualizar_brasileirao"
     # Writer ativo bloqueia novo dispatch.
-    assert active_writer(recent + [{"name": WORKFLOW_MM, "status": "in_progress", "id": 3}]) is not None
+    assert active_writer(recent + [{"name": WORKFLOW_MAIN, "status": "in_progress", "id": 3}]) is not None
 
     # Blocos: ausência, janela de boundary e frescor devem produzir sincronização.
     import tempfile
@@ -762,7 +590,7 @@ def self_test() -> int:
         assert health and health.action == "transmissoes_tv"
     GENERAL_AUDIT_PATH, TV_AUDIT_PATH, BLOCKS_AUDIT_PATH = old_general, old_tv, old_blocks
 
-    print("OK self-test: FINAL, blocos automáticos, gol sem pipeline, backoff, artefatos envelhecidos e exclusão mútua validados.")
+    print("OK self-test: FINAL, blocos automáticos, gol sem pipeline, artefatos envelhecidos e exclusão mútua validados.")
     return 0
 
 

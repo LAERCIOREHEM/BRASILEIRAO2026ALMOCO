@@ -429,14 +429,9 @@ def main() -> None:
     if narrative_false_positives:
         critical.append(f"{len(narrative_false_positives)} falso(s) gol(s) originado(s) de finalização/defesa")
 
-    with_public = sum(1 for g in detail_games.values() if (g or {}).get("publico") not in (None, "", 0, "0"))
     with_stats = sum(1 for g in detail_games.values() if (g or {}).get("stats") or (g or {}).get("estatisticas"))
     if with_stats == 0:
         critical.append("nenhum jogo com estatísticas detalhadas")
-    if with_public == 0:
-        warnings.append("nenhum público coletado ainda; conferir retorno da ESPN summary")
-    elif detail_games and with_public < int(len(detail_games) * 0.80):
-        warnings.append(f"público disponível em somente {with_public}/{len(detail_games)} jogos")
 
     comp_summary = competition.get("resumo") or {}
     if int(comp_summary.get("clubes") or 0) != 20:
@@ -450,26 +445,11 @@ def main() -> None:
     ]
     if short_club_scorers:
         critical.append("clubes com menos de cinco marcadores individualizados: " + ", ".join(short_club_scorers))
-    attendance = competition.get("publico") or {}
-    if int(attendance.get("jogos_com_publico") or 0) != with_public:
-        critical.append("contagem de jogos com público diverge entre detalhes e competição")
 
     if len(players.get("artilharia") or []) < 5 or len(players.get("assistencias") or []) < 5:
         critical.append("dados-br/jogadores.json não recebeu os rankings oficiais")
     if len(stats.get("artilharia") or []) < 40 or len(stats.get("garcons") or []) < 20:
         critical.append("dados-br/estatisticas.json não recebeu os rankings completos")
-
-    rosters = read(ROOT / "dados-br" / "elencos.json", {})
-    roster_audit = read(ROOT / "dados-br" / "auditoria-elencos.json", {})
-    roster_map = rosters.get("elencos") or {}
-    if not isinstance(roster_map, dict) or len(roster_map) != 20:
-        critical.append("elencos.json sem os 20 clubes")
-        roster_map = {}
-    incomplete_rosters = [f"{club}: {len(rows or [])}" for club, rows in roster_map.items() if not isinstance(rows, list) or len(rows) < 15]
-    if incomplete_rosters:
-        critical.append("elencos incompletos: " + ", ".join(incomplete_rosters))
-    if roster_audit and roster_audit.get("status") != "ok":
-        critical.append("auditoria-elencos.json não está OK")
 
     status = "ok" if not critical else "erro"
     payload = {
@@ -480,7 +460,6 @@ def main() -> None:
             "jogos_finalizados": len(result_rows),
             "jogos_com_detalhes": len(detail_games),
             "jogos_com_estatisticas": with_stats,
-            "jogos_com_publico": with_public,
             "artilheiros": len(goals),
             "assistentes": len(assists),
             "lider_gols": goals[0] if goals else None,
@@ -499,7 +478,6 @@ def main() -> None:
             "detalhes": {
                 "total_processados": details_audit.get("total_processados"),
                 "total_com_estatisticas": details_audit.get("total_com_estatisticas"),
-                "total_com_publico": details_audit.get("total_com_publico"),
                 "total_falhas": details_audit.get("total_falhas"),
             },
         },
@@ -508,7 +486,6 @@ def main() -> None:
         "resultados_manuais_pendentes_detalhes": pending_manual_details,
         "eventos_duplicados": duplicate_events,
         "falsos_gols_de_narracao": narrative_false_positives,
-        "elencos_incompletos": incomplete_rosters,
         "nomes_suspeitos": suspicious_names,
         "erros_criticos": critical,
         "avisos": warnings,

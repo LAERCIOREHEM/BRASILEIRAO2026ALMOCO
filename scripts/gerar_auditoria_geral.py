@@ -3,7 +3,7 @@
 """Auditoria cruzada e determinística do Brasileirão 2026 Almoço.
 
 Cruza, em uma única passada, calendário canônico, ESPN, agenda, resultados,
-tabela, detalhes/estatísticas, públicos, melhores momentos, transmissões e AF.
+tabela, detalhes/estatísticas, transmissões e AF.
 A auditoria nunca corrige placares ou cálculos. Ela classifica inconsistências
 estruturais e só envia e-mail quando existe problema CRÍTICO novo.
 """
@@ -38,8 +38,6 @@ FILES = {
     "detalhes": ROOT / "dados-br" / "jogos-detalhes.json",
     "aud_detalhes": ROOT / "dados-br" / "auditoria-jogos-detalhes.json",
     "aud_cobertura": ROOT / "dados-br" / "auditoria-cobertura-resultados.json",
-    "aud_publicos": ROOT / "dados-br" / "auditoria-publicos.json",
-    "aud_mm": ROOT / "dados-br" / "auditoria-melhores-momentos.json",
     "aud_tv": ROOT / "dados-br" / "auditoria-transmissoes-tv.json",
     "aud_af": ROOT / "dados-br" / "auditoria-probabilidades.json",
     "status": ROOT / "dados-br" / "status-atualizacao.json",
@@ -311,47 +309,6 @@ def audit(root: Path = ROOT, now: datetime | None = None) -> dict[str, Any]:
             auditoria=int(reported_snapshot_missing), recalculado=len(missing_stats),
         ))
 
-    # Públicos: o coletor já é fonte de verdade; falha ampla vira crítica.
-    aud_pub = data["aud_publicos"] if isinstance(data["aud_publicos"], Mapping) else {}
-    missing_public = int(aud_pub.get("total_partidas_fisicas_sem_publico") or aud_pub.get("total_sem_publico") or 0)
-    if missing_public:
-        level = critical if missing_public >= 8 else warnings
-        level.append(issue(
-            "PUBLICOS_PENDENTES",
-            f"{missing_public} partida(s) física(s) seguem sem público confirmado.",
-            exemplos=(aud_pub.get("partidas_fisicas_sem_publico") or aud_pub.get("sem_publico") or [])[:20],
-        ))
-
-    # Melhores momentos: carência deliberada. >24h warning; >48h só vira crítico em lote.
-    linked_ids: set[str] = set()
-    for mm_name in ("melhores-momentos.json", "melhores-momentos-manual.json"):
-        mm = load_json(root / "dados-br" / mm_name, {})
-        games = mm.get("jogos") if isinstance(mm, Mapping) else {}
-        if isinstance(games, Mapping):
-            for key, row in games.items():
-                if isinstance(row, Mapping):
-                    linked_ids.add(str(row.get("event_id") or key or "").strip())
-    old_24, old_48 = [], []
-    for row in result_rows:
-        eid = str(row.get("event_id") or row.get("id") or "").strip()
-        if not eid or eid in linked_ids:
-            continue
-        ended = final_time(row)
-        if not ended:
-            continue
-        age = (now - ended).total_seconds() / 3600
-        home, away = matchup(row)
-        item = {"event_id": eid, "jogo": f"{home} x {away}", "horas": round(age, 1)}
-        if age >= 48:
-            old_48.append(item)
-        elif age >= 24:
-            old_24.append(item)
-    if old_24:
-        warnings.append(issue("MELHORES_MOMENTOS_24H", f"{len(old_24)} jogo(s) estão sem vídeo há mais de 24h.", exemplos=old_24[:20]))
-    if old_48:
-        target = critical if len(old_48) >= 3 else warnings
-        target.append(issue("MELHORES_MOMENTOS_48H", f"{len(old_48)} jogo(s) estão sem vídeo há mais de 48h.", exemplos=old_48[:20]))
-
     # Grade de TV: artefato diário envelhecido é recuperação operacional.
     aud_tv = data["aud_tv"] if isinstance(data["aud_tv"], Mapping) else {}
     tv_age = age_hours(aud_tv, "atualizado_em", "gerado_em", now=now)
@@ -415,9 +372,6 @@ def audit(root: Path = ROOT, now: datetime | None = None) -> dict[str, Any]:
             "blocos_apostas_em_apuracao": int((blocos_resumo or {}).get("em_apuracao") or 0),
             "blocos_apostas_concluidos": int((blocos_resumo or {}).get("concluidos") or 0),
             "jogos_sem_estatisticas": len(missing_stats),
-            "partidas_sem_publico": missing_public,
-            "melhores_momentos_sem_video_24_48h": len(old_24),
-            "melhores_momentos_sem_video_mais_48h": len(old_48),
             "auditoria_tv_idade_horas": round(tv_age, 1) if tv_age is not None else None,
         },
         "criticos": critical,
@@ -425,7 +379,6 @@ def audit(root: Path = ROOT, now: datetime | None = None) -> dict[str, Any]:
         "informativos": infos,
         "rodadas_divergentes_por_artefato": round_diffs,
         "politica": {
-            "melhores_momentos": "0-24h não é falha; 24-48h aviso; >48h só é crítico em lote de 3 ou mais.",
             "email": "Somente status critical novo/diferente dispara e-mail; ok/warning ficam silenciosos.",
             "fontes": "Auditoria local; nenhum dado esportivo é inventado ou recalculado pela auditoria.",
             "blocos": "Blocos independentes: um bloco anterior parcial pode coexistir normalmente com o seguinte aberto.",
@@ -502,7 +455,6 @@ def self_test() -> None:
             (root/name).write_text(json.dumps({key:[]}),encoding="utf-8")
         (root/"dados-br/jogos-detalhes.json").write_text(json.dumps({"jogos":{}}),encoding="utf-8")
         (root/"dados-br/auditoria-jogos-detalhes.json").write_text(json.dumps({"total_sem_estatisticas_no_snapshot":0}),encoding="utf-8")
-        (root/"dados-br/auditoria-publicos.json").write_text(json.dumps({"total_partidas_fisicas_sem_publico":0}),encoding="utf-8")
         (root/"dados-br/auditoria-transmissoes-tv.json").write_text(json.dumps({"atualizado_em":"2026-08-15T08:00:00-03:00","resumo":{"jogos_criticos_sem_transmissao_72h":0}}),encoding="utf-8")
         (root/"dados-br/apuracao.json").write_text(json.dumps({"schema_version":4,"resumo":{"jogos_apurados_publicados":0},"rodadas":[]}),encoding="utf-8")
         (root/"dados-br/ranking-apostas.json").write_text(json.dumps({"schema_version":4,"resumo":{"jogos_apurados_publicados":0}}),encoding="utf-8")

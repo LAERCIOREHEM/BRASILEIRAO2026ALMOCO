@@ -1,29 +1,6 @@
 {
   "fonte": "GE TV / YouTube",
   "competicao": "Brasileirão Série A 2026",
-  "canal_nome": "GE TV",
-  "channel_id": "",
-  "handles_candidatos": [
-    "@getv"
-  ],
-  "playlists_semente": [
-    "PLZuM_Kl1KELk7ttMpZWfr2_ZWOZ12cdn8"
-  ],
-  "padroes_titulo_playlist": [
-    "brasileirao 2026",
-    "brasileirão 2026",
-    "brasileirao serie a 2026",
-    "brasileirão série a 2026"
-  ],
-  "min_confianca_publicar": 0.86,
-  "rodadas_backfill": {
-    "inicio": 1,
-    "fim": 18
-  },
-  "incremental": {
-    "rodadas_recentes": 4,
-    "max_playlists_por_execucao": 10
-  },
   "aliases_clubes": {
     "Athletico-PR": [
       "athletico-pr",
@@ -134,65 +111,5 @@
       "ec vitoria"
     ]
   },
-  "busca_extra": {
-    "descricao": "Busca reforçada quota-aware: prioriza GE/Globo, CazéTV e Prime Video; após 48 horas sem vídeo, consulta UOL Esporte como fallback.",
-    "min_confianca_publicar": 0.82,
-    "max_buscas_total_padrao": 20,
-    "max_consultas_por_jogo_padrao": 1,
-    "canais_oficiais_ou_confiaveis": [
-      "ge tv",
-      "ge.globo",
-      "ge globo",
-      "globoesporte",
-      "globo esporte",
-      "sportv",
-      "premiere",
-      "globoplay",
-      "cazetv",
-      "caze tv",
-      "cazé tv",
-      "amazon prime video",
-      "prime video",
-      "prime video sport brasil",
-      "prime video brasil",
-      "amazon brasil"
-    ],
-    "observacao": "Nas primeiras 48 horas, a publicação automática aceita GE/Globo/sportv/Premiere/Globoplay, CazéTV ou Amazon Prime Video. Depois desse prazo sem fonte primária, UOL Esporte pode ser publicado como fallback.",
-    "ttl_cache_dias": 21,
-    "prioridade_execucao": "rodadas recentes primeiro; para backfill antigo, rode uma rodada por vez",
-    "fallback_manual": "dados-br/melhores-momentos-manual.json",
-    "canais_publicacao_automatica": [
-      "ge tv",
-      "ge.globo",
-      "ge globo",
-      "globoesporte",
-      "globo esporte",
-      "sportv",
-      "premiere",
-      "globoplay",
-      "cazetv",
-      "caze tv",
-      "cazé tv",
-      "amazon prime video",
-      "prime video",
-      "prime video sport brasil",
-      "prime video brasil",
-      "amazon brasil"
-    ],
-    "permitir_publicacao_automatica_de_outros_canais": false,
-    "politica_publicacao": "Fontes primárias têm precedência. UOL Esporte é fallback controlado após 48 horas; canais aleatórios continuam rejeitados, mesmo que o título cite ge.globo.",
-    "channel_ids_publicacao_automatica": [
-      "UCgCKagVhzGnZcuP9bSMgMCg",
-      "UCZiYbVptd3PVPf4f6eR6UaQ"
-    ],
-    "fallback_uol": {
-      "canal": "UOL Esporte",
-      "handles_candidatos": [
-        "@uolesporte",
-        "@UOLEsporte"
-      ],
-      "carencia_horas": 48,
-      "regra": "A busca automática no canal UOL só ocorre quando não há vídeo de fonte primária e já decorreram 48 horas do jogo. Vínculos manuais conferidos podem entrar imediatamente."
-    }
-  }
+  "observacao": "Configuração mantida apenas para aliases de clubes usados pelo coletor de transmissões ao vivo."
 }

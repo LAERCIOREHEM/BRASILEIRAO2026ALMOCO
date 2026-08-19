@@ -277,49 +277,8 @@
     ["#aviso-ativo", "#aviso-id", "#aviso-titulo", "#aviso-mensagem", "#aviso-tempo", "#aviso-inicio", "#aviso-fim"].forEach(sel => {
       const el = $(sel); if (el) { el.addEventListener("input", atualizarPreviewAviso); el.addEventListener("change", atualizarPreviewAviso); }
     });
-    // ===== Melhores momentos =====
-  async function popularJogosMM() {
-    const sel = document.getElementById("mm-jogo");
-    if (!sel) return;
-    try {
-      const sj = await fetch("dados/selecoes.json").then(r => r.json());
-      const nome = {}; sj.selecoes.forEach(x => nome[x.id] = x.nome);
-      const jogos = COPA_ENGINE.gerarJogosGrupos(sj.selecoes);
-      sel.innerHTML = '<option value="">Escolha o jogo…</option>' +
-        jogos.map(j => {
-          const k = [j.a, j.b].sort().join("-");
-          return `<option value="${k}" data-a="${j.a}" data-b="${j.b}">${nome[j.a]} x ${nome[j.b]} (${k})</option>`;
-        }).join("");
-    } catch (e) { sel.innerHTML = '<option value="">Erro ao carregar jogos</option>'; }
-  }
-  function gerarMM() {
-    const sel = document.getElementById("mm-jogo");
-    const url = (document.getElementById("mm-url").value || "").trim();
-    const k = sel.value;
-    if (!k) { alerta("Escolha o jogo.", false); return; }
-    if (!/^https?:\/\//.test(url)) { alerta("Cole um link válido do YouTube.", false); return; }
-    const opt = sel.options[sel.selectedIndex];
-    const titulo = opt.textContent.split(" (")[0];
-    const linha = `    "${k}": { "url": "${url}", "titulo": "MELHORES MOMENTOS: ${titulo}", "fonte": "admin" }`;
-    const out = document.getElementById("mm-saida");
-    document.getElementById("mm-json").value = linha;
-    out.style.display = "";
-  }
-  function copiarMM() {
-    const ta = document.getElementById("mm-json");
-    ta.select(); navigator.clipboard && navigator.clipboard.writeText(ta.value);
-    alerta("Copiado! Cole no arquivo dados/melhores-momentos.json.", true);
-  }
-  // liga os controles quando o painel abre
-  const _abrirOrig = abrir;
-  abrir = function () {
-    _abrirOrig();
-    popularJogosMM();
-    const g = document.getElementById("mm-gerar"); if (g) g.onclick = gerarMM;
-    const c = document.getElementById("mm-copiar"); if (c) c.onclick = copiarMM;
-  };
 
-  const guard = localStorage.getItem("copa_admin_senha");
+    const guard = localStorage.getItem("copa_admin_senha");
     if (guard) tentaLogin(guard, true); else $("#gate-pass").focus();
   });
 })();

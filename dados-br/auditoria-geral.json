@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "gerado_em": "2026-08-18T21:33:37-03:00",
-  "status": "critical",
-  "fingerprint_critico": "9a7e2216ab193165149d90b70a35e799fdfc419afe15c9152a7f55bb1a64f991",
+  "gerado_em": "2026-08-18T22:11:26-03:00",
+  "status": "warning",
+  "fingerprint_critico": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "resumo": {
-    "criticos": 1,
+    "criticos": 0,
     "avisos": 1,
     "informativos": 0,
     "calendario_partidas": 380,
@@ -17,61 +17,9 @@
     "blocos_apostas_em_apuracao": 1,
     "blocos_apostas_concluidos": 0,
     "jogos_sem_estatisticas": 0,
-    "partidas_sem_publico": 0,
-    "melhores_momentos_sem_video_24_48h": 0,
-    "melhores_momentos_sem_video_mais_48h": 8,
-    "auditoria_tv_idade_horas": 2.9
+    "auditoria_tv_idade_horas": 3.5
   },
-  "criticos": [
-    {
-      "codigo": "MELHORES_MOMENTOS_48H",
-      "mensagem": "8 jogo(s) estão sem vídeo há mais de 48h.",
-      "detalhes": {
-        "exemplos": [
-          {
-            "event_id": "401841193",
-            "jogo": "Corinthians x Cruzeiro",
-            "horas": 48.2
-          },
-          {
-            "event_id": "401841190",
-            "jogo": "Mirassol x Flamengo",
-            "horas": 49.3
-          },
-          {
-            "event_id": "401841197",
-            "jogo": "Vitória x Botafogo",
-            "horas": 49.2
-          },
-          {
-            "event_id": "401841195",
-            "jogo": "Atlético-MG x Grêmio",
-            "horas": 51.7
-          },
-          {
-            "event_id": "401841188",
-            "jogo": "Vasco da Gama x Santos",
-            "horas": 51.7
-          },
-          {
-            "event_id": "401841194",
-            "jogo": "Chapecoense x Bahia",
-            "horas": 56.7
-          },
-          {
-            "event_id": "401841189",
-            "jogo": "São Paulo x Coritiba",
-            "horas": 70.7
-          },
-          {
-            "event_id": "401879459",
-            "jogo": "Bahia x Chapecoense",
-            "horas": 354.6
-          }
-        ]
-      }
-    }
-  ],
+  "criticos": [],
   "avisos": [
     {
       "codigo": "BLOCOS_APOSTAS_ATENCAO",
@@ -90,11 +38,8 @@
     "resultados": []
   },
   "politica": {
-    "melhores_momentos": "0-24h não é falha; 24-48h aviso; >48h só é crítico em lote de 3 ou mais.",
     "email": "Somente status critical novo/diferente dispara e-mail; ok/warning ficam silenciosos.",
     "fontes": "Auditoria local; nenhum dado esportivo é inventado ou recalculado pela auditoria.",
     "blocos": "Blocos independentes: um bloco anterior parcial pode coexistir normalmente com o seguinte aberto."
-  },
-  "alerta_email": "enviado",
-  "alerta_email_em": "2026-08-18T21:33:38-03:00"
+  }
 }

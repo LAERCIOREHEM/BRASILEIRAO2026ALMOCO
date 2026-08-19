@@ -30,7 +30,6 @@
   }
 
   let JOGOS = [], PALP = [], dia, timer = null, TVS = {};
-  let MM = {}; // melhores momentos: chave siglas -> {url,titulo}
   let ABA = "jogos", SEL = [], GRP_EVENTS = [], GRP_EVENTS_TS = 0;
   let ESTRUT = null, TERMAP = null, MATA_EVENTS = [], MATA_EVENTS_TS = 0, PALPMATA = {}, AGENDA_MATA = {};
   let FAIRPLAY = {}, FAIRPLAY_TS = 0; // {sigla: pontos de conduta}, cache 5min
@@ -539,18 +538,6 @@
     nsports: ["N Sports", "#222a38", "#fff"],
     caze:    ["CazéTV", "#f7d116", "#3a2a00"]
   };
-  function momentoDe(aAb, bAb) {
-    // normaliza as siglas da ESPN para a nossa sigla padrão (DE-PARA),
-    // senão "US" vs "USA" etc. fazem a chave não bater com o arquivo.
-    const sa = dpSigla(aAb) || aAb, sb = dpSigla(bAb) || bAb;
-    const k = [sa, sb].sort().join("-");
-    return MM[k] || null;
-  }
-  function blocoMomento(aAb, bAb) {
-    const m = momentoDe(aAb, bAb);
-    if (!m || !m.url) return "";
-    return `<a class="assista" href="${m.url}" target="_blank" rel="noopener">▶️ Assista como foi (melhores momentos)</a>`;
-  }
 
   function statsBlocoJogo(ev, home, away) {
     if (!window.COPA_JOGO_STATS || !ev || !ev.id) return "";
@@ -575,7 +562,6 @@
 
   async function carregarBase() {
     try { TVS = await fetch("dados/transmissoes.json").then(r => r.json()); } catch (e) { TVS = {}; }
-    try { const mm = await fetch("dados/melhores-momentos.json?t=" + Date.now()).then(r => r.json()); MM = mm.jogos || {}; } catch (e) { MM = {}; }
     try {
       const sj = await fetch("dados/selecoes.json").then(r => r.json());
       SEL = sj.selecoes;
@@ -1933,7 +1919,7 @@
       } else {
         meio = `<span class="jg-meio"><span class="jg-placar">${hScore} × ${aScore}</span><span class="jg-ir">ver jogo ›</span></span>`;
       }
-      return `<div class="jg-row jg-go-jogo${cls}" data-jogo="${ev.id}" data-dia="${diaJogo}" data-grupo="${G}" role="button" tabindex="0" title="Ver detalhes, gols e melhores momentos na aba Jogos">
+      return `<div class="jg-row jg-go-jogo${cls}" data-jogo="${ev.id}" data-dia="${diaJogo}" data-grupo="${G}" role="button" tabindex="0" title="Ver detalhes e gols na aba Jogos">
         <span class="jg-lado jg-h">${dpNome(hAb)} ${flagH ? `<img src="${flagH}" alt="">` : ""}</span>
         ${meio}
         <span class="jg-lado jg-a">${flagA ? `<img src="${flagA}" alt="">` : ""} ${dpNome(aAb)}</span>

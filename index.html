@@ -2056,208 +2056,11 @@ body > .container > section.hero > img {
   }
 }
 
-
-
-  /* EXECUÇÃO 2 — GE TV: melhores momentos por jogo */
-  .mm-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    max-width: 100%;
-    min-width: 0;
-    text-decoration: none;
-    color: #f9fbff;
-    border: 1px solid rgba(251,191,36,.28);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    background: linear-gradient(135deg, rgba(251,191,36,.16), rgba(163,230,53,.08));
-    border-radius: 14px;
-    padding: 6px 8px;
-    transition: transform .14s ease, border-color .14s ease, background .14s ease;
+  .stats-audit-pill {
+    display: inline-flex; align-items: center; gap: 5px; color: #d9ff76;
+    border: 1px solid rgba(163,230,53,.18); background: rgba(163,230,53,.08);
+    border-radius: 999px; padding: 4px 9px; font-size: 11px; font-weight: 800;
   }
-  .mm-link:hover {
-    transform: translateY(-1px);
-    border-color: rgba(251,191,36,.55);
-    background: linear-gradient(135deg, rgba(251,191,36,.24), rgba(163,230,53,.12));
-  }
-  .mm-thumb {
-    flex: 0 0 auto;
-    width: 54px;
-    height: 32px;
-    border-radius: 9px;
-    overflow: hidden;
-    display: grid;
-    place-items: center;
-    background: rgba(2,6,12,.58);
-    border: 1px solid rgba(255,255,255,.10);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
-  }
-  .mm-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .mm-thumb .mm-play {
-    color: #fbbf24;
-    font-size: 15px;
-    font-weight: 900;
-  }
-  .mm-text {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    line-height: 1.15;
-  }
-  .mm-text strong {
-    color: #ffe78b;
-    font-size: 12px;
-    font-weight: 900;
-    white-space: nowrap;
-  }
-  .mm-text span {
-    margin-top: 2px;
-    color: var(--text-secondary);
-    font-size: 10.5px;
-    font-weight: 650;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 210px;
-  }
-  .mm-link.mm-jogo { margin-left: auto; }
-  .mm-link.mm-resultado {
-    margin: 0;
-    width: 100%;
-    justify-content: flex-start;
-    min-height: 46px;
-    padding: 7px 10px;
-    border-radius: 13px;
-  }
-  .mm-link.mm-resultado .mm-text span { max-width: min(520px, 100%); }
-  .mm-audit-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    color: #d9ff76;
-    border: 1px solid rgba(163,230,53,.18);
-    background: rgba(163,230,53,.08);
-    border-radius: 999px;
-    padding: 4px 9px;
-    font-size: 11px;
-    font-weight: 800;
-  }
-  @media (max-width: 720px) {
-    .jogo-actions { align-items: stretch; flex-direction: column; }
-    .mm-link.mm-jogo { margin-left: 0; width: 100%; }
-    .mm-text span { max-width: 100%; }
-    .mm-link.mm-resultado { width: 100%; }
-    .resultado-card .mm-link { margin-top: 0; }
-  }
-  @media (max-width: 420px) {
-    .mm-thumb { width: 48px; height: 30px; }
-    .mm-link { padding: 6px 7px; border-radius: 13px; }
-    .mm-text strong { font-size: 11.5px; }
-    .mm-text span { font-size: 10px; }
-  }
-
-  /* EXECUÇÃO 6 — player incorporado dos melhores momentos */
-  .mm-modal-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 10050;
-    display: grid;
-    place-items: center;
-    padding: 18px;
-    background: rgba(0, 5, 10, .86);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-  .mm-modal-card {
-    width: min(960px, 100%);
-    max-height: calc(100vh - 36px);
-    overflow: auto;
-    border: 1px solid rgba(255,255,255,.15);
-    border-radius: 18px;
-    background: #07131b;
-    box-shadow: 0 28px 80px rgba(0,0,0,.58);
-  }
-  .mm-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-    padding: 13px 14px 11px 16px;
-    border-bottom: 1px solid rgba(255,255,255,.10);
-  }
-  .mm-modal-header strong {
-    min-width: 0;
-    color: #f8fafc;
-    font-size: 14px;
-    line-height: 1.3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .mm-modal-close {
-    flex: 0 0 auto;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    border: 1px solid rgba(255,255,255,.16);
-    background: rgba(255,255,255,.08);
-    color: #fff;
-    font: 900 22px/1 system-ui, sans-serif;
-    cursor: pointer;
-  }
-  .mm-modal-close:hover,
-  .mm-modal-close:focus-visible {
-    background: rgba(248,113,113,.18);
-    border-color: rgba(248,113,113,.55);
-    outline: none;
-  }
-  .mm-modal-frame {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-  }
-  .mm-modal-frame iframe {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-  }
-  .mm-modal-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 11px 16px 14px;
-    color: var(--text-secondary);
-    font-size: 11px;
-  }
-  .mm-modal-footer a {
-    flex: 0 0 auto;
-    color: #ffe78b;
-    font-weight: 850;
-    text-decoration: none;
-  }
-  .mm-modal-footer a:hover { text-decoration: underline; }
-  @media (min-width: 641px) {
-    .mm-modal-card { overflow: hidden; }
-  }
-  @media (max-width: 640px) {
-    .mm-modal-backdrop { padding: 8px; }
-    .mm-modal-card { max-height: calc(100vh - 16px); border-radius: 14px; }
-    .mm-modal-header { padding: 10px 10px 9px 12px; }
-    .mm-modal-header strong { font-size: 12px; }
-    .mm-modal-close { width: 36px; height: 36px; }
-    .mm-modal-footer { align-items: flex-start; flex-direction: column; padding: 10px 12px 12px; }
-  }
-
 
   /* EXECUÇÃO 3 — Resultados enriquecidos: estatísticas por jogo ESPN */
   .resultado-extra {
@@ -2698,12 +2501,6 @@ function brEscudoImg(src, nome, classe = '', loading = 'lazy') {
 function normalizarChaveJogoTexto(valor) {
   return normalizarNome(valor || '').replace(/\s+/g, '-');
 }
-function chaveMelhoresMomentos(j) {
-  const rodada = Number(j && j.rodada || 0);
-  const m = nomeCanonico((j && j.mandante || {}).nome) || ((j && j.mandante || {}).nome || '');
-  const v = nomeCanonico((j && j.visitante || {}).nome) || ((j && j.visitante || {}).nome || '');
-  return rodada ? `rodada-${rodada}-${normalizarChaveJogoTexto(m)}-${normalizarChaveJogoTexto(v)}` : '';
-}
 async function carregarJsonOpcionalBr(url) {
   try {
     const resp = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
@@ -2711,35 +2508,6 @@ async function carregarJsonOpcionalBr(url) {
     return await resp.json();
   } catch (e) {
     return null;
-  }
-}
-async function carregarMelhoresMomentos(opcoes = {}) {
-  try {
-    const auto = await carregarJsonOpcionalBr('dados-br/melhores-momentos.json');
-    const manual = await carregarJsonOpcionalBr('dados-br/melhores-momentos-manual.json');
-    const autoJogos = auto && auto.jogos && typeof auto.jogos === 'object' ? auto.jogos : {};
-    const manualJogos = manual && manual.jogos && typeof manual.jogos === 'object' ? manual.jogos : {};
-
-    // Fallback manual tem prioridade. Assim um link corrigido manualmente substitui
-    // qualquer vínculo automático fraco sem precisar alterar o robô.
-    state.melhoresMomentos = { ...autoJogos, ...manualJogos };
-    const totalAuto = auto && auto.total_vinculados ? Number(auto.total_vinculados) : Object.keys(autoJogos).length;
-    const totalManual = Object.keys(manualJogos).length;
-    state.melhoresMomentosMeta = {
-      atualizado_em: (manual && manual.atualizado_em) || (auto && auto.atualizado_em) || null,
-      fonte: totalManual ? 'Fontes oficiais no YouTube + fallback manual' : ((auto && auto.fonte) || 'Fontes oficiais no YouTube'),
-      total_vinculados: Object.keys(state.melhoresMomentos).length || totalAuto || 0,
-      total_automaticos: totalAuto || 0,
-      total_manuais: totalManual || 0
-    };
-    state.melhoresMomentosCarregados = true;
-    state.melhoresMomentosErro = null;
-  } catch (e) {
-    if (!opcoes.silencioso) console.warn('Melhores momentos indisponíveis:', e);
-    if (opcoes.silencioso && state.melhoresMomentosCarregados) return;
-    state.melhoresMomentos = state.melhoresMomentos || {};
-    state.melhoresMomentosErro = e.message;
-    state.melhoresMomentosCarregados = true;
   }
 }
 async function carregarResultadosManuais() {
@@ -2808,171 +2576,6 @@ function mesclarResultadosManuais(lista) {
   return base.sort((a,b) => String(b.data_iso || '').localeCompare(String(a.data_iso || '')));
 }
 
-function jogoFinalizadoParaMelhoresMomentos(j) {
-  if (!j) return false;
-  const estado = String(j.estado || '').toLowerCase();
-  const status = String(j.status || '').toLowerCase();
-  if (j.concluido === true || estado === 'post' || /encerrado|finalizado|fim de jogo/.test(status)) return true;
-  const manual = resultadoManualDoJogo(j);
-  if (manual && manual.ativo !== false && resultadoJaAconteceu(resultadoManualNormalizado(manual))) return true;
-  try {
-    const live = espnLiveDoJogo(j);
-    if (live && live.estado === 'post') return true;
-  } catch (_) {}
-  return false;
-}
-
-function melhoresMomentosDoJogo(j) {
-  if (!jogoFinalizadoParaMelhoresMomentos(j)) return null;
-  const mapa = state.melhoresMomentos || {};
-  const id = String((j && (j.event_id || j.id)) || '');
-  if (id && mapa[id]) return mapa[id];
-  const chave = chaveMelhoresMomentos(j);
-  if (chave && mapa[chave]) return mapa[chave];
-  const rodada = Number(j && j.rodada || 0);
-  const mand = nomeCanonico((j && j.mandante || {}).nome) || ((j && j.mandante || {}).nome || '');
-  const vist = nomeCanonico((j && j.visitante || {}).nome) || ((j && j.visitante || {}).nome || '');
-  const valores = Object.values(mapa);
-  for (const mm of valores) {
-    if (!mm) continue;
-    if (id && String(mm.event_id || '') === id) return mm;
-  }
-  for (const mm of valores) {
-    if (!mm || Number(mm.rodada || 0) !== rodada) continue;
-    const mmM = nomeCanonico(mm.mandante) || mm.mandante || '';
-    const mmV = nomeCanonico(mm.visitante) || mm.visitante || '';
-    if ((mmM === mand && mmV === vist) || (mmM === vist && mmV === mand)) return mm;
-  }
-  return null;
-}
-function youtubeVideoIdBr(valor) {
-  const direto = String(valor || '').trim();
-  if (/^[A-Za-z0-9_-]{6,20}$/.test(direto)) return direto;
-  try {
-    const u = new URL(direto, window.location.href);
-    const host = u.hostname.toLowerCase().replace(/^www\./, '');
-    let id = '';
-    if (host === 'youtu.be') id = u.pathname.split('/').filter(Boolean)[0] || '';
-    else if (host.endsWith('youtube.com')) {
-      id = u.searchParams.get('v') || '';
-      if (!id && /^\/(?:embed|shorts)\//.test(u.pathname)) id = u.pathname.split('/')[2] || '';
-    }
-    return /^[A-Za-z0-9_-]{6,20}$/.test(id) ? id : '';
-  } catch (_) {
-    return '';
-  }
-}
-let mmModalOverflowAnterior = '';
-let mmModalResizeHandler = null;
-function ajustarModalMelhoresMomentosDesktop() {
-  const modal = document.getElementById('mm-modal-player');
-  if (!modal || !window.matchMedia('(min-width: 641px)').matches) return;
-  const card = modal.querySelector('.mm-modal-card');
-  const header = modal.querySelector('.mm-modal-header');
-  const footer = modal.querySelector('.mm-modal-footer');
-  if (!card || !header || !footer) return;
-
-  const margemModal = 36;
-  card.style.width = `${Math.min(960, Math.max(0, window.innerWidth - margemModal))}px`;
-  for (let tentativa = 0; tentativa < 3; tentativa += 1) {
-    const alturaFixa = header.getBoundingClientRect().height
-      + footer.getBoundingClientRect().height
-      + 2; // bordas superior e inferior do card
-    const alturaDisponivelVideo = Math.max(0, window.innerHeight - margemModal - alturaFixa);
-    const larguraPelaAltura = (alturaDisponivelVideo * 16 / 9) + 2;
-    card.style.width = `${Math.floor(Math.min(960, window.innerWidth - margemModal, larguraPelaAltura))}px`;
-  }
-}
-function fecharModalMelhoresMomentos() {
-  const modal = document.getElementById('mm-modal-player');
-  if (!modal) return;
-  const iframe = modal.querySelector('iframe');
-  if (iframe) iframe.src = 'about:blank';
-  modal.remove();
-  if (mmModalResizeHandler) window.removeEventListener('resize', mmModalResizeHandler);
-  mmModalResizeHandler = null;
-  document.body.style.overflow = mmModalOverflowAnterior;
-  document.removeEventListener('keydown', teclaModalMelhoresMomentos);
-}
-function teclaModalMelhoresMomentos(evento) {
-  if (evento.key === 'Escape') fecharModalMelhoresMomentos();
-}
-function abrirModalMelhoresMomentos(videoId, titulo, urlOriginal, fonte) {
-  const id = youtubeVideoIdBr(videoId || urlOriginal);
-  if (!id) {
-    if (urlOriginal) window.open(urlOriginal, '_blank', 'noopener,noreferrer');
-    return;
-  }
-  fecharModalMelhoresMomentos();
-  const urlYoutube = urlOriginal || `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
-  const modal = document.createElement('div');
-  modal.id = 'mm-modal-player';
-  modal.className = 'mm-modal-backdrop';
-  modal.setAttribute('role', 'dialog');
-  modal.setAttribute('aria-modal', 'true');
-  modal.setAttribute('aria-label', titulo || 'Melhores momentos');
-  modal.innerHTML = `<section class="mm-modal-card">
-    <header class="mm-modal-header">
-      <strong>${brEscapeHtml(titulo || 'Melhores momentos')}</strong>
-      <button type="button" class="mm-modal-close" aria-label="Fechar vídeo">×</button>
-    </header>
-    <div class="mm-modal-frame">
-      <iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1"
-        title="${brEscapeAttr(titulo || 'Melhores momentos')}" loading="eager"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-    </div>
-    <footer class="mm-modal-footer">
-      <span>${brEscapeHtml(fonte || 'Vídeo publicado no YouTube')}. Caso o canal bloqueie a incorporação, use o link oficial.</span>
-      <a href="${brEscapeAttr(urlYoutube)}" target="_blank" rel="noopener noreferrer">Abrir no YouTube ↗</a>
-    </footer>
-  </section>`;
-  modal.addEventListener('click', evento => {
-    if (evento.target === modal || evento.target.closest('.mm-modal-close')) fecharModalMelhoresMomentos();
-  });
-  mmModalOverflowAnterior = document.body.style.overflow;
-  document.body.style.overflow = 'hidden';
-  document.body.appendChild(modal);
-  ajustarModalMelhoresMomentosDesktop();
-  mmModalResizeHandler = ajustarModalMelhoresMomentosDesktop;
-  window.addEventListener('resize', mmModalResizeHandler);
-  document.addEventListener('keydown', teclaModalMelhoresMomentos);
-  modal.querySelector('.mm-modal-close')?.focus();
-}
-function abrirMelhoresMomentosDoBotao(botao) {
-  if (!botao) return;
-  abrirModalMelhoresMomentos(
-    botao.dataset.mmVideo || '',
-    botao.dataset.mmTitulo || '',
-    botao.dataset.mmUrl || '',
-    botao.dataset.mmFonte || ''
-  );
-}
-function htmlMelhoresMomentos(j, contexto = 'jogo') {
-  const mm = melhoresMomentosDoJogo(j);
-  if (!mm) return '';
-  const url = mm.url || (mm.video_id ? `https://www.youtube.com/watch?v=${encodeURIComponent(mm.video_id)}` : '');
-  if (!url) return '';
-  const videoId = youtubeVideoIdBr(mm.video_id || url);
-  const titulo = mm.titulo || `Melhores momentos: ${(j.mandante || {}).nome || '?'} x ${(j.visitante || {}).nome || '?'}`;
-  const fonte = mm.fonte || mm.channel_title || 'YouTube';
-  const thumb = mm.thumbnail ? `<img src="${brEscapeAttr(mm.thumbnail)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span class=&quot;mm-play&quot;>▶</span>'">` : '<span class="mm-play">▶</span>';
-  const conf = Number(mm.confianca || 0);
-  const titleAttr = conf ? `${titulo} · confiança ${(conf * 100).toFixed(0)}%` : titulo;
-  if (!videoId) {
-    return `<a class="mm-link mm-${contexto}" href="${brEscapeAttr(url)}" target="_blank" rel="noopener noreferrer" title="${brEscapeAttr(titleAttr)}">
-      <span class="mm-thumb">${thumb}</span>
-      <span class="mm-text"><strong>▶️ Melhores momentos</strong><span>${brEscapeHtml(titulo)}</span></span>
-    </a>`;
-  }
-  return `<button type="button" class="mm-link mm-${contexto}"
-    data-mm-video="${brEscapeAttr(videoId)}" data-mm-url="${brEscapeAttr(url)}"
-    data-mm-titulo="${brEscapeAttr(titulo)}" data-mm-fonte="${brEscapeAttr(fonte)}"
-    onclick="abrirMelhoresMomentosDoBotao(this)" title="${brEscapeAttr(titleAttr)}">
-    <span class="mm-thumb">${thumb}</span>
-    <span class="mm-text"><strong>▶️ Melhores momentos</strong><span>${brEscapeHtml(titulo)}</span></span>
-  </button>`;
-}
 
 async function carregarJogosDetalhes(opcoes = {}) {
   try {
@@ -2985,7 +2588,6 @@ async function carregarJogosDetalhes(opcoes = {}) {
       fonte: data.fonte || 'ESPN summary',
       total_jogos: data.total_jogos || Object.keys(state.jogosDetalhes).length || 0,
       total_com_estatisticas: data.total_com_estatisticas || 0,
-      total_com_publico: data.total_com_publico || 0,
       total_com_eventos: data.total_com_eventos || 0
     };
     state.jogosDetalhesCarregados = true;
@@ -3133,10 +2735,8 @@ function htmlBarrasEstatistica(home, away) {
 function htmlResumoResultadoDetalhes(j) {
   const det = detalhesDoJogo(j) || {};
   const estadio = det.estadio || j.estadio || '';
-  const publico = Number(det.publico);
   const partes = [];
   if (estadio) partes.push(`<span>📍 ${brEscapeHtml(estadio)}</span>`);
-  if (Number.isFinite(publico) && publico > 0) partes.push(`<span>👥 ${publico.toLocaleString('pt-BR')}</span>`);
   if (!partes.length) return '';
   return `<div class="resultado-info-compacta">${partes.join('')}</div>`;
 }
@@ -3157,8 +2757,7 @@ function htmlEstatisticasJogo(j) {
   const stats = estatisticasDoJogo(j);
   const gols = brEventosUnicos(det.gols, 'gol');
   const cartoes = brEventosUnicos(det.cartoes, 'cartao');
-  const publico = Number(det.publico);
-  const temInfo = stats.length || gols.length || cartoes.length || det.estadio || det.arbitro || (Number.isFinite(publico) && publico > 0);
+  const temInfo = stats.length || gols.length || cartoes.length || det.estadio || det.arbitro;
   if (!temInfo) return '';
   const m = (j.mandante || {}).nome || det.mandante || 'Mandante';
   const v = (j.visitante || {}).nome || det.visitante || 'Visitante';
@@ -3175,7 +2774,6 @@ function htmlEstatisticasJogo(j) {
   }).join('');
   const info = `<div class="match-info-grid">
     <div><span>Estádio</span><strong>${brEscapeHtml(det.estadio || j.estadio || 'Não informado')}</strong></div>
-    <div><span>Público</span><strong>${Number.isFinite(publico) && publico > 0 ? publico.toLocaleString('pt-BR') : 'Não informado'}</strong></div>
     <div><span>Árbitro</span><strong>${brEscapeHtml(det.arbitro || 'Não informado')}</strong></div>
   </div>`;
   const events = (gols.length || cartoes.length) ? `<div class="match-event-grid">
@@ -3184,11 +2782,11 @@ function htmlEstatisticasJogo(j) {
   </div>` : '';
   const statsHtml = linhas ? `<div class="match-stat-list">${linhas}</div>` : `<div class="match-no-stats">Estatísticas avançadas não disponibilizadas pela ESPN para esta partida.</div>`;
   return `<details class="match-stats-block" data-event-id="${eventId}">
-    <summary>📊 Estatísticas e público do jogo</summary>
+    <summary>📊 Estatísticas do jogo</summary>
     <div class="match-stats-inner">
       <div class="match-stats-head"><span class="home">${brEscapeHtml(m)}</span><span class="vs">mandante × visitante</span><span class="away">${brEscapeHtml(v)}</span></div>
       ${info}${events}${statsHtml}
-      <div class="match-stats-source">Fonte: ESPN; público complementado por fonte documental quando ausente. Nenhum campo é inventado ou estimado.</div>
+      <div class="match-stats-source">Fonte: ESPN. Nenhum campo é inventado ou estimado.</div>
     </div>
   </details>`;
 }
@@ -3257,11 +2855,6 @@ let state = {
   resultadosErro: null,
   resultadosFiltroTime: '',  // time atualmente filtrado (vazio = todos)
   resultadosManuais: {},     // fallback versionado para resultado encerrado que a ESPN ainda não publicou
-  // GE TV / YouTube — melhores momentos por jogo
-  melhoresMomentos: {},
-  melhoresMomentosMeta: null,
-  melhoresMomentosCarregados: false,
-  melhoresMomentosErro: null,
   // ESPN summary — estatísticas por jogo na aba Resultados
   jogosDetalhes: {},
   jogosDetalhesMeta: null,
@@ -3744,19 +3337,11 @@ function atualizarAvisoLegalDaView(view) {
       <p>placares, datas, horários, escalações e estatísticas exibidos nesta página provêm da API pública da ESPN e são atualizados automaticamente. Este site não produz nem garante a exatidão das informações — para dados oficiais, consulte o site da CBF. Nomes, escudos e marcas dos clubes pertencem aos seus titulares e são usados apenas para identificação esportiva.</p>
     </div>`;
 
-  const avisoVideos = `
-    <div class="br-legal-context-divider" aria-hidden="true"></div>
-    <div class="br-legal-context-icon" aria-hidden="true">▶️</div>
-    <div>
-      <strong>Sobre os vídeos:</strong>
-      <p>os melhores momentos são exibidos em player incorporado do YouTube, a partir de publicações de GE/Globo, CazéTV, Prime Video e, após 48 horas sem fonte primária, UOL Esporte. Este site não hospeda, reproduz nem redistribui os arquivos — apenas incorpora ou direciona para o conteúdo público. Os vídeos e todos os direitos relacionados pertencem aos canais e produtoras responsáveis.</p>
-    </div>`;
-
   if (view === 'jogos' || view === 'tabela') {
     aviso.innerHTML = avisoDados;
     aviso.hidden = false;
   } else if (view === 'resultados') {
-    aviso.innerHTML = avisoDados + avisoVideos;
+    aviso.innerHTML = avisoDados;
     aviso.hidden = false;
   } else {
     aviso.innerHTML = '';
@@ -4481,7 +4066,6 @@ async function carregarJogos(opcoes = {}) {
     state.probabilidadesJogosErro = e && e.message ? e.message : String(e || 'indisponível');
   }
 
-  await carregarMelhoresMomentos({ silencioso: true });
   await carregarResultadosManuais();
 
   if (state.view === 'jogos') renderJogos();
@@ -4885,8 +4469,7 @@ function renderJogos() {
         html += `<div class="jogo-gols">⚽ ${live.gols.join(' · ')}</div>`;
       }
       html += '</div>';
-      const mmJogo = htmlMelhoresMomentos(j, 'jogo');
-      html += `<div class="jogo-actions"><span class="jogo-source-pill">Dados: ESPN</span>${mmJogo}</div>`;
+      html += `<div class="jogo-actions"><span class="jogo-source-pill">Dados: ESPN</span></div>`;
       html += '</div>';
     }
     html += '</div>';
@@ -5152,7 +4735,6 @@ async function carregarResultados(opcoes = {}) {
     state.resultadosErro = e.message;
     state.resultadosCarregados = true;
   }
-  await carregarMelhoresMomentos({ silencioso: true });
   await carregarJogosDetalhes({ silencioso: true });
   if (state.view === 'resultados') renderResultados();
   // A coluna "Últimos 5" da tabela depende dos resultados; se o usuário
@@ -5300,7 +4882,7 @@ function renderResultados() {
       const escudoVisitante = brEscudoImg(v.escudo || '', v.nome || '', 'resultado-escudo-img');
 
       const dataFmt = formatarDataResultado(r.data_iso);
-      const extrasResultado = [htmlMelhoresMomentos(r, 'resultado'), htmlEstatisticasJogo(r)].filter(Boolean).join('');
+      const extrasResultado = htmlEstatisticasJogo(r);
 
       html += `<div class="resultado-card ${classeJogo}">
         <div class="resultado-meta">
@@ -5318,16 +4900,8 @@ function renderResultados() {
     }
     html += '</div>';
   }
-
-  const jogosComMelhoresMomentos = (state.resultados || []).filter(r => Boolean(melhoresMomentosDoJogo(r))).length;
-  if (jogosComMelhoresMomentos) {
-    html += `<div style="text-align:center;margin-top:16px;"><span class="mm-audit-pill">▶️ ${jogosComMelhoresMomentos} jogos com melhores momentos</span></div>`;
-  }
   if (state.jogosDetalhesMeta && state.jogosDetalhesMeta.total_com_estatisticas) {
-    html += `<div style="text-align:center;margin-top:8px;"><span class="mm-audit-pill">📊 ${state.jogosDetalhesMeta.total_com_estatisticas} jogos com estatísticas ESPN</span></div>`;
-  }
-  if (state.jogosDetalhesMeta && state.jogosDetalhesMeta.total_com_publico) {
-    html += `<div style="text-align:center;margin-top:8px;"><span class="mm-audit-pill">👥 ${state.jogosDetalhesMeta.total_com_publico} jogos com público informado</span></div>`;
+    html += `<div style="text-align:center;margin-top:8px;"><span class="stats-audit-pill">📊 ${state.jogosDetalhesMeta.total_com_estatisticas} jogos com estatísticas ESPN</span></div>`;
   }
 
   container.innerHTML = html;
