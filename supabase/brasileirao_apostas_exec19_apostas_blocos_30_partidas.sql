@@ -263,7 +263,7 @@ begin
   values
     (p_temporada, v_bloco.id, p_participante_id, v_total, 30,
      v_hash, v_payload_hash)
-  on conflict (temporada, bloco_id, participante_id)
+  on conflict on constraint br_comprovantes_blocos_unico
   do update set
     total_palpites = excluded.total_palpites,
     total_jogos = 30,

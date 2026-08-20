@@ -1,0 +1,30 @@
+HOTFIX BOLÃO — 20/08/2026 — bloco_id ambiguous
+
+ORDEM PARA CORRIGIR O SITE AO VIVO
+
+1) SUPABASE (OBRIGATÓRIO E PRIMEIRO)
+   - Abra Supabase > SQL Editor > New query.
+   - Abra o arquivo supabase/HOTFIX_20260820_bloco_id_ambiguo.sql deste PATCH.
+   - Cole TODO o conteúdo e clique Run.
+   - A consulta final deve retornar o constraint br_comprovantes_blocos_unico.
+
+2) GITHUB
+   Substitua no repositório, mantendo os caminhos:
+   - apostas.html
+   - js/br-apostas.js
+   - supabase/brasileirao_apostas_exec19_apostas_blocos_30_partidas.sql
+   - supabase/brasileirao_apostas_exec21_orquestracao_automatica_blocos.sql
+   - adicione supabase/HOTFIX_20260820_bloco_id_ambiguo.sql
+
+3) TESTE
+   - Recarregue apostas.html.
+   - Entre com um usuário de teste.
+   - Salve 1 palpite do bloco 24–26.
+   - Depois recarregue e confirme que o placar salvo permanece.
+   - Salve os demais palpites normalmente.
+
+IMPORTANTE
+- O hotfix não apaga dados.
+- O erro anterior ocorre no RPC br_salvar_palpites_bloco_v1.
+- O front também foi corrigido para não deixar o botão eternamente em “Salvando…” quando o Supabase retorna erro.
+- Não clique em “Descartar alterações locais” nos navegadores que ainda têm os 30 palpites digitados; o rascunho local só é limpo após salvamento bem-sucedido.

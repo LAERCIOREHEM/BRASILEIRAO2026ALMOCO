@@ -1777,7 +1777,11 @@
     } catch (err) {
       console.error(err); status(err.message || "Falha ao salvar o bloco.", "err"); toast(err.message || "Falha ao salvar o bloco.", "err");
     } finally {
-      state.salvandoPalpites = false; atualizarProgressoFormularioBloco();
+      state.salvandoPalpites = false;
+      $$("#salvar-palpites-bloco, #salvar-palpites-bloco-fixo").forEach(b => {
+        b.textContent = b.id === "salvar-palpites-bloco-fixo" ? "Salvar palpites" : "💾 Salvar palpites preenchidos";
+      });
+      atualizarProgressoFormularioBloco();
     }
   }
 
