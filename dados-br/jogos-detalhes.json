@@ -1,15 +1,586 @@
 {
   "_comentario": "Gerado por scripts/buscar_detalhes_jogos_brasileirao.py. Gols e cartões são deduplicados e validados contra placar/boxscore.",
-  "gerado_em": "2026-08-22T22:21:07.174350-03:00",
+  "gerado_em": "2026-08-22T22:31:10.606908-03:00",
   "fonte": "ESPN summary + scoreboard",
-  "total_jogos": 227,
-  "total_com_estatisticas": 227,
+  "total_jogos": 228,
+  "total_com_estatisticas": 228,
   "total_com_publico": 216,
-  "total_com_eventos": 227,
-  "total_com_jogadores": 227,
-  "total_eventos_validados": 227,
+  "total_com_eventos": 228,
+  "total_com_jogadores": 228,
+  "total_eventos_validados": 228,
   "total_eventos_pendentes_detalhes": 0,
   "jogos": {
+    "401841206": {
+      "event_id": "401841206",
+      "event_id_fonte_detalhes": "401841206",
+      "rodada": 24,
+      "data_iso": "2026-08-22T20:30",
+      "mandante": "Cruzeiro",
+      "visitante": "Flamengo",
+      "placar_mandante": 2,
+      "placar_visitante": 1,
+      "estadio": "Estadio Mineirão",
+      "publico": null,
+      "publico_tipo": "",
+      "publico_fonte": "",
+      "arbitro": "Rodrigo Jose Pereira De Lima",
+      "stats": [
+        {
+          "nome": "Posse",
+          "home": "47.6%",
+          "away": "52.4%"
+        },
+        {
+          "nome": "Finalizações",
+          "home": "24",
+          "away": "14"
+        },
+        {
+          "nome": "Chutes no gol",
+          "home": "6",
+          "away": "3"
+        },
+        {
+          "nome": "Chutes bloqueados",
+          "home": "7",
+          "away": "5"
+        },
+        {
+          "nome": "Aproveitamento dos chutes",
+          "home": "30%",
+          "away": "20%",
+          "note": "chutes no gol ÷ finalizações"
+        },
+        {
+          "nome": "Escanteios",
+          "home": "3",
+          "away": "3"
+        },
+        {
+          "nome": "Faltas",
+          "home": "13",
+          "away": "7"
+        },
+        {
+          "nome": "Amarelos",
+          "home": "3",
+          "away": "1"
+        },
+        {
+          "nome": "Vermelhos",
+          "home": "0",
+          "away": "0"
+        },
+        {
+          "nome": "Impedimentos",
+          "home": "1",
+          "away": "0"
+        },
+        {
+          "nome": "Defesas",
+          "home": "2",
+          "away": "4"
+        },
+        {
+          "nome": "Passes certos",
+          "home": "439",
+          "away": "505"
+        },
+        {
+          "nome": "Precisão de passe",
+          "home": "90%",
+          "away": "90%"
+        },
+        {
+          "nome": "Passes",
+          "home": "497",
+          "away": "562"
+        },
+        {
+          "nome": "Desarmes",
+          "home": "10",
+          "away": "13"
+        },
+        {
+          "nome": "Interceptações",
+          "home": "12",
+          "away": "10"
+        },
+        {
+          "nome": "Cruzamentos",
+          "home": "8",
+          "away": "11"
+        },
+        {
+          "nome": "Cortes",
+          "home": "14",
+          "away": "26"
+        }
+      ],
+      "estatisticas": [
+        {
+          "nome": "Posse",
+          "home": "47.6%",
+          "away": "52.4%"
+        },
+        {
+          "nome": "Finalizações",
+          "home": "24",
+          "away": "14"
+        },
+        {
+          "nome": "Chutes no gol",
+          "home": "6",
+          "away": "3"
+        },
+        {
+          "nome": "Chutes bloqueados",
+          "home": "7",
+          "away": "5"
+        },
+        {
+          "nome": "Aproveitamento dos chutes",
+          "home": "30%",
+          "away": "20%",
+          "note": "chutes no gol ÷ finalizações"
+        },
+        {
+          "nome": "Escanteios",
+          "home": "3",
+          "away": "3"
+        },
+        {
+          "nome": "Faltas",
+          "home": "13",
+          "away": "7"
+        },
+        {
+          "nome": "Amarelos",
+          "home": "3",
+          "away": "1"
+        },
+        {
+          "nome": "Vermelhos",
+          "home": "0",
+          "away": "0"
+        },
+        {
+          "nome": "Impedimentos",
+          "home": "1",
+          "away": "0"
+        },
+        {
+          "nome": "Defesas",
+          "home": "2",
+          "away": "4"
+        },
+        {
+          "nome": "Passes certos",
+          "home": "439",
+          "away": "505"
+        },
+        {
+          "nome": "Precisão de passe",
+          "home": "90%",
+          "away": "90%"
+        },
+        {
+          "nome": "Passes",
+          "home": "497",
+          "away": "562"
+        },
+        {
+          "nome": "Desarmes",
+          "home": "10",
+          "away": "13"
+        },
+        {
+          "nome": "Interceptações",
+          "home": "12",
+          "away": "10"
+        },
+        {
+          "nome": "Cruzamentos",
+          "home": "8",
+          "away": "11"
+        },
+        {
+          "nome": "Cortes",
+          "home": "14",
+          "away": "26"
+        }
+      ],
+      "gols": [
+        {
+          "minuto": "22'",
+          "jogador": "Pedro",
+          "time": "Flamengo",
+          "assistencias": [
+            "Giorgian de Arrascaeta"
+          ],
+          "descricao": "Goal 70 Goal! Cruzeiro 0, Flamengo 1. Pedro (Flamengo) right footed shot from the centre of the box to the bottom right corner. Assisted by Giorgian de Arrascaeta. Pedro Goal"
+        },
+        {
+          "minuto": "55'",
+          "jogador": "Keny Arroyo",
+          "time": "Cruzeiro",
+          "assistencias": [
+            "Matheus Henrique"
+          ],
+          "descricao": "Goal 70 Goal! Cruzeiro 1, Flamengo 1. Keny Arroyo (Cruzeiro) left footed shot from outside the box to the top left corner. Assisted by Matheus Henrique. Keny Arroyo Goal"
+        },
+        {
+          "minuto": "90'+5'",
+          "jogador": "Matheus Pereira",
+          "time": "Cruzeiro",
+          "assistencias": [
+            "Lucas Villalba"
+          ],
+          "descricao": "Goal - Volley 173 Goal! Cruzeiro 2, Flamengo 1. Matheus Pereira (Cruzeiro) left footed shot from the centre of the box to the centre of the goal. Assisted by Lucas Villalba with a headed pass. Matheus Pereira Goal - Volley"
+        }
+      ],
+      "cartoes": [
+        {
+          "tipo": "amarelo",
+          "minuto": "20'",
+          "jogador": "Fabrício Bruno",
+          "time": "Cruzeiro",
+          "descricao": "Yellow Card 94 Fabrício Bruno (Cruzeiro) is shown the yellow card for a bad foul. Fabrício Bruno Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "36'",
+          "jogador": "João Marcelo",
+          "time": "Cruzeiro",
+          "descricao": "Yellow Card 94 João Marcelo (Cruzeiro) is shown the yellow card for a bad foul. João Marcelo Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "82'",
+          "jogador": "Bruno Henrique",
+          "time": "Flamengo",
+          "descricao": "Yellow Card 94 Bruno Henrique (Flamengo) is shown the yellow card for a bad foul. Bruno Henrique Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "86'",
+          "jogador": "Wesley Ribeiro",
+          "time": "Cruzeiro",
+          "descricao": "Yellow Card 94 Wesley (Cruzeiro) is shown the yellow card for a bad foul. Wesley Ribeiro Yellow Card"
+        }
+      ],
+      "jogadores": [
+        {
+          "athlete_id": "236111",
+          "nome": "Fabrício Bruno",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "108342",
+          "nome": "Fagner",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "373806",
+          "nome": "João Costa",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "286558",
+          "nome": "João Marcelo",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "280978",
+          "nome": "Kaio Jorge",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "371534",
+          "nome": "Keny Arroyo",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "77577",
+          "nome": "Lucas Romero",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "176810",
+          "nome": "Lucas Villalba",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "268221",
+          "nome": "Matheus Henrique",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "216098",
+          "nome": "Matheus Pereira",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "337996",
+          "nome": "Otávio Costa",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "210135",
+          "nome": "Gerson",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "383096",
+          "nome": "Kaique Kenji",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "370814",
+          "nome": "Neyser Villareal",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "304533",
+          "nome": "Wesley Ribeiro",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "402423",
+          "nome": "Zé Lucas",
+          "time": "Cruzeiro",
+          "team_id": "2022",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "215388",
+          "nome": "Agustín Rossi",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "203077",
+          "nome": "Ayrton Lucas",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "170369",
+          "nome": "Danilo",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "202533",
+          "nome": "Erick Pulgar",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "179767",
+          "nome": "Giorgian de Arrascaeta",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "188368",
+          "nome": "Guillermo Varela",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "208700",
+          "nome": "Jorge Carrascal",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "252316",
+          "nome": "Léo Ortiz",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "234715",
+          "nome": "Lucas Paquetá",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "235017",
+          "nome": "Pedro",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "253937",
+          "nome": "Samuel Lino",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "201683",
+          "nome": "Bruno Henrique",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "334752",
+          "nome": "Evertton",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "277352",
+          "nome": "Gonzalo Plata",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "165778",
+          "nome": "Jorginho",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "234765",
+          "nome": "Luiz Araújo",
+          "time": "Flamengo",
+          "team_id": "819",
+          "titular": false,
+          "entrou": true
+        }
+      ],
+      "jogadores_preservados_de_execucao_anterior": false,
+      "validacao_eventos": {
+        "gols_esperados": {
+          "Cruzeiro": 2,
+          "Flamengo": 1
+        },
+        "gols_extraidos": {
+          "Cruzeiro": 2,
+          "Flamengo": 1
+        },
+        "gols_completos": true,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": true,
+        "cartoes_esperados": {
+          "Cruzeiro": {
+            "amarelo": 3,
+            "vermelho": 0
+          },
+          "Flamengo": {
+            "amarelo": 1,
+            "vermelho": 0
+          }
+        },
+        "cartoes_extraidos": {
+          "Cruzeiro": {
+            "amarelo": 3,
+            "vermelho": 0
+          },
+          "Flamengo": {
+            "amarelo": 1,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": true,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": true,
+        "pendente_detalhes": false,
+        "tipo_pendencia": "",
+        "motivo": ""
+      },
+      "fonte": "ESPN summary + scoreboard",
+      "resultado_manual": false,
+      "origem_resultado": "",
+      "motivo_resultado_manual": "",
+      "preservado_de_execucao_anterior": false,
+      "atualizado_em": "2026-08-22T22:31:09.640714-03:00"
+    },
     "401841204": {
       "event_id": "401841204",
       "event_id_fonte_detalhes": "401841204",
@@ -572,7 +1143,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-22T22:21:06.672315-03:00"
+      "atualizado_em": "2026-08-22T22:31:10.141735-03:00"
     },
     "401841205": {
       "event_id": "401841205",
@@ -1129,7 +1700,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-22T22:21:07.091553-03:00"
+      "atualizado_em": "2026-08-22T22:31:10.524176-03:00"
     },
     "401841191": {
       "event_id": "401841191",
