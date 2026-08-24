@@ -1,15 +1,586 @@
 {
   "_comentario": "Gerado por scripts/buscar_detalhes_jogos_brasileirao.py. Gols e cartões são deduplicados e validados contra placar/boxscore.",
-  "gerado_em": "2026-08-23T20:41:02.051400-03:00",
+  "gerado_em": "2026-08-23T21:41:08.268998-03:00",
   "fonte": "ESPN summary + scoreboard",
-  "total_jogos": 233,
-  "total_com_estatisticas": 233,
+  "total_jogos": 234,
+  "total_com_estatisticas": 234,
   "total_com_publico": 216,
-  "total_com_eventos": 233,
-  "total_com_jogadores": 233,
-  "total_eventos_validados": 233,
+  "total_com_eventos": 234,
+  "total_com_jogadores": 234,
+  "total_eventos_validados": 234,
   "total_eventos_pendentes_detalhes": 0,
   "jogos": {
+    "401841207": {
+      "event_id": "401841207",
+      "event_id_fonte_detalhes": "401841207",
+      "rodada": 24,
+      "data_iso": "2026-08-23T19:30",
+      "mandante": "Coritiba",
+      "visitante": "Corinthians",
+      "placar_mandante": 2,
+      "placar_visitante": 1,
+      "estadio": "Couto Pereira",
+      "publico": null,
+      "publico_tipo": "",
+      "publico_fonte": "",
+      "arbitro": "Daronco, Anderson",
+      "stats": [
+        {
+          "nome": "Posse",
+          "home": "35.5%",
+          "away": "64.5%"
+        },
+        {
+          "nome": "Finalizações",
+          "home": "12",
+          "away": "16"
+        },
+        {
+          "nome": "Chutes no gol",
+          "home": "3",
+          "away": "3"
+        },
+        {
+          "nome": "Chutes bloqueados",
+          "home": "2",
+          "away": "7"
+        },
+        {
+          "nome": "Aproveitamento dos chutes",
+          "home": "30%",
+          "away": "20%",
+          "note": "chutes no gol ÷ finalizações"
+        },
+        {
+          "nome": "Escanteios",
+          "home": "4",
+          "away": "14"
+        },
+        {
+          "nome": "Faltas",
+          "home": "8",
+          "away": "9"
+        },
+        {
+          "nome": "Amarelos",
+          "home": "2",
+          "away": "2"
+        },
+        {
+          "nome": "Vermelhos",
+          "home": "0",
+          "away": "0"
+        },
+        {
+          "nome": "Impedimentos",
+          "home": "5",
+          "away": "1"
+        },
+        {
+          "nome": "Defesas",
+          "home": "2",
+          "away": "1"
+        },
+        {
+          "nome": "Passes certos",
+          "home": "250",
+          "away": "493"
+        },
+        {
+          "nome": "Precisão de passe",
+          "home": "80%",
+          "away": "90%"
+        },
+        {
+          "nome": "Passes",
+          "home": "314",
+          "away": "549"
+        },
+        {
+          "nome": "Desarmes",
+          "home": "16",
+          "away": "13"
+        },
+        {
+          "nome": "Interceptações",
+          "home": "7",
+          "away": "5"
+        },
+        {
+          "nome": "Cruzamentos",
+          "home": "2",
+          "away": "47"
+        },
+        {
+          "nome": "Cortes",
+          "home": "55",
+          "away": "14"
+        }
+      ],
+      "estatisticas": [
+        {
+          "nome": "Posse",
+          "home": "35.5%",
+          "away": "64.5%"
+        },
+        {
+          "nome": "Finalizações",
+          "home": "12",
+          "away": "16"
+        },
+        {
+          "nome": "Chutes no gol",
+          "home": "3",
+          "away": "3"
+        },
+        {
+          "nome": "Chutes bloqueados",
+          "home": "2",
+          "away": "7"
+        },
+        {
+          "nome": "Aproveitamento dos chutes",
+          "home": "30%",
+          "away": "20%",
+          "note": "chutes no gol ÷ finalizações"
+        },
+        {
+          "nome": "Escanteios",
+          "home": "4",
+          "away": "14"
+        },
+        {
+          "nome": "Faltas",
+          "home": "8",
+          "away": "9"
+        },
+        {
+          "nome": "Amarelos",
+          "home": "2",
+          "away": "2"
+        },
+        {
+          "nome": "Vermelhos",
+          "home": "0",
+          "away": "0"
+        },
+        {
+          "nome": "Impedimentos",
+          "home": "5",
+          "away": "1"
+        },
+        {
+          "nome": "Defesas",
+          "home": "2",
+          "away": "1"
+        },
+        {
+          "nome": "Passes certos",
+          "home": "250",
+          "away": "493"
+        },
+        {
+          "nome": "Precisão de passe",
+          "home": "80%",
+          "away": "90%"
+        },
+        {
+          "nome": "Passes",
+          "home": "314",
+          "away": "549"
+        },
+        {
+          "nome": "Desarmes",
+          "home": "16",
+          "away": "13"
+        },
+        {
+          "nome": "Interceptações",
+          "home": "7",
+          "away": "5"
+        },
+        {
+          "nome": "Cruzamentos",
+          "home": "2",
+          "away": "47"
+        },
+        {
+          "nome": "Cortes",
+          "home": "55",
+          "away": "14"
+        }
+      ],
+      "gols": [
+        {
+          "minuto": "40'",
+          "jogador": "Pedro Rocha",
+          "time": "Coritiba",
+          "assistencias": [
+            "João Pedro Chermont"
+          ],
+          "descricao": "Goal 70 Goal! Coritiba 1, Corinthians 0. Pedro Rocha (Coritiba) right footed shot from a difficult angle on the left to the centre of the goal. Assisted by João Pedro Chermont following a corner. Pedro Rocha Goal"
+        },
+        {
+          "minuto": "75'",
+          "jogador": "Paulo Roberto",
+          "time": "Coritiba",
+          "assistencias": [
+            "João Pedro Chermont"
+          ],
+          "descricao": "Goal - Header 137 Goal! Coritiba 2, Corinthians 0. Paulo Roberto (Coritiba) header from the centre of the box to the bottom right corner. Assisted by João Pedro Chermont with a cross. Paulo Roberto Goal - Header"
+        },
+        {
+          "minuto": "90'+3'",
+          "jogador": "Raniele",
+          "time": "Corinthians",
+          "assistencias": [
+            "Allan"
+          ],
+          "descricao": "Goal - Header 137 Goal! Coritiba 2, Corinthians 1. Raniele (Corinthians) header from the centre of the box to the top left corner. Assisted by Allan with a cross. Raniele Goal - Header"
+        }
+      ],
+      "cartoes": [
+        {
+          "tipo": "amarelo",
+          "minuto": "42'",
+          "jogador": "Thiago Santos",
+          "time": "Coritiba",
+          "descricao": "Yellow Card 94 Thiago Santos (Coritiba) is shown the yellow card. Thiago Santos Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "42'",
+          "jogador": "Breno Bidon",
+          "time": "Corinthians",
+          "descricao": "Yellow Card 94 Breno Bidon (Corinthians) is shown the yellow card. Breno Bidon Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "67'",
+          "jogador": "Tissi",
+          "time": "Coritiba",
+          "descricao": "Yellow Card 94 Tissi (Coritiba) is shown the yellow card. Tissi Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "67'",
+          "jogador": "Matheus Pereira",
+          "time": "Corinthians",
+          "descricao": "Yellow Card 94 Matheus Pereira (Corinthians) is shown the yellow card. Matheus Pereira Yellow Card"
+        }
+      ],
+      "jogadores": [
+        {
+          "athlete_id": "223437",
+          "nome": "Allan",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "148189",
+          "nome": "André Carrillo",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "338898",
+          "nome": "Breno Bidon",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "195756",
+          "nome": "Fabrizio Angileri",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "192226",
+          "nome": "Gabriel Paulista",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "168981",
+          "nome": "Gustavo Henrique",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "347456",
+          "nome": "Kaio",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "361442",
+          "nome": "Kauê Camargo",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "359849",
+          "nome": "Pedro Milans",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "234070",
+          "nome": "Pedro Raúl",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "236099",
+          "nome": "Raniele",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "382944",
+          "nome": "Dieguinho",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "382959",
+          "nome": "Gui Negão",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "169136",
+          "nome": "Jesse Lingard",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "216098",
+          "nome": "Matheus Pereira",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "159255",
+          "nome": "Memphis Depay",
+          "time": "Corinthians",
+          "team_id": "874",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "236324",
+          "nome": "Breno",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "243831",
+          "nome": "Bruno Melo",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "256018",
+          "nome": "Jacy Maranhão",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "371527",
+          "nome": "João Pedro Chermont",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "333306",
+          "nome": "Joaquín Lavega",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "150215",
+          "nome": "Josué Pesqueira",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "364880",
+          "nome": "Pedro Luccas",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "216846",
+          "nome": "Pedro Rocha",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "128368",
+          "nome": "Sebastián Gómez",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "188143",
+          "nome": "Thiago Santos",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "319507",
+          "nome": "Tiago",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "295072",
+          "nome": "Fabinho",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "201942",
+          "nome": "Fernando Sobral",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "403736",
+          "nome": "Lucas Taverna",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "417356",
+          "nome": "Paulo Roberto",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "402818",
+          "nome": "Tissi",
+          "time": "Coritiba",
+          "team_id": "3456",
+          "titular": false,
+          "entrou": true
+        }
+      ],
+      "jogadores_preservados_de_execucao_anterior": false,
+      "validacao_eventos": {
+        "gols_esperados": {
+          "Coritiba": 2,
+          "Corinthians": 1
+        },
+        "gols_extraidos": {
+          "Coritiba": 2,
+          "Corinthians": 1
+        },
+        "gols_completos": true,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": true,
+        "cartoes_esperados": {
+          "Coritiba": {
+            "amarelo": 2,
+            "vermelho": 0
+          },
+          "Corinthians": {
+            "amarelo": 2,
+            "vermelho": 0
+          }
+        },
+        "cartoes_extraidos": {
+          "Coritiba": {
+            "amarelo": 2,
+            "vermelho": 0
+          },
+          "Corinthians": {
+            "amarelo": 2,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": true,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": true,
+        "pendente_detalhes": false,
+        "tipo_pendencia": "",
+        "motivo": ""
+      },
+      "fonte": "ESPN summary + scoreboard",
+      "resultado_manual": false,
+      "origem_resultado": "",
+      "motivo_resultado_manual": "",
+      "preservado_de_execucao_anterior": false,
+      "atualizado_em": "2026-08-23T21:41:04.404474-03:00"
+    },
     "401841199": {
       "event_id": "401841199",
       "event_id_fonte_detalhes": "401841199",
@@ -561,7 +1132,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-23T20:40:58.625303-03:00"
+      "atualizado_em": "2026-08-23T21:41:04.825290-03:00"
     },
     "401841201": {
       "event_id": "401841201",
@@ -1135,7 +1706,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-23T20:40:59.061811-03:00"
+      "atualizado_em": "2026-08-23T21:41:05.246970-03:00"
     },
     "401841203": {
       "event_id": "401841203",
@@ -1720,7 +2291,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-23T20:40:59.517626-03:00"
+      "atualizado_em": "2026-08-23T21:41:05.675359-03:00"
     },
     "401841202": {
       "event_id": "401841202",
@@ -2272,7 +2843,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-23T20:40:59.953663-03:00"
+      "atualizado_em": "2026-08-23T21:41:06.195630-03:00"
     },
     "401841200": {
       "event_id": "401841200",
@@ -2840,7 +3411,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-23T20:41:00.406590-03:00"
+      "atualizado_em": "2026-08-23T21:41:06.636419-03:00"
     },
     "401841206": {
       "event_id": "401841206",
@@ -3411,7 +3982,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-23T20:41:01.116828-03:00"
+      "atualizado_em": "2026-08-23T21:41:07.194621-03:00"
     },
     "401841204": {
       "event_id": "401841204",
@@ -3975,7 +4546,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-23T20:41:01.561213-03:00"
+      "atualizado_em": "2026-08-23T21:41:07.746156-03:00"
     },
     "401841205": {
       "event_id": "401841205",
@@ -4532,7 +5103,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-23T20:41:01.968565-03:00"
+      "atualizado_em": "2026-08-23T21:41:08.185675-03:00"
     },
     "401841191": {
       "event_id": "401841191",
