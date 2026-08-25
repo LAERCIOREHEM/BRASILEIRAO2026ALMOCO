@@ -1,15 +1,585 @@
 {
   "_comentario": "Gerado por scripts/buscar_detalhes_jogos_brasileirao.py. Gols e cartões são deduplicados e validados contra placar/boxscore.",
-  "gerado_em": "2026-08-24T19:20:57.170321-03:00",
+  "gerado_em": "2026-08-24T22:01:17.117644-03:00",
   "fonte": "ESPN summary + scoreboard",
-  "total_jogos": 234,
-  "total_com_estatisticas": 234,
+  "total_jogos": 235,
+  "total_com_estatisticas": 235,
   "total_com_publico": 216,
-  "total_com_eventos": 234,
-  "total_com_jogadores": 234,
-  "total_eventos_validados": 234,
+  "total_com_eventos": 235,
+  "total_com_jogadores": 235,
+  "total_eventos_validados": 235,
   "total_eventos_pendentes_detalhes": 0,
   "jogos": {
+    "401841198": {
+      "event_id": "401841198",
+      "event_id_fonte_detalhes": "401841198",
+      "rodada": 24,
+      "data_iso": "2026-08-24T20:00",
+      "mandante": "Botafogo",
+      "visitante": "Athletico-PR",
+      "placar_mandante": 2,
+      "placar_visitante": 3,
+      "estadio": "Joao Havelange Stadium",
+      "publico": null,
+      "publico_tipo": "",
+      "publico_fonte": "",
+      "arbitro": "André Luis Skettino Policarpo Bento",
+      "stats": [
+        {
+          "nome": "Posse",
+          "home": "55.5%",
+          "away": "44.5%"
+        },
+        {
+          "nome": "Finalizações",
+          "home": "32",
+          "away": "7"
+        },
+        {
+          "nome": "Chutes no gol",
+          "home": "8",
+          "away": "6"
+        },
+        {
+          "nome": "Chutes bloqueados",
+          "home": "10",
+          "away": "0"
+        },
+        {
+          "nome": "Aproveitamento dos chutes",
+          "home": "30%",
+          "away": "90%",
+          "note": "chutes no gol ÷ finalizações"
+        },
+        {
+          "nome": "Escanteios",
+          "home": "13",
+          "away": "2"
+        },
+        {
+          "nome": "Faltas",
+          "home": "12",
+          "away": "9"
+        },
+        {
+          "nome": "Amarelos",
+          "home": "2",
+          "away": "1"
+        },
+        {
+          "nome": "Vermelhos",
+          "home": "0",
+          "away": "0"
+        },
+        {
+          "nome": "Impedimentos",
+          "home": "2",
+          "away": "2"
+        },
+        {
+          "nome": "Defesas",
+          "home": "3",
+          "away": "6"
+        },
+        {
+          "nome": "Passes certos",
+          "home": "432",
+          "away": "346"
+        },
+        {
+          "nome": "Precisão de passe",
+          "home": "90%",
+          "away": "80%"
+        },
+        {
+          "nome": "Passes",
+          "home": "488",
+          "away": "412"
+        },
+        {
+          "nome": "Desarmes",
+          "home": "10",
+          "away": "18"
+        },
+        {
+          "nome": "Interceptações",
+          "home": "5",
+          "away": "13"
+        },
+        {
+          "nome": "Cruzamentos",
+          "home": "9",
+          "away": "9"
+        },
+        {
+          "nome": "Cortes",
+          "home": "12",
+          "away": "44"
+        }
+      ],
+      "estatisticas": [
+        {
+          "nome": "Posse",
+          "home": "55.5%",
+          "away": "44.5%"
+        },
+        {
+          "nome": "Finalizações",
+          "home": "32",
+          "away": "7"
+        },
+        {
+          "nome": "Chutes no gol",
+          "home": "8",
+          "away": "6"
+        },
+        {
+          "nome": "Chutes bloqueados",
+          "home": "10",
+          "away": "0"
+        },
+        {
+          "nome": "Aproveitamento dos chutes",
+          "home": "30%",
+          "away": "90%",
+          "note": "chutes no gol ÷ finalizações"
+        },
+        {
+          "nome": "Escanteios",
+          "home": "13",
+          "away": "2"
+        },
+        {
+          "nome": "Faltas",
+          "home": "12",
+          "away": "9"
+        },
+        {
+          "nome": "Amarelos",
+          "home": "2",
+          "away": "1"
+        },
+        {
+          "nome": "Vermelhos",
+          "home": "0",
+          "away": "0"
+        },
+        {
+          "nome": "Impedimentos",
+          "home": "2",
+          "away": "2"
+        },
+        {
+          "nome": "Defesas",
+          "home": "3",
+          "away": "6"
+        },
+        {
+          "nome": "Passes certos",
+          "home": "432",
+          "away": "346"
+        },
+        {
+          "nome": "Precisão de passe",
+          "home": "90%",
+          "away": "80%"
+        },
+        {
+          "nome": "Passes",
+          "home": "488",
+          "away": "412"
+        },
+        {
+          "nome": "Desarmes",
+          "home": "10",
+          "away": "18"
+        },
+        {
+          "nome": "Interceptações",
+          "home": "5",
+          "away": "13"
+        },
+        {
+          "nome": "Cruzamentos",
+          "home": "9",
+          "away": "9"
+        },
+        {
+          "nome": "Cortes",
+          "home": "12",
+          "away": "44"
+        }
+      ],
+      "gols": [
+        {
+          "minuto": "11'",
+          "jogador": "João Cruz",
+          "time": "Athletico-PR",
+          "assistencias": [],
+          "descricao": "Goal - Header 137 Goal! Botafogo 0, Athletico Paranaense 1. João Cruz (Athletico Paranaense) header from the centre of the box to the centre of the goal. João Cruz Goal - Header"
+        },
+        {
+          "minuto": "13'",
+          "jogador": "Kevin Viveros",
+          "time": "Athletico-PR",
+          "assistencias": [
+            "Dantas"
+          ],
+          "descricao": "Goal 70 Goal! Botafogo 0, Athletico Paranaense 2. Kevin Viveros (Athletico Paranaense) right footed shot from the centre of the box to the centre of the goal. Assisted by Dantas. Kevin Viveros Goal"
+        },
+        {
+          "minuto": "78'",
+          "jogador": "Kevin Viveros",
+          "time": "Athletico-PR",
+          "assistencias": [
+            "Kerwin Vargas"
+          ],
+          "descricao": "Goal 70 Goal! Botafogo 0, Athletico Paranaense 3. Kevin Viveros (Athletico Paranaense) right footed shot from the right side of the box to the bottom left corner. Assisted by Kerwin Vargas following a fast break. Kevin Viveros Goal"
+        },
+        {
+          "minuto": "85'",
+          "jogador": "Santiago Rodríguez",
+          "time": "Botafogo",
+          "assistencias": [],
+          "descricao": "Goal 70 Goal! Botafogo 1, Athletico Paranaense 3. Santiago Rodríguez (Botafogo) left footed shot from outside the box to the centre of the goal following a corner. Santiago Rodríguez Goal"
+        },
+        {
+          "minuto": "90'+2'",
+          "jogador": "Santiago Rodríguez",
+          "time": "Botafogo",
+          "assistencias": [
+            "Danilo"
+          ],
+          "descricao": "Goal 70 Goal! Botafogo 2, Athletico Paranaense 3. Santiago Rodríguez (Botafogo) right footed shot from very close range to the centre of the goal. Assisted by Danilo following a corner. Santiago Rodríguez Goal"
+        }
+      ],
+      "cartoes": [
+        {
+          "tipo": "amarelo",
+          "minuto": "35'",
+          "jogador": "Kauan Toledo",
+          "time": "Botafogo",
+          "descricao": "Yellow Card 94 Kauan Toledo (Botafogo) is shown the yellow card for a bad foul. Kauan Toledo Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "68'",
+          "jogador": "Edenilson",
+          "time": "Botafogo",
+          "descricao": "Yellow Card 94 Edenílson (Botafogo) is shown the yellow card. Edenilson Yellow Card"
+        },
+        {
+          "tipo": "amarelo",
+          "minuto": "77'",
+          "jogador": "Dantas",
+          "time": "Athletico-PR",
+          "descricao": "Yellow Card 94 Dantas (Athletico Paranaense) is shown the yellow card for a bad foul. Dantas Yellow Card"
+        }
+      ],
+      "jogadores": [
+        {
+          "athlete_id": "381170",
+          "nome": "Arthur Dias",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "360826",
+          "nome": "Dantas",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "287688",
+          "nome": "Gastón Benavídez",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "173351",
+          "nome": "Jádson",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "361359",
+          "nome": "João Cruz",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "270242",
+          "nome": "Juan Felipe Aguirre",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "268476",
+          "nome": "Kevin Viveros",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "380327",
+          "nome": "Leozinho",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "113352",
+          "nome": "Luiz Gustavo",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "153754",
+          "nome": "Santos",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "197049",
+          "nome": "Stiven Mendoza",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "361357",
+          "nome": "Eduardo",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "94976",
+          "nome": "Juan Portilla",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "340596",
+          "nome": "Kerwin Vargas",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "315283",
+          "nome": "Renan",
+          "time": "Athletico-PR",
+          "team_id": "3458",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "199734",
+          "nome": "Alex Telles",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "143883",
+          "nome": "Allan",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "379785",
+          "nome": "Álvaro Montoro",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "297056",
+          "nome": "Cristian Medina",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "272224",
+          "nome": "Danilo",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "196849",
+          "nome": "Edenilson",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "228401",
+          "nome": "Gabriel Batista",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "411648",
+          "nome": "Gabriel Pereira Justino",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "400067",
+          "nome": "Kauan Toledo",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "245291",
+          "nome": "Nahuel Ferraresi",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "268700",
+          "nome": "Vitinho",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": true,
+          "entrou": false
+        },
+        {
+          "athlete_id": "411290",
+          "nome": "José Kadir",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "269843",
+          "nome": "Júnior Santos",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "314841",
+          "nome": "Matheus Martins",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "83178",
+          "nome": "Santiago Rodríguez",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": false,
+          "entrou": true
+        },
+        {
+          "athlete_id": "398719",
+          "nome": "Victor Hugo",
+          "time": "Botafogo",
+          "team_id": "6086",
+          "titular": false,
+          "entrou": true
+        }
+      ],
+      "jogadores_preservados_de_execucao_anterior": false,
+      "validacao_eventos": {
+        "gols_esperados": {
+          "Botafogo": 2,
+          "Athletico-PR": 3
+        },
+        "gols_extraidos": {
+          "Botafogo": 2,
+          "Athletico-PR": 3
+        },
+        "gols_completos": true,
+        "gols_sem_excesso": true,
+        "gols_time_desconhecido": 0,
+        "gols_duplicados": 0,
+        "gols_compativeis": true,
+        "gols_ok": true,
+        "cartoes_esperados": {
+          "Botafogo": {
+            "amarelo": 2,
+            "vermelho": 0
+          },
+          "Athletico-PR": {
+            "amarelo": 1,
+            "vermelho": 0
+          }
+        },
+        "cartoes_extraidos": {
+          "Botafogo": {
+            "amarelo": 2,
+            "vermelho": 0
+          },
+          "Athletico-PR": {
+            "amarelo": 1,
+            "vermelho": 0
+          }
+        },
+        "cartoes_completos": true,
+        "cartoes_sem_excesso": true,
+        "cartoes_time_desconhecido": 0,
+        "cartoes_duplicados": 0,
+        "cartoes_compativeis": true,
+        "cartoes_ok": true,
+        "ok": true,
+        "pendente_detalhes": false,
+        "tipo_pendencia": "",
+        "motivo": ""
+      },
+      "fonte": "ESPN summary + scoreboard",
+      "resultado_manual": false,
+      "origem_resultado": "",
+      "motivo_resultado_manual": "",
+      "preservado_de_execucao_anterior": false,
+      "atualizado_em": "2026-08-24T22:01:13.644272-03:00"
+    },
     "401841207": {
       "event_id": "401841207",
       "event_id_fonte_detalhes": "401841207",
@@ -579,7 +1149,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-24T19:20:53.896275-03:00"
+      "atualizado_em": "2026-08-24T22:01:14.346161-03:00"
     },
     "401841199": {
       "event_id": "401841199",
@@ -1132,7 +1702,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-24T19:20:54.395117-03:00"
+      "atualizado_em": "2026-08-24T22:01:14.891823-03:00"
     },
     "401841201": {
       "event_id": "401841201",
@@ -1706,7 +2276,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-24T19:20:54.875556-03:00"
+      "atualizado_em": "2026-08-24T22:01:15.399421-03:00"
     },
     "401841203": {
       "event_id": "401841203",
@@ -2291,7 +2861,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-24T19:20:55.355442-03:00"
+      "atualizado_em": "2026-08-24T22:01:15.870426-03:00"
     },
     "401841202": {
       "event_id": "401841202",
@@ -2843,7 +3413,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-24T19:20:55.849435-03:00"
+      "atualizado_em": "2026-08-24T22:01:16.331452-03:00"
     },
     "401841200": {
       "event_id": "401841200",
@@ -3411,7 +3981,7 @@
       "origem_resultado": "",
       "motivo_resultado_manual": "",
       "preservado_de_execucao_anterior": false,
-      "atualizado_em": "2026-08-24T19:20:56.352914-03:00"
+      "atualizado_em": "2026-08-24T22:01:17.034982-03:00"
     },
     "401841206": {
       "event_id": "401841206",
