@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 39,
     "jogos_sem_transmissao_14d": 1,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 7,
+    "registros_preservados": 22,
     "fontes_com_falha": 1
   },
   "fontes": {
@@ -15,21 +15,21 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 32,
-      "duracao_ms": 22921
+      "jogos_com_canal": 14,
+      "duracao_ms": 6857
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 1,
-      "jogos_com_canal": 1,
-      "duracao_ms": 17056
+      "artigos_consultados": 2,
+      "jogos_com_canal": 5,
+      "duracao_ms": 31607
     },
     "espn": {
       "ok": true,
       "eventos_na_janela": 40,
       "scoreboard_com_canal": 0,
       "summary_com_canal": 0,
-      "duracao_ms": 2179
+      "duracao_ms": 6308
     }
   },
   "sem_transmissao": [
@@ -38,11 +38,26 @@
       "rodada": 25,
       "jogo": "Remo x Coritiba",
       "data_iso": "2026-08-31T20:00",
-      "faltam_horas": 164.2,
+      "faltam_horas": 157.5,
       "nivel": "aviso"
     }
   ],
   "preservados": [
+    {
+      "event_id": "401841216",
+      "jogo": "Atlético-MG x Vitória",
+      "canais": [
+        "SporTV",
+        "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841209",
+      "jogo": "São Paulo x Bragantino",
+      "canais": [
+        "SporTV"
+      ]
+    },
     {
       "event_id": "401841212",
       "jogo": "Vasco da Gama x Cruzeiro",
@@ -58,10 +73,59 @@
       ]
     },
     {
+      "event_id": "401841214",
+      "jogo": "Corinthians x Santos",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841213",
+      "jogo": "Flamengo x Botafogo",
+      "canais": [
+        "SporTV",
+        "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841215",
+      "jogo": "Bahia x Internacional",
+      "canais": [
+        "SporTV",
+        "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841226",
+      "jogo": "São Paulo x Atlético-MG",
+      "canais": [
+        "SporTV",
+        "GE TV"
+      ]
+    },
+    {
       "event_id": "401841227",
       "jogo": "Fluminense x Vasco da Gama",
       "canais": [
         "Globo"
+      ]
+    },
+    {
+      "event_id": "401841219",
+      "jogo": "Coritiba x Mirassol",
+      "canais": [
+        "Premiere",
+        "Globo",
+        "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841225",
+      "jogo": "Remo x Flamengo",
+      "canais": [
+        "Premiere",
+        "SporTV",
+        "Prime Video"
       ]
     },
     {
@@ -72,9 +136,22 @@
       ]
     },
     {
-      "event_id": "401841228",
-      "jogo": "Chapecoense x Internacional",
+      "event_id": "401841221",
+      "jogo": "Botafogo x Palmeiras",
       "canais": [
+        "SporTV",
+        "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841230",
+      "jogo": "Bahia x Remo",
+      "canais": [
+        "Premiere",
+        "SporTV",
+        "Prime Video",
+        "Disney+ / ESPN",
+        "GE TV",
         "Globo"
       ]
     },
@@ -86,10 +163,62 @@
       ]
     },
     {
+      "event_id": "401841233",
+      "jogo": "Santos x Cruzeiro",
+      "canais": [
+        "SporTV",
+        "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841231",
+      "jogo": "Atlético-MG x Fluminense",
+      "canais": [
+        "Premiere",
+        "SporTV",
+        "Prime Video"
+      ]
+    },
+    {
+      "event_id": "401841236",
+      "jogo": "Grêmio x Vasco da Gama",
+      "canais": [
+        "Premiere",
+        "Globo",
+        "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841235",
+      "jogo": "Mirassol x Vitória",
+      "canais": [
+        "Premiere",
+        "Globo",
+        "GE TV"
+      ]
+    },
+    {
       "event_id": "401841245",
       "jogo": "Mirassol x Botafogo",
       "canais": [
         "Globo"
+      ]
+    },
+    {
+      "event_id": "401841247",
+      "jogo": "Vasco da Gama x Coritiba",
+      "canais": [
+        "Premiere",
+        "Globo",
+        "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841242",
+      "jogo": "Vitória x Cruzeiro",
+      "canais": [
+        "SporTV",
+        "GE TV"
       ]
     }
   ],
@@ -97,7 +226,8 @@
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis"
   ],
   "artigos_ge_descobertos": [
+    "https://ge.globo.com/mg/futebol/copa-do-brasil/noticia/2026/08/25/cruzeiro-x-atletico-mg-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/futebol/brasileirao-serie-a/noticia/2026/08/24/botafogo-x-athletico-pr-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
   ],
-  "atualizado_em": "2026-08-24T23:50:40-03:00"
+  "atualizado_em": "2026-08-25T06:30:43-03:00"
 }
