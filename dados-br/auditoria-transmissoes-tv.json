@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 36,
     "jogos_sem_transmissao_14d": 1,
     "jogos_criticos_sem_transmissao_72h": 1,
-    "registros_preservados": 11,
+    "registros_preservados": 13,
     "fontes_com_falha": 1
   },
   "fontes": {
@@ -16,20 +16,20 @@
     "ge_agenda": {
       "ok": true,
       "jogos_com_canal": 14,
-      "duracao_ms": 7059
+      "duracao_ms": 6438
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 7,
-      "jogos_com_canal": 17,
-      "duracao_ms": 95258
+      "artigos_consultados": 10,
+      "jogos_com_canal": 14,
+      "duracao_ms": 96996
     },
     "espn": {
       "ok": true,
       "eventos_na_janela": 37,
       "scoreboard_com_canal": 0,
       "summary_com_canal": 0,
-      "duracao_ms": 3472
+      "duracao_ms": 3106
     }
   },
   "sem_transmissao": [
@@ -38,7 +38,7 @@
       "rodada": 25,
       "jogo": "Remo x Coritiba",
       "data_iso": "2026-08-31T20:00",
-      "faltam_horas": 44.2,
+      "faltam_horas": 37.5,
       "nivel": "critico"
     }
   ],
@@ -71,6 +71,13 @@
     {
       "event_id": "401841218",
       "jogo": "Cruzeiro x Athletico-PR",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
+      "event_id": "401841222",
+      "jogo": "Vitória x Grêmio",
       "canais": [
         "Globo"
       ]
@@ -135,12 +142,22 @@
         "Globo",
         "GE TV"
       ]
+    },
+    {
+      "event_id": "401841242",
+      "jogo": "Vitória x Cruzeiro",
+      "canais": [
+        "Globo"
+      ]
     }
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis"
   ],
   "artigos_ge_descobertos": [
+    "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/08/30/corinthians-x-santos-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/30/bahia-x-internacional-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/sp/tem-esporte/futebol/brasileirao-serie-a/noticia/2026/08/30/mirassol-x-palmeiras-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/pr/futebol/brasileirao-serie-a/noticia/2026/08/29/athletico-x-fluminense-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/sp/campinas-e-regiao/futebol/brasileirao-serie-c/noticia/2026/08/29/guarani-x-brusque-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/pr/futebol/noticia/2026/08/29/athletico-x-parana-clube-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
@@ -149,5 +166,5 @@
     "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/29/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-25a-rodada.ghtml",
     "https://ge.globo.com/futebol/brasileirao-serie-a/noticia/2026/08/29/vasco-x-cruzeiro-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
   ],
-  "atualizado_em": "2026-08-29T23:50:44-03:00"
+  "atualizado_em": "2026-08-30T06:30:43-03:00"
 }
