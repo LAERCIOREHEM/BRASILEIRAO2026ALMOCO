@@ -13,6 +13,42 @@
     "youtube_exato": "links exatos de GE TV/CazéTV permanecem em dados-br/transmissoes-aovivo.json"
   },
   "jogos": {
+    "401841210": {
+      "event_id": "401841210",
+      "rodada": 25,
+      "mandante": "Remo",
+      "visitante": "Coritiba",
+      "data_iso": "2026-08-31T20:00",
+      "tipo": "tv_ou_streaming_oficial",
+      "canais": [
+        "Globo",
+        "Premiere"
+      ],
+      "origem": "GE Agenda + GE guia de transmissão",
+      "confianca": "confirmado",
+      "fontes": [
+        {
+          "fonte": "GE guia de transmissão",
+          "canais": [
+            "Globo"
+          ],
+          "referencia": "https://ge.globo.com/pa/futebol/brasileirao-serie-a/noticia/2026/08/31/remo-x-coritiba-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 85,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
+        },
+        {
+          "fonte": "GE Agenda",
+          "canais": [
+            "Premiere"
+          ],
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
+        }
+      ]
+    },
     "401841224": {
       "event_id": "401841224",
       "rodada": 26,
@@ -21,7 +57,11 @@
       "data_iso": "2026-09-05T16:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Globo",
+        "Premiere",
+        "SporTV",
+        "Prime Video",
+        "GE TV"
       ],
       "origem": "GE Agenda + GE guia de transmissão",
       "confianca": "confirmado",
@@ -32,27 +72,21 @@
             "Globo"
           ],
           "referencia": "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/08/30/corinthians-x-santos-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 85,
-          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
-        },
-        {
-          "fonte": "GE guia de transmissão",
-          "canais": [
-            "Globo"
-          ],
-          "referencia": "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/08/29/sao-paulo-x-bragantino-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 85,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         },
         {
           "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "SporTV",
+            "Globo",
+            "Prime Video",
+            "GE TV"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -66,9 +100,11 @@
       "data_iso": "2026-09-05T18:30",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Globo",
+        "Premiere",
+        "SporTV"
       ],
-      "origem": "GE guia de transmissão",
+      "origem": "GE Agenda + GE guia de transmissão",
       "confianca": "confirmado",
       "fontes": [
         {
@@ -77,8 +113,19 @@
             "Globo"
           ],
           "referencia": "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/08/30/corinthians-x-santos-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 85,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
+        },
+        {
+          "fonte": "GE Agenda",
+          "canais": [
+            "Premiere",
+            "SporTV"
+          ],
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
@@ -91,20 +138,28 @@
       "data_iso": "2026-09-05T21:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "SporTV",
+        "Globo",
+        "Prime Video",
+        "GE TV"
       ],
-      "origem": "snapshot anterior preservado",
-      "confianca": "preservado",
+      "origem": "GE Agenda",
+      "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "snapshot anterior preservado",
+          "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "SporTV",
+            "Globo",
+            "Prime Video",
+            "GE TV"
           ],
-          "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 10,
-          "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
     },
@@ -131,7 +186,7 @@
             "GE TV"
           ],
           "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 10,
           "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
         }
@@ -145,7 +200,9 @@
       "data_iso": "2026-09-06T16:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "SporTV",
+        "Premiere",
+        "Disney+ / ESPN"
       ],
       "origem": "GE Agenda",
       "confianca": "confirmado",
@@ -153,10 +210,12 @@
         {
           "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "SporTV",
+            "Premiere",
+            "Disney+ / ESPN"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -185,7 +244,7 @@
             "Prime Video"
           ],
           "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 10,
           "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
         }
@@ -210,17 +269,7 @@
             "Globo"
           ],
           "referencia": "https://ge.globo.com/pr/futebol/brasileirao-serie-a/noticia/2026/08/29/athletico-x-fluminense-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 85,
-          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
-        },
-        {
-          "fonte": "GE guia de transmissão",
-          "canais": [
-            "Globo"
-          ],
-          "referencia": "https://ge.globo.com/pr/futebol/noticia/2026/08/29/athletico-x-parana-clube-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 85,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -234,19 +283,27 @@
       "data_iso": "2026-09-06T18:30",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "Globo",
+        "GE TV",
+        "Prime Video",
+        "SporTV"
       ],
-      "origem": "GE guia de transmissão",
+      "origem": "GE Agenda",
       "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "GE guia de transmissão",
+          "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "Globo",
+            "GE TV",
+            "Prime Video",
+            "SporTV"
           ],
-          "referencia": "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/29/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-25a-rodada.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 85,
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
@@ -259,7 +316,11 @@
       "data_iso": "2026-09-06T19:30",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "Globo",
+        "GE TV",
+        "Prime Video",
+        "SporTV"
       ],
       "origem": "GE Agenda + GE guia de transmissão",
       "confianca": "confirmado",
@@ -267,20 +328,24 @@
         {
           "fonte": "GE guia de transmissão",
           "canais": [
-            "Globo"
+            "Premiere"
           ],
-          "referencia": "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/29/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-25a-rodada.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "referencia": "https://ge.globo.com/pa/futebol/brasileirao-serie-a/noticia/2026/08/31/remo-x-coritiba-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 85,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         },
         {
           "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "Globo",
+            "GE TV",
+            "Prime Video",
+            "SporTV"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -294,20 +359,30 @@
       "data_iso": "2026-09-07T20:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
+        "Premiere",
+        "SporTV",
+        "Disney+ / ESPN",
+        "GE TV",
+        "Prime Video",
         "Globo"
       ],
-      "origem": "snapshot anterior preservado",
-      "confianca": "preservado",
+      "origem": "GE Agenda",
+      "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "snapshot anterior preservado",
+          "fonte": "GE Agenda",
           "canais": [
+            "Premiere",
+            "SporTV",
+            "Disney+ / ESPN",
+            "GE TV",
+            "Prime Video",
             "Globo"
           ],
-          "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 10,
-          "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
     },
@@ -320,29 +395,25 @@
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
         "Premiere",
-        "SporTV",
-        "Prime Video",
         "Disney+ / ESPN",
-        "GE TV",
-        "Globo"
+        "SporTV",
+        "Prime Video"
       ],
-      "origem": "snapshot anterior preservado",
-      "confianca": "preservado",
+      "origem": "GE Agenda",
+      "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "snapshot anterior preservado",
+          "fonte": "GE Agenda",
           "canais": [
             "Premiere",
-            "SporTV",
-            "Prime Video",
             "Disney+ / ESPN",
-            "GE TV",
-            "Globo"
+            "SporTV",
+            "Prime Video"
           ],
-          "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 10,
-          "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
     },
@@ -354,28 +425,28 @@
       "data_iso": "2026-09-12T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
+        "Premiere",
+        "SporTV",
+        "Disney+ / ESPN",
+        "GE TV",
+        "Prime Video",
         "Globo"
       ],
-      "origem": "GE Agenda + GE guia de transmissão",
+      "origem": "GE Agenda",
       "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "GE guia de transmissão",
-          "canais": [
-            "Globo"
-          ],
-          "referencia": "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/29/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-25a-rodada.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 85,
-          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
-        },
-        {
           "fonte": "GE Agenda",
           "canais": [
+            "Premiere",
+            "SporTV",
+            "Disney+ / ESPN",
+            "GE TV",
+            "Prime Video",
             "Globo"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -389,19 +460,27 @@
       "data_iso": "2026-09-12T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "Globo",
+        "GE TV",
+        "Prime Video",
+        "SporTV"
       ],
-      "origem": "GE guia de transmissão",
+      "origem": "GE Agenda",
       "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "GE guia de transmissão",
+          "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "Globo",
+            "GE TV",
+            "Prime Video",
+            "SporTV"
           ],
-          "referencia": "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/29/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-25a-rodada.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 85,
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
@@ -425,7 +504,7 @@
             "Globo"
           ],
           "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 10,
           "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
         }
@@ -439,7 +518,11 @@
       "data_iso": "2026-09-12T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Globo",
+        "Premiere",
+        "GE TV",
+        "Prime Video",
+        "SporTV"
       ],
       "origem": "GE Agenda + GE guia de transmissão",
       "confianca": "confirmado",
@@ -450,27 +533,21 @@
             "Globo"
           ],
           "referencia": "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/30/bahia-x-internacional-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 85,
-          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
-        },
-        {
-          "fonte": "GE guia de transmissão",
-          "canais": [
-            "Globo"
-          ],
-          "referencia": "https://ge.globo.com/pr/futebol/noticia/2026/08/29/athletico-x-parana-clube-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 85,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         },
         {
           "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "Globo",
+            "GE TV",
+            "Prime Video",
+            "SporTV"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -495,7 +572,7 @@
             "Globo"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -509,9 +586,10 @@
       "data_iso": "2026-09-12T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Globo",
+        "SporTV"
       ],
-      "origem": "GE guia de transmissão",
+      "origem": "GE Agenda + GE guia de transmissão",
       "confianca": "confirmado",
       "fontes": [
         {
@@ -520,18 +598,18 @@
             "Globo"
           ],
           "referencia": "https://ge.globo.com/pr/futebol/brasileirao-serie-a/noticia/2026/08/29/athletico-x-fluminense-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 85,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         },
         {
-          "fonte": "GE guia de transmissão",
+          "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "SporTV"
           ],
-          "referencia": "https://ge.globo.com/pr/futebol/noticia/2026/08/29/athletico-x-parana-clube-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 85,
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
@@ -544,20 +622,28 @@
       "data_iso": "2026-09-12T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "SporTV",
+        "Globo",
+        "Prime Video",
+        "GE TV"
       ],
-      "origem": "snapshot anterior preservado",
-      "confianca": "preservado",
+      "origem": "GE Agenda",
+      "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "snapshot anterior preservado",
+          "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "SporTV",
+            "Globo",
+            "Prime Video",
+            "GE TV"
           ],
-          "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 10,
-          "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
     },
@@ -573,24 +659,26 @@
         "SporTV",
         "Disney+ / ESPN",
         "GE TV",
-        "Prime Video"
+        "Prime Video",
+        "Globo"
       ],
-      "origem": "snapshot anterior preservado",
-      "confianca": "preservado",
+      "origem": "GE Agenda",
+      "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "snapshot anterior preservado",
+          "fonte": "GE Agenda",
           "canais": [
             "Premiere",
             "SporTV",
             "Disney+ / ESPN",
             "GE TV",
-            "Prime Video"
+            "Prime Video",
+            "Globo"
           ],
-          "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 10,
-          "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
     },
@@ -602,20 +690,28 @@
       "data_iso": "2026-09-12T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "SporTV",
+        "Globo",
+        "Prime Video",
+        "GE TV"
       ],
-      "origem": "snapshot anterior preservado",
-      "confianca": "preservado",
+      "origem": "GE Agenda",
+      "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "snapshot anterior preservado",
+          "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "SporTV",
+            "Globo",
+            "Prime Video",
+            "GE TV"
           ],
-          "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 10,
-          "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
     },
@@ -627,7 +723,11 @@
       "data_iso": "2026-09-19T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "Globo",
+        "GE TV",
+        "Prime Video",
+        "SporTV"
       ],
       "origem": "GE Agenda",
       "confianca": "confirmado",
@@ -635,10 +735,14 @@
         {
           "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "Globo",
+            "GE TV",
+            "Prime Video",
+            "SporTV"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -663,7 +767,7 @@
             "Globo"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -677,7 +781,11 @@
       "data_iso": "2026-09-19T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "Globo",
+        "GE TV",
+        "Prime Video",
+        "SporTV"
       ],
       "origem": "GE Agenda",
       "confianca": "confirmado",
@@ -685,10 +793,14 @@
         {
           "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "Globo",
+            "GE TV",
+            "Prime Video",
+            "SporTV"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -702,7 +814,11 @@
       "data_iso": "2026-09-19T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "SporTV",
+        "Globo",
+        "Prime Video",
+        "GE TV"
       ],
       "origem": "GE Agenda",
       "confianca": "confirmado",
@@ -710,10 +826,14 @@
         {
           "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "SporTV",
+            "Globo",
+            "Prime Video",
+            "GE TV"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -727,19 +847,27 @@
       "data_iso": "2026-09-19T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "Globo",
+        "GE TV",
+        "Prime Video",
+        "SporTV"
       ],
-      "origem": "GE guia de transmissão",
+      "origem": "GE Agenda",
       "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "GE guia de transmissão",
+          "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "Globo",
+            "GE TV",
+            "Prime Video",
+            "SporTV"
           ],
-          "referencia": "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/29/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-25a-rodada.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 85,
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
@@ -767,7 +895,7 @@
             "GE TV"
           ],
           "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 10,
           "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
         }
@@ -781,20 +909,22 @@
       "data_iso": "2026-09-19T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "SporTV"
       ],
-      "origem": "snapshot anterior preservado",
-      "confianca": "preservado",
+      "origem": "GE Agenda",
+      "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "snapshot anterior preservado",
+          "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "SporTV"
           ],
-          "referencia": "dados-br/transmissoes-tv.json",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 10,
-          "detalhe": "usado somente quando nenhuma fonte automática respondeu com dado válido"
+          "referencia": "https://ge.globo.com/agenda/",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
+          "autoridade": 80,
+          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
     },
@@ -806,28 +936,26 @@
       "data_iso": "2026-09-19T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "Premiere",
+        "Globo",
+        "GE TV",
+        "Prime Video",
+        "SporTV"
       ],
-      "origem": "GE Agenda + GE guia de transmissão",
+      "origem": "GE Agenda",
       "confianca": "confirmado",
       "fontes": [
         {
-          "fonte": "GE guia de transmissão",
-          "canais": [
-            "Globo"
-          ],
-          "referencia": "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/08/30/bahia-x-internacional-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
-          "autoridade": 85,
-          "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
-        },
-        {
           "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "Premiere",
+            "Globo",
+            "GE TV",
+            "Prime Video",
+            "SporTV"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -852,7 +980,7 @@
             "Globo"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
@@ -866,7 +994,9 @@
       "data_iso": "2026-09-19T15:00",
       "tipo": "tv_ou_streaming_oficial",
       "canais": [
-        "Globo"
+        "SporTV",
+        "Premiere",
+        "Disney+ / ESPN"
       ],
       "origem": "GE Agenda",
       "confianca": "confirmado",
@@ -874,15 +1004,17 @@
         {
           "fonte": "GE Agenda",
           "canais": [
-            "Globo"
+            "SporTV",
+            "Premiere",
+            "Disney+ / ESPN"
           ],
           "referencia": "https://ge.globo.com/agenda/",
-          "capturado_em": "2026-08-30T23:50:42-03:00",
+          "capturado_em": "2026-08-31T06:40:36-03:00",
           "autoridade": 80,
           "detalhe": "clubes e provedores identificados no mesmo bloco de conteúdo"
         }
       ]
     }
   },
-  "atualizado_em": "2026-08-30T23:50:42-03:00"
+  "atualizado_em": "2026-08-31T06:40:36-03:00"
 }
