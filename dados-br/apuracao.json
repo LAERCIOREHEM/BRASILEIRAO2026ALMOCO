@@ -1,7 +1,7 @@
 {
   "schema_version": 4,
   "temporada": 2026,
-  "atualizado_em": "2026-08-31T22:11:03.317996-03:00",
+  "atualizado_em": "2026-09-02T11:46:45.451297-03:00",
   "fonte": "Supabase br_palpites + resultados finais auditados dos JSONs locais",
   "politica_sigilo": "Rodadas e blocos não publicados não expõem palpites nem rankings no JSON público.",
   "regra_pontuacao": {
@@ -3605,15 +3605,6 @@
           "status": "0'"
         },
         {
-          "event_id": "401841176",
-          "rodada": 21,
-          "mandante": "Botafogo",
-          "visitante": "Grêmio",
-          "data_iso": "2026-07-29T15:00",
-          "adiado": true,
-          "status": "0'"
-        },
-        {
           "event_id": "401841175",
           "rodada": 21,
           "mandante": "Chapecoense",
@@ -3629,6 +3620,15 @@
           "visitante": "Santos",
           "data_iso": "2026-07-29T15:00",
           "adiado": true,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841176",
+          "rodada": 21,
+          "mandante": "Botafogo",
+          "visitante": "Grêmio",
+          "data_iso": "2026-09-16T19:30",
+          "adiado": false,
           "status": "0'"
         }
       ],
@@ -8659,7 +8659,7 @@
     },
     {
       "rodada": 25,
-      "status": "publicada",
+      "status": "apurada",
       "publicada": true,
       "sigilosa": false,
       "estado_apuracao": "concluida",
@@ -10101,56 +10101,20 @@
       "jogos": [],
       "pendencias": [
         {
-          "event_id": "401841231",
-          "rodada": 27,
-          "mandante": "Atlético-MG",
-          "visitante": "Fluminense",
-          "data_iso": "2026-09-12T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841230",
-          "rodada": 27,
-          "mandante": "Bahia",
-          "visitante": "Remo",
-          "data_iso": "2026-09-12T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841229",
-          "rodada": 27,
-          "mandante": "Botafogo",
-          "visitante": "Bragantino",
-          "data_iso": "2026-09-12T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841228",
-          "rodada": 27,
-          "mandante": "Chapecoense",
-          "visitante": "Internacional",
-          "data_iso": "2026-09-12T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
           "event_id": "401841232",
           "rodada": 27,
           "mandante": "Coritiba",
           "visitante": "Athletico-PR",
-          "data_iso": "2026-09-12T15:00",
+          "data_iso": "2026-09-11T21:00",
           "adiado": false,
           "status": "0'"
         },
         {
-          "event_id": "401841237",
+          "event_id": "401841231",
           "rodada": 27,
-          "mandante": "Flamengo",
-          "visitante": "Corinthians",
-          "data_iso": "2026-09-12T15:00",
+          "mandante": "Atlético-MG",
+          "visitante": "Fluminense",
+          "data_iso": "2026-09-12T16:00",
           "adiado": false,
           "status": "0'"
         },
@@ -10159,16 +10123,16 @@
           "rodada": 27,
           "mandante": "Grêmio",
           "visitante": "Vasco da Gama",
-          "data_iso": "2026-09-12T15:00",
+          "data_iso": "2026-09-12T16:00",
           "adiado": false,
           "status": "0'"
         },
         {
-          "event_id": "401841235",
+          "event_id": "401841228",
           "rodada": 27,
-          "mandante": "Mirassol",
-          "visitante": "Vitória",
-          "data_iso": "2026-09-12T15:00",
+          "mandante": "Chapecoense",
+          "visitante": "Internacional",
+          "data_iso": "2026-09-12T17:00",
           "adiado": false,
           "status": "0'"
         },
@@ -10177,7 +10141,16 @@
           "rodada": 27,
           "mandante": "Palmeiras",
           "visitante": "São Paulo",
-          "data_iso": "2026-09-12T15:00",
+          "data_iso": "2026-09-12T18:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841229",
+          "rodada": 27,
+          "mandante": "Botafogo",
+          "visitante": "Bragantino",
+          "data_iso": "2026-09-12T20:30",
           "adiado": false,
           "status": "0'"
         },
@@ -10186,7 +10159,34 @@
           "rodada": 27,
           "mandante": "Santos",
           "visitante": "Cruzeiro",
-          "data_iso": "2026-09-12T15:00",
+          "data_iso": "2026-09-12T21:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841235",
+          "rodada": 27,
+          "mandante": "Mirassol",
+          "visitante": "Vitória",
+          "data_iso": "2026-09-13T16:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841237",
+          "rodada": 27,
+          "mandante": "Flamengo",
+          "visitante": "Corinthians",
+          "data_iso": "2026-09-13T17:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841230",
+          "rodada": 27,
+          "mandante": "Bahia",
+          "visitante": "Remo",
+          "data_iso": "2026-09-14T20:00",
           "adiado": false,
           "status": "0'"
         }
@@ -10215,47 +10215,11 @@
       "jogos": [],
       "pendencias": [
         {
-          "event_id": "401841238",
-          "rodada": 28,
-          "mandante": "Athletico-PR",
-          "visitante": "Bahia",
-          "data_iso": "2026-09-19T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
           "event_id": "401841239",
           "rodada": 28,
           "mandante": "Atlético-MG",
           "visitante": "Chapecoense",
-          "data_iso": "2026-09-19T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841240",
-          "rodada": 28,
-          "mandante": "Corinthians",
-          "visitante": "Fluminense",
-          "data_iso": "2026-09-19T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841241",
-          "rodada": 28,
-          "mandante": "Flamengo",
-          "visitante": "Bragantino",
-          "data_iso": "2026-09-19T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841246",
-          "rodada": 28,
-          "mandante": "Grêmio",
-          "visitante": "Palmeiras",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-19T16:00",
           "adiado": false,
           "status": "0'"
         },
@@ -10264,7 +10228,7 @@
           "rodada": 28,
           "mandante": "Mirassol",
           "visitante": "Botafogo",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-19T17:00",
           "adiado": false,
           "status": "0'"
         },
@@ -10273,16 +10237,7 @@
           "rodada": 28,
           "mandante": "Remo",
           "visitante": "Santos",
-          "data_iso": "2026-09-19T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841243",
-          "rodada": 28,
-          "mandante": "São Paulo",
-          "visitante": "Internacional",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-19T18:30",
           "adiado": false,
           "status": "0'"
         },
@@ -10291,7 +10246,34 @@
           "rodada": 28,
           "mandante": "Vasco da Gama",
           "visitante": "Coritiba",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-19T20:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841243",
+          "rodada": 28,
+          "mandante": "São Paulo",
+          "visitante": "Internacional",
+          "data_iso": "2026-09-19T21:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841246",
+          "rodada": 28,
+          "mandante": "Grêmio",
+          "visitante": "Palmeiras",
+          "data_iso": "2026-09-20T11:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841240",
+          "rodada": 28,
+          "mandante": "Corinthians",
+          "visitante": "Fluminense",
+          "data_iso": "2026-09-20T16:00",
           "adiado": false,
           "status": "0'"
         },
@@ -10300,7 +10282,25 @@
           "rodada": 28,
           "mandante": "Vitória",
           "visitante": "Cruzeiro",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-20T16:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841241",
+          "rodada": 28,
+          "mandante": "Flamengo",
+          "visitante": "Bragantino",
+          "data_iso": "2026-09-20T18:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841238",
+          "rodada": 28,
+          "mandante": "Athletico-PR",
+          "visitante": "Bahia",
+          "data_iso": "2026-09-20T19:30",
           "adiado": false,
           "status": "0'"
         }
@@ -10329,47 +10329,11 @@
       "jogos": [],
       "pendencias": [
         {
-          "event_id": "401841256",
-          "rodada": 29,
-          "mandante": "Athletico-PR",
-          "visitante": "Atlético-MG",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841257",
-          "rodada": 29,
-          "mandante": "Botafogo",
-          "visitante": "Vasco da Gama",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
           "event_id": "401841253",
           "rodada": 29,
           "mandante": "Bragantino",
           "visitante": "Mirassol",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841249",
-          "rodada": 29,
-          "mandante": "Cruzeiro",
-          "visitante": "São Paulo",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841248",
-          "rodada": 29,
-          "mandante": "Fluminense",
-          "visitante": "Coritiba",
-          "data_iso": "2026-10-07T15:00",
+          "data_iso": "2026-10-07T19:30",
           "adiado": false,
           "status": "0'"
         },
@@ -10378,16 +10342,7 @@
           "rodada": 29,
           "mandante": "Internacional",
           "visitante": "Corinthians",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841254",
-          "rodada": 29,
-          "mandante": "Palmeiras",
-          "visitante": "Bahia",
-          "data_iso": "2026-10-07T15:00",
+          "data_iso": "2026-10-07T19:30",
           "adiado": false,
           "status": "0'"
         },
@@ -10396,16 +10351,7 @@
           "rodada": 29,
           "mandante": "Remo",
           "visitante": "Grêmio",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841251",
-          "rodada": 29,
-          "mandante": "Santos",
-          "visitante": "Flamengo",
-          "data_iso": "2026-10-07T15:00",
+          "data_iso": "2026-10-07T19:30",
           "adiado": false,
           "status": "0'"
         },
@@ -10414,7 +10360,61 @@
           "rodada": 29,
           "mandante": "Vitória",
           "visitante": "Chapecoense",
-          "data_iso": "2026-10-07T15:00",
+          "data_iso": "2026-10-07T20:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841257",
+          "rodada": 29,
+          "mandante": "Botafogo",
+          "visitante": "Vasco da Gama",
+          "data_iso": "2026-10-07T20:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841249",
+          "rodada": 29,
+          "mandante": "Cruzeiro",
+          "visitante": "São Paulo",
+          "data_iso": "2026-10-07T21:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841251",
+          "rodada": 29,
+          "mandante": "Santos",
+          "visitante": "Flamengo",
+          "data_iso": "2026-10-08T19:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841256",
+          "rodada": 29,
+          "mandante": "Athletico-PR",
+          "visitante": "Atlético-MG",
+          "data_iso": "2026-10-08T20:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841248",
+          "rodada": 29,
+          "mandante": "Fluminense",
+          "visitante": "Coritiba",
+          "data_iso": "2026-10-08T21:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841254",
+          "rodada": 29,
+          "mandante": "Palmeiras",
+          "visitante": "Bahia",
+          "data_iso": "2026-10-08T21:30",
           "adiado": false,
           "status": "0'"
         }
@@ -10443,74 +10443,11 @@
       "jogos": [],
       "pendencias": [
         {
-          "event_id": "401841258",
+          "event_id": "401841262",
           "rodada": 30,
-          "mandante": "Atlético-MG",
-          "visitante": "Santos",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841266",
-          "rodada": 30,
-          "mandante": "Bahia",
-          "visitante": "Mirassol",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841260",
-          "rodada": 30,
-          "mandante": "Bragantino",
-          "visitante": "Cruzeiro",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841265",
-          "rodada": 30,
-          "mandante": "Chapecoense",
-          "visitante": "Athletico-PR",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841264",
-          "rodada": 30,
-          "mandante": "Coritiba",
-          "visitante": "Botafogo",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841263",
-          "rodada": 30,
-          "mandante": "Flamengo",
-          "visitante": "Fluminense",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841267",
-          "rodada": 30,
-          "mandante": "Grêmio",
-          "visitante": "Internacional",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841261",
-          "rodada": 30,
-          "mandante": "Palmeiras",
-          "visitante": "Corinthians",
-          "data_iso": "2026-10-10T15:00",
+          "mandante": "Vasco da Gama",
+          "visitante": "Remo",
+          "data_iso": "2026-10-10T17:00",
           "adiado": false,
           "status": "0'"
         },
@@ -10519,16 +10456,79 @@
           "rodada": 30,
           "mandante": "São Paulo",
           "visitante": "Vitória",
-          "data_iso": "2026-10-10T15:00",
+          "data_iso": "2026-10-10T21:00",
           "adiado": false,
           "status": "0'"
         },
         {
-          "event_id": "401841262",
+          "event_id": "401841258",
           "rodada": 30,
-          "mandante": "Vasco da Gama",
-          "visitante": "Remo",
-          "data_iso": "2026-10-10T15:00",
+          "mandante": "Atlético-MG",
+          "visitante": "Santos",
+          "data_iso": "2026-10-11T16:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841263",
+          "rodada": 30,
+          "mandante": "Flamengo",
+          "visitante": "Fluminense",
+          "data_iso": "2026-10-11T17:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841267",
+          "rodada": 30,
+          "mandante": "Grêmio",
+          "visitante": "Internacional",
+          "data_iso": "2026-10-11T17:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841261",
+          "rodada": 30,
+          "mandante": "Palmeiras",
+          "visitante": "Corinthians",
+          "data_iso": "2026-10-11T17:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841266",
+          "rodada": 30,
+          "mandante": "Bahia",
+          "visitante": "Mirassol",
+          "data_iso": "2026-10-11T19:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841264",
+          "rodada": 30,
+          "mandante": "Coritiba",
+          "visitante": "Botafogo",
+          "data_iso": "2026-10-11T19:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841265",
+          "rodada": 30,
+          "mandante": "Chapecoense",
+          "visitante": "Athletico-PR",
+          "data_iso": "2026-10-12T19:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841260",
+          "rodada": 30,
+          "mandante": "Bragantino",
+          "visitante": "Cruzeiro",
+          "data_iso": "2026-10-12T21:00",
           "adiado": false,
           "status": "0'"
         }
@@ -11013,94 +11013,94 @@
       "jogos": [],
       "pendencias": [
         {
-          "event_id": "35-corinthians-botafogo-",
+          "event_id": "401841316",
           "rodada": 35,
           "mandante": "Corinthians",
           "visitante": "Botafogo",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-coritiba-santos-",
+          "event_id": "401841315",
           "rodada": 35,
           "mandante": "Coritiba",
           "visitante": "Santos",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-cruzeiro-palmeiras-",
+          "event_id": "401841314",
           "rodada": 35,
           "mandante": "Cruzeiro",
           "visitante": "Palmeiras",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-flamengo-athletico-pr-",
+          "event_id": "401841313",
           "rodada": 35,
           "mandante": "Flamengo",
           "visitante": "Athletico-PR",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-gremio-bahia-",
+          "event_id": "401841312",
           "rodada": 35,
           "mandante": "Grêmio",
           "visitante": "Bahia",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-mirassol-atletico-mg-",
+          "event_id": "401841311",
           "rodada": 35,
           "mandante": "Mirassol",
           "visitante": "Atlético-MG",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-remo-chapecoense-",
+          "event_id": "401841310",
           "rodada": 35,
           "mandante": "Remo",
           "visitante": "Chapecoense",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-sao-paulo-fluminense-",
+          "event_id": "401841309",
           "rodada": 35,
           "mandante": "São Paulo",
           "visitante": "Fluminense",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-vasco-da-gama-internacional-",
+          "event_id": "401841308",
           "rodada": 35,
           "mandante": "Vasco da Gama",
           "visitante": "Internacional",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-vitoria-bragantino-",
+          "event_id": "401841317",
           "rodada": 35,
           "mandante": "Vitória",
           "visitante": "Bragantino",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         }
       ],
       "auditoria_resumo": []
@@ -11127,94 +11127,94 @@
       "jogos": [],
       "pendencias": [
         {
-          "event_id": "36-athletico-pr-remo-",
+          "event_id": "401841318",
           "rodada": 36,
           "mandante": "Athletico-PR",
           "visitante": "Remo",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-atletico-mg-corinthians-",
+          "event_id": "401841319",
           "rodada": 36,
           "mandante": "Atlético-MG",
           "visitante": "Corinthians",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-bahia-coritiba-",
+          "event_id": "401841327",
           "rodada": 36,
           "mandante": "Bahia",
           "visitante": "Coritiba",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-botafogo-sao-paulo-",
+          "event_id": "401841326",
           "rodada": 36,
           "mandante": "Botafogo",
           "visitante": "São Paulo",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-bragantino-vasco-da-gama-",
+          "event_id": "401841321",
           "rodada": 36,
           "mandante": "Bragantino",
           "visitante": "Vasco da Gama",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-chapecoense-cruzeiro-",
+          "event_id": "401841325",
           "rodada": 36,
           "mandante": "Chapecoense",
           "visitante": "Cruzeiro",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-fluminense-mirassol-",
+          "event_id": "401841324",
           "rodada": 36,
           "mandante": "Fluminense",
           "visitante": "Mirassol",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-internacional-vitoria-",
+          "event_id": "401841323",
           "rodada": 36,
           "mandante": "Internacional",
           "visitante": "Vitória",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-palmeiras-flamengo-",
+          "event_id": "401841322",
           "rodada": 36,
           "mandante": "Palmeiras",
           "visitante": "Flamengo",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-santos-gremio-",
+          "event_id": "401841320",
           "rodada": 36,
           "mandante": "Santos",
           "visitante": "Grêmio",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         }
       ],
       "auditoria_resumo": []
@@ -11241,94 +11241,94 @@
       "jogos": [],
       "pendencias": [
         {
-          "event_id": "37-atletico-mg-vasco-da-gama-",
+          "event_id": "401841328",
           "rodada": 37,
           "mandante": "Atlético-MG",
           "visitante": "Vasco da Gama",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-botafogo-bahia-",
+          "event_id": "401841336",
           "rodada": 37,
           "mandante": "Botafogo",
           "visitante": "Bahia",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-chapecoense-palmeiras-",
+          "event_id": "401841335",
           "rodada": 37,
           "mandante": "Chapecoense",
           "visitante": "Palmeiras",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-corinthians-gremio-",
+          "event_id": "401841334",
           "rodada": 37,
           "mandante": "Corinthians",
           "visitante": "Grêmio",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-coritiba-flamengo-",
+          "event_id": "401841333",
           "rodada": 37,
           "mandante": "Coritiba",
           "visitante": "Flamengo",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-fluminense-cruzeiro-",
+          "event_id": "401841337",
           "rodada": 37,
           "mandante": "Fluminense",
           "visitante": "Cruzeiro",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-internacional-bragantino-",
+          "event_id": "401841331",
           "rodada": 37,
           "mandante": "Internacional",
           "visitante": "Bragantino",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-mirassol-athletico-pr-",
+          "event_id": "401841330",
           "rodada": 37,
           "mandante": "Mirassol",
           "visitante": "Athletico-PR",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-sao-paulo-remo-",
+          "event_id": "401841329",
           "rodada": 37,
           "mandante": "São Paulo",
           "visitante": "Remo",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-vitoria-santos-",
+          "event_id": "401841332",
           "rodada": 37,
           "mandante": "Vitória",
           "visitante": "Santos",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         }
       ],
       "auditoria_resumo": []
@@ -11355,94 +11355,94 @@
       "jogos": [],
       "pendencias": [
         {
-          "event_id": "38-athletico-pr-sao-paulo-",
+          "event_id": "401841338",
           "rodada": 38,
           "mandante": "Athletico-PR",
           "visitante": "São Paulo",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-bahia-atletico-mg-",
+          "event_id": "401841339",
           "rodada": 38,
           "mandante": "Bahia",
           "visitante": "Atlético-MG",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-bragantino-fluminense-",
+          "event_id": "401841344",
           "rodada": 38,
           "mandante": "Bragantino",
           "visitante": "Fluminense",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-cruzeiro-internacional-",
+          "event_id": "401841340",
           "rodada": 38,
           "mandante": "Cruzeiro",
           "visitante": "Internacional",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-flamengo-chapecoense-",
+          "event_id": "401841341",
           "rodada": 38,
           "mandante": "Flamengo",
           "visitante": "Chapecoense",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-gremio-mirassol-",
+          "event_id": "401841347",
           "rodada": 38,
           "mandante": "Grêmio",
           "visitante": "Mirassol",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-palmeiras-coritiba-",
+          "event_id": "401841343",
           "rodada": 38,
           "mandante": "Palmeiras",
           "visitante": "Coritiba",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-remo-corinthians-",
+          "event_id": "401841345",
           "rodada": 38,
           "mandante": "Remo",
           "visitante": "Corinthians",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-santos-botafogo-",
+          "event_id": "401841346",
           "rodada": 38,
           "mandante": "Santos",
           "visitante": "Botafogo",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-vasco-da-gama-vitoria-",
+          "event_id": "401841342",
           "rodada": 38,
           "mandante": "Vasco da Gama",
           "visitante": "Vitória",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         }
       ],
       "auditoria_resumo": []
@@ -12074,15 +12074,6 @@
           "status": "0'"
         },
         {
-          "event_id": "401841176",
-          "rodada": 21,
-          "mandante": "Botafogo",
-          "visitante": "Grêmio",
-          "data_iso": "2026-07-29T15:00",
-          "adiado": true,
-          "status": "0'"
-        },
-        {
           "event_id": "401841175",
           "rodada": 21,
           "mandante": "Chapecoense",
@@ -12098,6 +12089,15 @@
           "visitante": "Santos",
           "data_iso": "2026-07-29T15:00",
           "adiado": true,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841176",
+          "rodada": 21,
+          "mandante": "Botafogo",
+          "visitante": "Grêmio",
+          "data_iso": "2026-09-16T19:30",
+          "adiado": false,
           "status": "0'"
         }
       ],
@@ -12645,56 +12645,20 @@
       "rankings_por_liga": {},
       "pendencias": [
         {
-          "event_id": "401841231",
-          "rodada": 27,
-          "mandante": "Atlético-MG",
-          "visitante": "Fluminense",
-          "data_iso": "2026-09-12T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841230",
-          "rodada": 27,
-          "mandante": "Bahia",
-          "visitante": "Remo",
-          "data_iso": "2026-09-12T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841229",
-          "rodada": 27,
-          "mandante": "Botafogo",
-          "visitante": "Bragantino",
-          "data_iso": "2026-09-12T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841228",
-          "rodada": 27,
-          "mandante": "Chapecoense",
-          "visitante": "Internacional",
-          "data_iso": "2026-09-12T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
           "event_id": "401841232",
           "rodada": 27,
           "mandante": "Coritiba",
           "visitante": "Athletico-PR",
-          "data_iso": "2026-09-12T15:00",
+          "data_iso": "2026-09-11T21:00",
           "adiado": false,
           "status": "0'"
         },
         {
-          "event_id": "401841237",
+          "event_id": "401841231",
           "rodada": 27,
-          "mandante": "Flamengo",
-          "visitante": "Corinthians",
-          "data_iso": "2026-09-12T15:00",
+          "mandante": "Atlético-MG",
+          "visitante": "Fluminense",
+          "data_iso": "2026-09-12T16:00",
           "adiado": false,
           "status": "0'"
         },
@@ -12703,16 +12667,16 @@
           "rodada": 27,
           "mandante": "Grêmio",
           "visitante": "Vasco da Gama",
-          "data_iso": "2026-09-12T15:00",
+          "data_iso": "2026-09-12T16:00",
           "adiado": false,
           "status": "0'"
         },
         {
-          "event_id": "401841235",
+          "event_id": "401841228",
           "rodada": 27,
-          "mandante": "Mirassol",
-          "visitante": "Vitória",
-          "data_iso": "2026-09-12T15:00",
+          "mandante": "Chapecoense",
+          "visitante": "Internacional",
+          "data_iso": "2026-09-12T17:00",
           "adiado": false,
           "status": "0'"
         },
@@ -12721,7 +12685,16 @@
           "rodada": 27,
           "mandante": "Palmeiras",
           "visitante": "São Paulo",
-          "data_iso": "2026-09-12T15:00",
+          "data_iso": "2026-09-12T18:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841229",
+          "rodada": 27,
+          "mandante": "Botafogo",
+          "visitante": "Bragantino",
+          "data_iso": "2026-09-12T20:30",
           "adiado": false,
           "status": "0'"
         },
@@ -12730,16 +12703,34 @@
           "rodada": 27,
           "mandante": "Santos",
           "visitante": "Cruzeiro",
-          "data_iso": "2026-09-12T15:00",
+          "data_iso": "2026-09-12T21:00",
           "adiado": false,
           "status": "0'"
         },
         {
-          "event_id": "401841238",
-          "rodada": 28,
-          "mandante": "Athletico-PR",
-          "visitante": "Bahia",
-          "data_iso": "2026-09-19T15:00",
+          "event_id": "401841235",
+          "rodada": 27,
+          "mandante": "Mirassol",
+          "visitante": "Vitória",
+          "data_iso": "2026-09-13T16:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841237",
+          "rodada": 27,
+          "mandante": "Flamengo",
+          "visitante": "Corinthians",
+          "data_iso": "2026-09-13T17:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841230",
+          "rodada": 27,
+          "mandante": "Bahia",
+          "visitante": "Remo",
+          "data_iso": "2026-09-14T20:00",
           "adiado": false,
           "status": "0'"
         },
@@ -12748,34 +12739,7 @@
           "rodada": 28,
           "mandante": "Atlético-MG",
           "visitante": "Chapecoense",
-          "data_iso": "2026-09-19T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841240",
-          "rodada": 28,
-          "mandante": "Corinthians",
-          "visitante": "Fluminense",
-          "data_iso": "2026-09-19T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841241",
-          "rodada": 28,
-          "mandante": "Flamengo",
-          "visitante": "Bragantino",
-          "data_iso": "2026-09-19T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841246",
-          "rodada": 28,
-          "mandante": "Grêmio",
-          "visitante": "Palmeiras",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-19T16:00",
           "adiado": false,
           "status": "0'"
         },
@@ -12784,7 +12748,7 @@
           "rodada": 28,
           "mandante": "Mirassol",
           "visitante": "Botafogo",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-19T17:00",
           "adiado": false,
           "status": "0'"
         },
@@ -12793,16 +12757,7 @@
           "rodada": 28,
           "mandante": "Remo",
           "visitante": "Santos",
-          "data_iso": "2026-09-19T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841243",
-          "rodada": 28,
-          "mandante": "São Paulo",
-          "visitante": "Internacional",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-19T18:30",
           "adiado": false,
           "status": "0'"
         },
@@ -12811,7 +12766,34 @@
           "rodada": 28,
           "mandante": "Vasco da Gama",
           "visitante": "Coritiba",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-19T20:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841243",
+          "rodada": 28,
+          "mandante": "São Paulo",
+          "visitante": "Internacional",
+          "data_iso": "2026-09-19T21:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841246",
+          "rodada": 28,
+          "mandante": "Grêmio",
+          "visitante": "Palmeiras",
+          "data_iso": "2026-09-20T11:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841240",
+          "rodada": 28,
+          "mandante": "Corinthians",
+          "visitante": "Fluminense",
+          "data_iso": "2026-09-20T16:00",
           "adiado": false,
           "status": "0'"
         },
@@ -12820,25 +12802,25 @@
           "rodada": 28,
           "mandante": "Vitória",
           "visitante": "Cruzeiro",
-          "data_iso": "2026-09-19T15:00",
+          "data_iso": "2026-09-20T16:00",
           "adiado": false,
           "status": "0'"
         },
         {
-          "event_id": "401841256",
-          "rodada": 29,
+          "event_id": "401841241",
+          "rodada": 28,
+          "mandante": "Flamengo",
+          "visitante": "Bragantino",
+          "data_iso": "2026-09-20T18:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841238",
+          "rodada": 28,
           "mandante": "Athletico-PR",
-          "visitante": "Atlético-MG",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841257",
-          "rodada": 29,
-          "mandante": "Botafogo",
-          "visitante": "Vasco da Gama",
-          "data_iso": "2026-10-07T15:00",
+          "visitante": "Bahia",
+          "data_iso": "2026-09-20T19:30",
           "adiado": false,
           "status": "0'"
         },
@@ -12847,25 +12829,7 @@
           "rodada": 29,
           "mandante": "Bragantino",
           "visitante": "Mirassol",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841249",
-          "rodada": 29,
-          "mandante": "Cruzeiro",
-          "visitante": "São Paulo",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841248",
-          "rodada": 29,
-          "mandante": "Fluminense",
-          "visitante": "Coritiba",
-          "data_iso": "2026-10-07T15:00",
+          "data_iso": "2026-10-07T19:30",
           "adiado": false,
           "status": "0'"
         },
@@ -12874,16 +12838,7 @@
           "rodada": 29,
           "mandante": "Internacional",
           "visitante": "Corinthians",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841254",
-          "rodada": 29,
-          "mandante": "Palmeiras",
-          "visitante": "Bahia",
-          "data_iso": "2026-10-07T15:00",
+          "data_iso": "2026-10-07T19:30",
           "adiado": false,
           "status": "0'"
         },
@@ -12892,16 +12847,7 @@
           "rodada": 29,
           "mandante": "Remo",
           "visitante": "Grêmio",
-          "data_iso": "2026-10-07T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841251",
-          "rodada": 29,
-          "mandante": "Santos",
-          "visitante": "Flamengo",
-          "data_iso": "2026-10-07T15:00",
+          "data_iso": "2026-10-07T19:30",
           "adiado": false,
           "status": "0'"
         },
@@ -12910,7 +12856,61 @@
           "rodada": 29,
           "mandante": "Vitória",
           "visitante": "Chapecoense",
-          "data_iso": "2026-10-07T15:00",
+          "data_iso": "2026-10-07T20:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841257",
+          "rodada": 29,
+          "mandante": "Botafogo",
+          "visitante": "Vasco da Gama",
+          "data_iso": "2026-10-07T20:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841249",
+          "rodada": 29,
+          "mandante": "Cruzeiro",
+          "visitante": "São Paulo",
+          "data_iso": "2026-10-07T21:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841251",
+          "rodada": 29,
+          "mandante": "Santos",
+          "visitante": "Flamengo",
+          "data_iso": "2026-10-08T19:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841256",
+          "rodada": 29,
+          "mandante": "Athletico-PR",
+          "visitante": "Atlético-MG",
+          "data_iso": "2026-10-08T20:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841248",
+          "rodada": 29,
+          "mandante": "Fluminense",
+          "visitante": "Coritiba",
+          "data_iso": "2026-10-08T21:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841254",
+          "rodada": 29,
+          "mandante": "Palmeiras",
+          "visitante": "Bahia",
+          "data_iso": "2026-10-08T21:30",
           "adiado": false,
           "status": "0'"
         }
@@ -12961,74 +12961,11 @@
       "rankings_por_liga": {},
       "pendencias": [
         {
-          "event_id": "401841258",
+          "event_id": "401841262",
           "rodada": 30,
-          "mandante": "Atlético-MG",
-          "visitante": "Santos",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841266",
-          "rodada": 30,
-          "mandante": "Bahia",
-          "visitante": "Mirassol",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841260",
-          "rodada": 30,
-          "mandante": "Bragantino",
-          "visitante": "Cruzeiro",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841265",
-          "rodada": 30,
-          "mandante": "Chapecoense",
-          "visitante": "Athletico-PR",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841264",
-          "rodada": 30,
-          "mandante": "Coritiba",
-          "visitante": "Botafogo",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841263",
-          "rodada": 30,
-          "mandante": "Flamengo",
-          "visitante": "Fluminense",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841267",
-          "rodada": 30,
-          "mandante": "Grêmio",
-          "visitante": "Internacional",
-          "data_iso": "2026-10-10T15:00",
-          "adiado": false,
-          "status": "0'"
-        },
-        {
-          "event_id": "401841261",
-          "rodada": 30,
-          "mandante": "Palmeiras",
-          "visitante": "Corinthians",
-          "data_iso": "2026-10-10T15:00",
+          "mandante": "Vasco da Gama",
+          "visitante": "Remo",
+          "data_iso": "2026-10-10T17:00",
           "adiado": false,
           "status": "0'"
         },
@@ -13037,16 +12974,79 @@
           "rodada": 30,
           "mandante": "São Paulo",
           "visitante": "Vitória",
-          "data_iso": "2026-10-10T15:00",
+          "data_iso": "2026-10-10T21:00",
           "adiado": false,
           "status": "0'"
         },
         {
-          "event_id": "401841262",
+          "event_id": "401841258",
           "rodada": 30,
-          "mandante": "Vasco da Gama",
-          "visitante": "Remo",
-          "data_iso": "2026-10-10T15:00",
+          "mandante": "Atlético-MG",
+          "visitante": "Santos",
+          "data_iso": "2026-10-11T16:00",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841263",
+          "rodada": 30,
+          "mandante": "Flamengo",
+          "visitante": "Fluminense",
+          "data_iso": "2026-10-11T17:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841267",
+          "rodada": 30,
+          "mandante": "Grêmio",
+          "visitante": "Internacional",
+          "data_iso": "2026-10-11T17:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841261",
+          "rodada": 30,
+          "mandante": "Palmeiras",
+          "visitante": "Corinthians",
+          "data_iso": "2026-10-11T17:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841266",
+          "rodada": 30,
+          "mandante": "Bahia",
+          "visitante": "Mirassol",
+          "data_iso": "2026-10-11T19:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841264",
+          "rodada": 30,
+          "mandante": "Coritiba",
+          "visitante": "Botafogo",
+          "data_iso": "2026-10-11T19:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841265",
+          "rodada": 30,
+          "mandante": "Chapecoense",
+          "visitante": "Athletico-PR",
+          "data_iso": "2026-10-12T19:30",
+          "adiado": false,
+          "status": "0'"
+        },
+        {
+          "event_id": "401841260",
+          "rodada": 30,
+          "mandante": "Bragantino",
+          "visitante": "Cruzeiro",
+          "data_iso": "2026-10-12T21:00",
           "adiado": false,
           "status": "0'"
         },
@@ -13457,94 +13457,94 @@
           "status": "0'"
         },
         {
-          "event_id": "35-corinthians-botafogo-",
+          "event_id": "401841316",
           "rodada": 35,
           "mandante": "Corinthians",
           "visitante": "Botafogo",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-coritiba-santos-",
+          "event_id": "401841315",
           "rodada": 35,
           "mandante": "Coritiba",
           "visitante": "Santos",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-cruzeiro-palmeiras-",
+          "event_id": "401841314",
           "rodada": 35,
           "mandante": "Cruzeiro",
           "visitante": "Palmeiras",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-flamengo-athletico-pr-",
+          "event_id": "401841313",
           "rodada": 35,
           "mandante": "Flamengo",
           "visitante": "Athletico-PR",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-gremio-bahia-",
+          "event_id": "401841312",
           "rodada": 35,
           "mandante": "Grêmio",
           "visitante": "Bahia",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-mirassol-atletico-mg-",
+          "event_id": "401841311",
           "rodada": 35,
           "mandante": "Mirassol",
           "visitante": "Atlético-MG",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-remo-chapecoense-",
+          "event_id": "401841310",
           "rodada": 35,
           "mandante": "Remo",
           "visitante": "Chapecoense",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-sao-paulo-fluminense-",
+          "event_id": "401841309",
           "rodada": 35,
           "mandante": "São Paulo",
           "visitante": "Fluminense",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-vasco-da-gama-internacional-",
+          "event_id": "401841308",
           "rodada": 35,
           "mandante": "Vasco da Gama",
           "visitante": "Internacional",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "35-vitoria-bragantino-",
+          "event_id": "401841317",
           "rodada": 35,
           "mandante": "Vitória",
           "visitante": "Bragantino",
-          "data_iso": null,
+          "data_iso": "2026-11-18T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         }
       ],
       "apurado_em": null
@@ -13593,274 +13593,274 @@
       "rankings_por_liga": {},
       "pendencias": [
         {
-          "event_id": "36-athletico-pr-remo-",
+          "event_id": "401841318",
           "rodada": 36,
           "mandante": "Athletico-PR",
           "visitante": "Remo",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-atletico-mg-corinthians-",
+          "event_id": "401841319",
           "rodada": 36,
           "mandante": "Atlético-MG",
           "visitante": "Corinthians",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-bahia-coritiba-",
+          "event_id": "401841327",
           "rodada": 36,
           "mandante": "Bahia",
           "visitante": "Coritiba",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-botafogo-sao-paulo-",
+          "event_id": "401841326",
           "rodada": 36,
           "mandante": "Botafogo",
           "visitante": "São Paulo",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-bragantino-vasco-da-gama-",
+          "event_id": "401841321",
           "rodada": 36,
           "mandante": "Bragantino",
           "visitante": "Vasco da Gama",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-chapecoense-cruzeiro-",
+          "event_id": "401841325",
           "rodada": 36,
           "mandante": "Chapecoense",
           "visitante": "Cruzeiro",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-fluminense-mirassol-",
+          "event_id": "401841324",
           "rodada": 36,
           "mandante": "Fluminense",
           "visitante": "Mirassol",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-internacional-vitoria-",
+          "event_id": "401841323",
           "rodada": 36,
           "mandante": "Internacional",
           "visitante": "Vitória",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-palmeiras-flamengo-",
+          "event_id": "401841322",
           "rodada": 36,
           "mandante": "Palmeiras",
           "visitante": "Flamengo",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "36-santos-gremio-",
+          "event_id": "401841320",
           "rodada": 36,
           "mandante": "Santos",
           "visitante": "Grêmio",
-          "data_iso": null,
+          "data_iso": "2026-11-21T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-atletico-mg-vasco-da-gama-",
+          "event_id": "401841328",
           "rodada": 37,
           "mandante": "Atlético-MG",
           "visitante": "Vasco da Gama",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-botafogo-bahia-",
+          "event_id": "401841336",
           "rodada": 37,
           "mandante": "Botafogo",
           "visitante": "Bahia",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-chapecoense-palmeiras-",
+          "event_id": "401841335",
           "rodada": 37,
           "mandante": "Chapecoense",
           "visitante": "Palmeiras",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-corinthians-gremio-",
+          "event_id": "401841334",
           "rodada": 37,
           "mandante": "Corinthians",
           "visitante": "Grêmio",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-coritiba-flamengo-",
+          "event_id": "401841333",
           "rodada": 37,
           "mandante": "Coritiba",
           "visitante": "Flamengo",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-fluminense-cruzeiro-",
+          "event_id": "401841337",
           "rodada": 37,
           "mandante": "Fluminense",
           "visitante": "Cruzeiro",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-internacional-bragantino-",
+          "event_id": "401841331",
           "rodada": 37,
           "mandante": "Internacional",
           "visitante": "Bragantino",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-mirassol-athletico-pr-",
+          "event_id": "401841330",
           "rodada": 37,
           "mandante": "Mirassol",
           "visitante": "Athletico-PR",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-sao-paulo-remo-",
+          "event_id": "401841329",
           "rodada": 37,
           "mandante": "São Paulo",
           "visitante": "Remo",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "37-vitoria-santos-",
+          "event_id": "401841332",
           "rodada": 37,
           "mandante": "Vitória",
           "visitante": "Santos",
-          "data_iso": null,
+          "data_iso": "2026-11-28T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-athletico-pr-sao-paulo-",
+          "event_id": "401841338",
           "rodada": 38,
           "mandante": "Athletico-PR",
           "visitante": "São Paulo",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-bahia-atletico-mg-",
+          "event_id": "401841339",
           "rodada": 38,
           "mandante": "Bahia",
           "visitante": "Atlético-MG",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-bragantino-fluminense-",
+          "event_id": "401841344",
           "rodada": 38,
           "mandante": "Bragantino",
           "visitante": "Fluminense",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-cruzeiro-internacional-",
+          "event_id": "401841340",
           "rodada": 38,
           "mandante": "Cruzeiro",
           "visitante": "Internacional",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-flamengo-chapecoense-",
+          "event_id": "401841341",
           "rodada": 38,
           "mandante": "Flamengo",
           "visitante": "Chapecoense",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-gremio-mirassol-",
+          "event_id": "401841347",
           "rodada": 38,
           "mandante": "Grêmio",
           "visitante": "Mirassol",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-palmeiras-coritiba-",
+          "event_id": "401841343",
           "rodada": 38,
           "mandante": "Palmeiras",
           "visitante": "Coritiba",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-remo-corinthians-",
+          "event_id": "401841345",
           "rodada": 38,
           "mandante": "Remo",
           "visitante": "Corinthians",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-santos-botafogo-",
+          "event_id": "401841346",
           "rodada": 38,
           "mandante": "Santos",
           "visitante": "Botafogo",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         },
         {
-          "event_id": "38-vasco-da-gama-vitoria-",
+          "event_id": "401841342",
           "rodada": 38,
           "mandante": "Vasco da Gama",
           "visitante": "Vitória",
-          "data_iso": null,
+          "data_iso": "2026-12-02T17:00",
           "adiado": false,
-          "status": "Aguardando resultado final"
+          "status": "0'"
         }
       ],
       "apurado_em": null
