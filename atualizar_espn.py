@@ -739,11 +739,16 @@ def _parse_data_manual_brt(valor: Any) -> datetime | None:
     return dt.astimezone(FUSO_BRASILIA)
 
 
+
 def aplicar_ajustes_calendario(eventos: list[dict[str, Any]]) -> None:
+    # HOTFIX_REAGENDADOS_20260902
+    # "adiado" é estado operacional atual, não histórico eterno.
     ajustes = carregar_ajustes_calendario()
     if not ajustes:
         return
+
     aplicados = 0
+    obsoletos = 0
     for ajuste in ajustes:
         event_id = str(ajuste.get("event_id") or "").strip()
         mand = para_canonico(ajuste.get("mandante"))
@@ -751,54 +756,115 @@ def aplicar_ajustes_calendario(eventos: list[dict[str, Any]]) -> None:
         alvo = None
         for e in eventos:
             bate_id = bool(event_id and str(e.get("event_id") or "") == event_id)
-            bate_jogo = bool(mand and vis and e.get("mandante_nome") == mand and e.get("visitante_nome") == vis)
+            bate_jogo = bool(
+                mand and vis
+                and e.get("mandante_nome") == mand
+                and e.get("visitante_nome") == vis
+            )
             if bate_id or bate_jogo:
                 alvo = e
                 break
+
         if alvo is None:
-            print(f"Aviso: ajuste de calendário não encontrou evento: {event_id or (mand + ' x ' + vis if mand and vis else '?')}")
+            print(
+                "Aviso: ajuste de calendário não encontrou evento: "
+                f"{event_id or (mand + ' x ' + vis if mand and vis else '?')}"
+            )
             continue
 
-        fonte_finalizada = bool(alvo.get("concluido") is True)
+        fonte_finalizada = bool(
+            alvo.get("concluido") is True
+            or str(alvo.get("estado") or "").lower() == "post"
+        )
+
         rodada = ajuste.get("rodada")
         if rodada not in (None, ""):
             alvo["rodada"] = int(rodada)
-        alvo["adiado"] = True
-        alvo["ajuste_calendario"] = True
-        alvo["motivo_ajuste"] = str(ajuste.get("motivo") or "").strip()
 
-        if ajuste.get("data_definir") is True:
+        for campo in ("estadio", "transmissao"):
+            if campo in ajuste and ajuste[campo]:
+                alvo[campo] = ajuste[campo]
+
+        fonte_tem_kickoff_ativo = bool(
+            isinstance(alvo.get("data_dt"), datetime)
+            and alvo.get("data_definir") is not True
+            and alvo.get("adiado") is not True
+            and not fonte_finalizada
+        )
+
+        ajuste_operacional_aplicado = False
+
+        if fonte_finalizada:
+            # Fonte finalizada é soberana: não volta a ser "adiada".
+            pass
+
+        elif ajuste.get("data_definir") is True and fonte_tem_kickoff_ativo:
+            # TBA manual antigo perde para kickoff novo e ativo da fonte.
+            obsoletos += 1
+            motivo_antigo = str(ajuste.get("motivo") or "").strip()
+            if str(alvo.get("motivo_ajuste") or "").strip() == motivo_antigo:
+                alvo["motivo_ajuste"] = ""
+            alvo["ajuste_calendario"] = False
+            print(
+                "::notice::Ajuste manual TBA obsoleto ignorado; "
+                f"fonte atual já confirmou {alvo.get('mandante_nome')} x "
+                f"{alvo.get('visitante_nome')} em {alvo.get('data_iso')}."
+            )
+            continue
+
+        elif ajuste.get("data_definir") is True:
+            alvo["adiado"] = True
             alvo["data_definir"] = True
             alvo["data_iso"] = None
             alvo["data_dt"] = None
             alvo["_sort"] = float("inf")
+            ajuste_operacional_aplicado = True
+
         elif ajuste.get("data_iso"):
             dt = _parse_data_manual_brt(ajuste.get("data_iso"))
             if not dt:
-                raise RuntimeError(f"Data manual inválida no ajuste {event_id}: {ajuste.get('data_iso')}")
+                raise RuntimeError(
+                    f"Data manual inválida no ajuste {event_id}: {ajuste.get('data_iso')}"
+                )
+            alvo["adiado"] = False
             alvo["data_definir"] = False
             alvo["data_dt"] = dt
             alvo["data_iso"] = dt.strftime("%Y-%m-%dT%H:%M")
             alvo["_sort"] = dt.timestamp()
+            ajuste_operacional_aplicado = True
 
-        # Depois que a ESPN confirmar o jogo como concluído, preserva placar e
-        # status oficiais. Campos de estado do ajuste só valem até pouco antes
-        # do novo horário: depois disso a fonte esportiva volta a ser soberana.
-        # Isso evita que um reagendamento antigo mantenha eternamente um jogo
-        # já disputado como "Agendado/AO VIVO".
-        campos_estado = ("estado", "status", "placar_mandante", "placar_visitante", "concluido")
-        for campo in ("estadio", "transmissao"):
-            if campo in ajuste and ajuste[campo]:
-                alvo[campo] = ajuste[campo]
+        elif ajuste.get("adiado") is True:
+            alvo["adiado"] = True
+            ajuste_operacional_aplicado = True
+
+        if not ajuste_operacional_aplicado:
+            continue
+
+        alvo["ajuste_calendario"] = True
+        alvo["motivo_ajuste"] = str(ajuste.get("motivo") or "").strip()
+
         inicio_ajustado = alvo.get("data_dt")
-        estado_manual_ainda_valido = not isinstance(inicio_ajustado, datetime) or agora_brt() < inicio_ajustado - timedelta(minutes=15)
-        if not fonte_finalizada and estado_manual_ainda_valido:
-            for campo in campos_estado:
+        estado_manual_ainda_valido = (
+            not isinstance(inicio_ajustado, datetime)
+            or agora_brt() < inicio_ajustado - timedelta(minutes=15)
+        )
+        if estado_manual_ainda_valido:
+            for campo in (
+                "estado",
+                "status",
+                "placar_mandante",
+                "placar_visitante",
+                "concluido",
+            ):
                 if campo in ajuste:
                     alvo[campo] = ajuste[campo]
-        aplicados += 1
-    print(f"Ajustes de calendário aplicados: {aplicados}/{len(ajustes)}")
 
+        aplicados += 1
+
+    print(
+        f"Ajustes de calendário aplicados: {aplicados}/{len(ajustes)}"
+        + (f"; TBA obsoleto(s) ignorado(s): {obsoletos}" if obsoletos else "")
+    )
 
 def _status_interrompido(st: dict[str, Any], status_publico: str = "") -> bool:
     texto = " ".join(
@@ -939,38 +1005,70 @@ def complementar_eventos_futuros_cbf(eventos: list[dict[str, Any]], rows: list[A
     return adicionados
 
 
+
 def aplicar_agenda_oficial_cbf(eventos: list[dict[str, Any]], rows: list[Any]) -> int:
-    """Confirma/reconcilia kickoffs futuros com a agenda operacional oficial da CBF."""
+    # HOTFIX_REAGENDADOS_20260902
+    # Uma nova data oficial reativa operacionalmente o jogo.
     if not rows:
         return 0
+
     agora = agora_brt()
     alterados = 0
+
     for evento in eventos:
-        if evento.get("concluido") is True or str(evento.get("estado") or "").lower() == "post":
+        estado_atual = str(evento.get("estado") or "").lower()
+        if evento.get("concluido") is True or estado_atual == "post":
             continue
+
         home = str(evento.get("mandante_nome") or "")
         away = str(evento.get("visitante_nome") or "")
         oficial = localizar_agenda_cbf(rows, mandante=home, visitante=away)
         if not oficial:
             continue
+
         dt = parse_iso_brt(oficial.data_iso)
         if not dt or dt < agora - timedelta(hours=6):
             continue
+
         anterior = str(evento.get("data_iso") or "")
         novo = dt.strftime("%Y-%m-%dT%H:%M")
-        if anterior != novo:
-            if not str(evento.get("data_espn_original") or "").strip():
-                evento["data_espn_original"] = anterior
-            evento["data_iso"] = novo
-            evento["data_dt"] = dt
-            evento["_sort"] = dt.timestamp()
-            evento["data_definir"] = False
-            alterados += 1
+        estava_interrompido = bool(
+            evento.get("adiado") is True
+            or evento.get("data_definir") is True
+            or _status_interrompido({}, str(evento.get("status") or ""))
+        )
+
+        mudou = bool(
+            anterior != novo
+            or evento.get("adiado") is True
+            or evento.get("data_definir") is True
+        )
+
+        if anterior != novo and not str(evento.get("data_espn_original") or "").strip():
+            evento["data_espn_original"] = anterior
+
+        evento["data_iso"] = novo
+        evento["data_dt"] = dt
+        evento["_sort"] = dt.timestamp()
+        evento["data_definir"] = False
+        evento["adiado"] = False
+
+        # Não rebaixa uma partida efetivamente ao vivo para pré-jogo.
+        if estado_atual != "in":
+            evento["estado"] = "pre"
+            evento["concluido"] = False
+            if estava_interrompido:
+                evento["status"] = "Pré-jogo"
+                mudou = True
+
         evento["fonte_calendario"] = "CBF oficial — agenda de credenciamento"
         evento["origem_calendario"] = oficial.origem
+
+        if mudou:
+            alterados += 1
+
     eventos.sort(key=lambda e: float(e.get("_sort") or 0))
     return alterados
-
 
 def marcar_kickoffs_provisorios_espn(eventos: list[dict[str, Any]]) -> int:
     """Marca lotes futuros incompletos no mesmo timestamp como data a definir."""
@@ -2766,6 +2864,87 @@ def selftest_execucao_6() -> None:
     confirm[0]["fonte_calendario"] = "CBF oficial — agenda de credenciamento"
     assert marcar_kickoffs_provisorios_espn(confirm) == 0
     assert confirm[0]["data_definir"] is False
+
+
+    # HOTFIX_REAGENDADOS_20260902 — regressões permanentes.
+    # 1) TBA manual antigo não pode apagar kickoff novo/ativo da ESPN.
+    ajustes_original = globals()["carregar_ajustes_calendario"]
+    try:
+        futuro_ativo = agora_brt() + timedelta(days=2)
+        globals()["carregar_ajustes_calendario"] = lambda: [{
+            "event_id": "id-antigo",
+            "rodada": 4,
+            "mandante": "Flamengo",
+            "visitante": "Mirassol",
+            "data_definir": True,
+            "estado": "pre",
+            "concluido": False,
+            "status": "Data a definir",
+            "motivo": "TBA antigo de teste",
+        }]
+        reagendado_espn = [{
+            "event_id": "id-novo",
+            "rodada": 4,
+            "mandante_nome": "Flamengo",
+            "visitante_nome": "Mirassol",
+            "data_dt": futuro_ativo,
+            "data_iso": futuro_ativo.strftime("%Y-%m-%dT%H:%M"),
+            "_sort": futuro_ativo.timestamp(),
+            "estado": "pre",
+            "concluido": False,
+            "adiado": False,
+            "data_definir": False,
+            "status": "0'",
+        }]
+        aplicar_ajustes_calendario(reagendado_espn)
+        assert reagendado_espn[0]["data_iso"] == futuro_ativo.strftime("%Y-%m-%dT%H:%M")
+        assert reagendado_espn[0]["adiado"] is False
+        assert reagendado_espn[0]["data_definir"] is False
+        assert reagendado_espn[0]["status"] == "0'"
+    finally:
+        globals()["carregar_ajustes_calendario"] = ajustes_original
+
+    # 2) CBF com nova data limpa o estado operacional de adiamento,
+    # inclusive se a data já tiver sido gravada numa execução anterior.
+    localizar_original = globals()["localizar_agenda_cbf"]
+    try:
+        class _AgendaTesteReagendado:
+            mandante = "Botafogo"
+            visitante = "Grêmio"
+            data_iso = (agora_brt() + timedelta(days=4)).strftime("%Y-%m-%dT%H:%M")
+            origem = "https://credencial.cbf.com.br/teste-reagendado"
+
+        agenda_teste = _AgendaTesteReagendado()
+        globals()["localizar_agenda_cbf"] = (
+            lambda rows, mandante, visitante:
+            rows[0]
+            if rows and mandante == rows[0].mandante and visitante == rows[0].visitante
+            else None
+        )
+        antigo = agora_brt() - timedelta(days=20)
+        evento_reagendado = [{
+            "event_id": "reagendado-r21",
+            "rodada": 21,
+            "mandante_nome": "Botafogo",
+            "visitante_nome": "Grêmio",
+            "data_dt": antigo,
+            "data_iso": antigo.strftime("%Y-%m-%dT%H:%M"),
+            "_sort": antigo.timestamp(),
+            "estado": "pre",
+            "concluido": False,
+            "adiado": True,
+            "data_definir": False,
+            "status": "Postponed",
+        }]
+        assert aplicar_agenda_oficial_cbf(evento_reagendado, [agenda_teste]) == 1
+        assert evento_reagendado[0]["data_iso"] == agenda_teste.data_iso
+        assert evento_reagendado[0]["adiado"] is False
+        assert evento_reagendado[0]["data_definir"] is False
+        assert evento_reagendado[0]["estado"] == "pre"
+        assert evento_reagendado[0]["status"] == "Pré-jogo"
+        assert evento_reagendado[0]["fonte_calendario"].startswith("CBF oficial")
+    finally:
+        globals()["localizar_agenda_cbf"] = localizar_original
 
     # Proveniência da CBF precisa sobreviver ao espn_eventos.json; sem isso a
     # execução seguinte perderia a informação de que o kickoff foi confirmado.

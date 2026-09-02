@@ -408,7 +408,9 @@
       dataIso: game.dataIso || loc.dataIso,
       venue: game.venue || loc.venue,
       transmissao: loc.transmissao || game.transmissao,
-      adiado: loc.adiado || game.adiado,
+      // HOTFIX_REAGENDADOS_20260902: snapshot historicamente adiado não
+      // contamina um evento ESPN atual que já voltou a ter kickoff ativo.
+      adiado: game.adiado === true || (!game.date && loc.adiado === true),
       finalizadoEm: game.finalizadoEm || loc.finalizadoEm || null,
       home: { ...loc.home, ...game.home, nome: loc.home.nome || game.home.nome, escudo: loc.home.escudo || game.home.escudo },
       away: { ...loc.away, ...game.away, nome: loc.away.nome || game.away.nome, escudo: loc.away.escudo || game.away.escudo }
