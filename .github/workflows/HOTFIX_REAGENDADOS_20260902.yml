@@ -1,0 +1,92 @@
+name: HOTFIX · jogos reagendados automáticos
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: repo-write-main
+  cancel-in-progress: false
+
+jobs:
+  aplicar:
+    name: Corrigir reagendamentos e validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar repositório atual
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Aplicar hotfix sobre os arquivos atuais
+        run: python scripts/aplicar_hotfix_reagendados_20260902.py
+
+      - name: Validar sintaxe e regressões
+        run: |
+          set -euo pipefail
+          python -m py_compile atualizar_espn.py fontes_brasileirao.py
+          python atualizar_espn.py --selftest
+          node --check js/br-aovivo.js
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          ajustes = json.loads(Path("dados-br/ajustes-calendario.json").read_text(encoding="utf-8"))
+          assert not any(
+              a.get("mandante") == "Flamengo"
+              and a.get("visitante") == "Mirassol"
+              and a.get("data_definir") is True
+              for a in ajustes.get("ajustes", [])
+          )
+
+          py = Path("atualizar_espn.py").read_text(encoding="utf-8")
+          assert "HOTFIX_REAGENDADOS_20260902" in py
+          assert 'evento["adiado"] = False' in py
+          assert 'evento["data_definir"] = False' in py
+
+          js = Path("js/br-aovivo.js").read_text(encoding="utf-8")
+          assert "game.adiado === true || (!game.date && loc.adiado === true)" in js
+
+          print("Validação estrutural do hotfix: OK")
+          PY
+          git diff --check
+
+      - name: Publicar correção e remover instalador temporário
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add atualizar_espn.py js/br-aovivo.js aovivo.html dados-br/ajustes-calendario.json
+          git rm -f .github/workflows/HOTFIX_REAGENDADOS_20260902.yml
+          git rm -f scripts/aplicar_hotfix_reagendados_20260902.py
+
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração necessária."
+          else
+            git commit -m "Corrigir jogos adiados quando recebem nova data"
+            git push origin HEAD:main
+          fi
+
+      - name: Forçar atualização completa do Brasileirão
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run atualizar-brasileirao.yml \
+            --ref main \
+            -f coleta_completa=true \
+            -f forcar_af=false
+          echo "Workflow Atualizar Brasileirao (ESPN) disparado com coleta completa."
