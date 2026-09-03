@@ -1,0 +1,20 @@
+VALIDAÇÃO — Orchestrator BR Almoço 1.0.0
+
+- JavaScript syntax (node --check): PASS
+- Testes determinísticos/integrados Node: 21/21 PASS
+- YAML workflow: parse estrutural PASS
+- TOML Wrangler: parse estrutural PASS
+- Teste integrado ACTIVE: FINAL ESPN -> debounce -> revalidação -> writer gate -> workflow_dispatch Atualizar Brasileirão: PASS
+- Regressão de escopo: nenhuma ação AO VIVO/públicos/melhores momentos/elencos/fair play: PASS
+- Regressão TV: cobertura completa não dispara rotina por troca de dia: PASS
+- Regressão TBA/reagendados: pendência de calendário reduz janela de reconciliação: PASS
+- Simulação com snapshot real anexado em 03/09/2026 ~17:40 BRT: candidate = none
+  * 3 jogos R21 ainda marcados como adiados/pending para reconciliação
+  * TV: 31/37 cobertos em 35d, 0 faltando em 14d, 0 críticos em 72h; backoff impede busca inútil
+  * apuração consistente
+  * AF consistente
+  * próximo evento de bloco: 04/09/2026 21:00 BRT
+
+Observação: o ambiente local desta geração não conseguiu baixar o pacote npm do Wrangler em tempo hábil.
+Por isso o workflow entregue contém um gate obrigatório `wrangler deploy --dry-run` no próprio GitHub Actions,
+antes de qualquer deploy real. Wrangler está fixado em 4.128.0.

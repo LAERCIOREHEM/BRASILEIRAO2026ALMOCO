@@ -1,0 +1,11 @@
+{
+  "name": "brasileirao-almoco-orchestrator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check src/index.js",
+    "test": "node --test test/*.test.mjs",
+    "validate": "npm run check && npm test"
+  }
+}
