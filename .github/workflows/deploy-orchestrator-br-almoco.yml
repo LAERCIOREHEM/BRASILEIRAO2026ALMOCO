@@ -136,7 +136,7 @@ jobs:
           sleep 5
           BODY="$(curl -fsS --retry 6 --retry-delay 2 "$URL/health")"
           echo "$BODY"
-          printf '%s' "$BODY" | python -c 'import json,sys,os; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="1.1.5"; assert d.get("mode")==os.environ["MODE"]; assert d.get("liveIgnored") is True; print("health validado")'
+          printf '%s' "$BODY" | python -c 'import json,sys,os; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="1.1.6"; assert d.get("mode")==os.environ["MODE"]; assert d.get("liveIgnored") is True; print("health validado")'
 
       - name: Resumo operacional
         env:
@@ -145,7 +145,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Orchestrator BR Almoço 1.1.5"
+            echo "## Orchestrator BR Almoço 1.1.6"
             echo ""
             echo "- **Modo:** \`${MODE}\`"
             echo "- **Worker:** \`brasileirao-almoco-orchestrator\`"
