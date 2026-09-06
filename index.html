@@ -2383,11 +2383,28 @@ body > .container > section.hero > img {
 // ADMINISTRAÇÃO — acesso centralizado na área autenticada
 // ========================================================================
 
-// O index.html não gera dados; ele apenas lê os JSONs publicados pelo GitHub Actions.
-// O workflow do Brasileirão roda de 10 em 10 minutos. No navegador, fazemos
-// uma nova leitura dos JSONs na mesma cadência, sem depender de minuto fixo.
+// O index.html não gera dados; ele lê os JSONs publicados pelo GitHub Actions.
+// EXECUÇÃO RÁPIDA 1.1: dados críticos vêm primeiro do main bruto do GitHub,
+// sem aguardar o deploy completo do GitHub Pages. O arquivo local é fallback.
 const URL_TABELA_LOCAL = "tabela.json";
-const INTERVALO_ATUALIZACAO_MS = 10 * 60 * 1000;
+const BR_RAW_MAIN = "https://raw.githubusercontent.com/LAERCIOREHEM/BRASILEIRAO2026ALMOCO/main/";
+const INTERVALO_ATUALIZACAO_MS = 60 * 1000;
+
+async function brFetchJsonDinamico(caminho) {
+  const path = String(caminho || '').split('?')[0].replace(/^\/+/, '');
+  const bust = `v=${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const opcoes = { cache: 'no-store', headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } };
+  const candidatos = [`${BR_RAW_MAIN}${path}?${bust}`, `${path}?${bust}`];
+  let ultimoErro = null;
+  for (const url of candidatos) {
+    try {
+      const resp = await fetch(url, opcoes);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return await resp.json();
+    } catch (e) { ultimoErro = e; }
+  }
+  throw ultimoErro || new Error(`Falha ao carregar ${path}`);
+}
 
 let timerAtualizacao = null;
 let refreshEmAndamento = false;
@@ -2921,20 +2938,7 @@ function carregarCache() {
 // FETCH DA TABELA — lê o tabela.json gerado pelo GitHub Actions
 // ========================================================================
 async function buscarTabelaTerra() {
-  // Anti-cache forte: evita o navegador/CDN reutilizar tabela.json antigo.
-  const url = `${URL_TABELA_LOCAL}?nocache=${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const resp = await fetch(url, {
-    cache: 'no-store',
-    headers: {
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache'
-    }
-  });
-
-  if (!resp.ok) {
-    throw new Error("Não consegui ler o tabela.json (HTTP " + resp.status + "). Verifique se o arquivo existe no repositório.");
-  }
-  const data = await resp.json();
+  const data = await brFetchJsonDinamico(URL_TABELA_LOCAL);
   if (!data || !Array.isArray(data.tabela)) {
     throw new Error("Formato inválido de tabela.json");
   }
@@ -3985,10 +3989,7 @@ function calcularFormaTimes() {
 // ========================================================================
 async function carregarJogos(opcoes = {}) {
   try {
-    const url = 'jogos.json?t=' + Date.now();
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
+    const data = await brFetchJsonDinamico('jogos.json');
     state.jogos = jogosCanônicosPorRodada(Array.isArray(data.jogos) ? data.jogos : []);
     state.jogosMeta = {
       atualizado_em: data.atualizado_em,
@@ -4711,10 +4712,7 @@ function filtrarResultadosValidos(lista) {
 
 async function carregarResultados(opcoes = {}) {
   try {
-    const url = 'resultados.json?t=' + Date.now();
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const data = await resp.json();
+    const data = await brFetchJsonDinamico('resultados.json');
     await carregarResultadosManuais();
     state.resultados = mesclarResultadosManuais(filtrarResultadosValidos(data.resultados));
     state.resultadosTimes = [...new Set(state.resultados.flatMap(r => [(r.mandante || {}).nome, (r.visitante || {}).nome]).filter(Boolean))].sort((a,b) => a.localeCompare(b, "pt-BR"));

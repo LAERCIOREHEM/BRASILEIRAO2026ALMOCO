@@ -124,20 +124,40 @@
     return global.confirm(mensagem);
   }
 
+  const BR_RAW_MAIN = "https://raw.githubusercontent.com/LAERCIOREHEM/BRASILEIRAO2026ALMOCO/main/";
+  const BR_CRITICAL_JSON = new Set([
+    "jogos.json",
+    "resultados.json",
+    "espn_eventos.json",
+    "dados-br/calendario-completo.json",
+    "dados-br/apuracao.json",
+    "dados-br/ranking-apostas.json"
+  ]);
+
   function cacheBust(url) {
     const sep = String(url).includes("?") ? "&" : "?";
-    return `${url}${sep}v=${Date.now()}`;
+    return `${url}${sep}v=${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function caminhoRelativo(url) {
+    return String(url || "").split("?")[0].replace(/^\/+/, "");
   }
 
   async function fetchJson(url, fallback) {
-    try {
-      const res = await fetch(cacheBust(url), { cache: "no-store" });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      return await res.json();
-    } catch (err) {
-      console.warn("Falha ao buscar", url, err);
-      return fallback;
+    const path = caminhoRelativo(url);
+    const candidatos = BR_CRITICAL_JSON.has(path)
+      ? [`${BR_RAW_MAIN}${path}`, url]
+      : [url];
+    let ultimoErro = null;
+    for (const candidato of candidatos) {
+      try {
+        const res = await fetch(cacheBust(candidato), { cache: "no-store", headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" } });
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        return await res.json();
+      } catch (err) { ultimoErro = err; }
     }
+    console.warn("Falha ao buscar", url, ultimoErro);
+    return fallback;
   }
 
   function parseData(iso) {

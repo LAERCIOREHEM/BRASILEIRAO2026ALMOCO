@@ -17,6 +17,8 @@ import {
   computeNextSlowAt,
   finalProbeIntervalMs,
   dateKeyBrt,
+  dateKeyUtc,
+  espnStateFromPayload,
   findActiveWriter,
   normalizeMode,
   parseDate,
@@ -56,6 +58,17 @@ test("datas locais do repositório são interpretadas como BRT", () => {
 
 test("dateKeyBrt mantém o dia esportivo de Brasília", () => {
   assert.equal(dateKeyBrt(parseDate("2026-09-05T23:30:00-03:00")), "20260905");
+});
+
+test("dateKeyUtc reconhece a virada UTC sem confundir com o dia BRT", () => {
+  const ms = parseDate("2026-09-05T21:00:00-03:00");
+  assert.equal(dateKeyBrt(ms), "20260905");
+  assert.equal(dateKeyUtc(ms), "20260906");
+});
+
+test("summary ESPN identifica FINAL por event_id", () => {
+  const payload = { header: { competitions: [{ status: { type: { state: "post", completed: true } } }] } };
+  assert.equal(espnStateFromPayload(payload), "post");
 });
 
 test("modo desconhecido sempre cai em shadow", () => {
@@ -100,6 +113,16 @@ test("auditoria crítica de blocos dispara imediatamente", () => {
   f.blocksAudit.criticos = ["x"];
   const snap = buildRepositorySnapshot(f, NOW);
   assert.equal(chooseSlowCandidate(snap, state(), NOW, DEFAULTS).action, ACTIONS.BLOCKS);
+});
+
+test("checkpoint de bloco vencido vira recuperação automática", () => {
+  const f = baseFiles();
+  f.blocksAudit.gerado_em = "2026-09-03T14:00:00-03:00";
+  f.blocksAudit.proximo_evento_em = "2026-09-03T15:00:00-03:00";
+  const snap = buildRepositorySnapshot(f, NOW);
+  const dec = chooseSlowCandidate(snap, state(), NOW, DEFAULTS);
+  assert.equal(dec.action, ACTIONS.BLOCKS);
+  assert.match(dec.reason, /vencido/);
 });
 
 test("apuração só dispara quando realmente diverge dos resultados", () => {
@@ -152,23 +175,23 @@ test("fast path começa apenas perto do horário provável de FINAL", () => {
   assert.deepEqual(relevantFinalProbeGames(snap, NOW, DEFAULTS).map((g) => g.id), ["g1"]);
 });
 
-test("recovery path mantém jogo elegível até 24h após kickoff", () => {
+test("recovery path mantém jogo elegível até 12h após kickoff", () => {
   const f = baseFiles();
   f.calendar.jogos[0].data_iso = "2026-09-03T10:00";
   const snap = buildRepositorySnapshot(f, NOW);
   assert.deepEqual(relevantFinalProbeGames(snap, NOW, DEFAULTS).map((g) => g.id), ["g1"]);
-  const muitoAntigo = parseDate("2026-09-04T11:00:01-03:00");
+  const muitoAntigo = parseDate("2026-09-03T22:00:01-03:00");
   assert.equal(relevantFinalProbeGames(snap, muitoAntigo, DEFAULTS).length, 0);
 });
 
-test("recovery path reduz polling ESPN para 15 minutos depois de +300 min", () => {
+test("recovery path reduz polling ESPN para 5 minutos depois de +300 min", () => {
   const f = baseFiles();
   f.calendar.jogos[0].data_iso = "2026-09-03T15:30";
   let snap = buildRepositorySnapshot(f, NOW);
-  assert.equal(finalProbeIntervalMs(relevantFinalProbeGames(snap, NOW, DEFAULTS), NOW, DEFAULTS), 90_000);
+  assert.equal(finalProbeIntervalMs(relevantFinalProbeGames(snap, NOW, DEFAULTS), NOW, DEFAULTS), 60_000);
   f.calendar.jogos[0].data_iso = "2026-09-03T10:00";
   snap = buildRepositorySnapshot(f, NOW);
-  assert.equal(finalProbeIntervalMs(relevantFinalProbeGames(snap, NOW, DEFAULTS), NOW, DEFAULTS), 15 * 60_000);
+  assert.equal(finalProbeIntervalMs(relevantFinalProbeGames(snap, NOW, DEFAULTS), NOW, DEFAULTS), 5 * 60_000);
 });
 
 test("FINAL consolidado no calendário mas ausente em resultados vira pendência", () => {
@@ -179,21 +202,42 @@ test("FINAL consolidado no calendário mas ausente em resultados vira pendência
   assert.ok(collectRepositoryFinals(snap, {}, NOW).g1);
 });
 
-test("probe ESPN de FINAL força no-cache em todas as camadas", async () => {
+test("probe ESPN usa summary por event_id e força no-cache", async () => {
   const originalFetch = globalThis.fetch;
   const seen = [];
   globalThis.fetch = async (input, init = {}) => {
     seen.push({ url: String(input), init });
-    return new Response(JSON.stringify({ events: [{ id: "g1", status: { type: { state: "post", completed: true } } }] }), { status: 200, headers: { "content-type": "application/json" } });
+    return new Response(JSON.stringify({ header: { competitions: [{ status: { type: { state: "post", completed: true } } }] } }), { status: 200, headers: { "content-type": "application/json" } });
   };
   try {
     const out = await probeEspn([{ id: "g1", kickoffMs: parseDate("2026-09-03T16:00") }], NOW);
     assert.equal(out.states.g1.state, "post");
-    assert.match(seen[0].url, /&_=[0-9]+$/);
+    assert.equal(out.states.g1.source, "summary");
+    assert.match(seen[0].url, /summary\?event=g1/);
     assert.equal(seen[0].init.cache, "no-store");
     assert.equal(seen[0].init.headers["cache-control"], "no-cache");
     assert.equal(seen[0].init.cf.cacheTtl, 0);
     assert.equal(seen[0].init.cf.cacheEverything, false);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("probe ESPN cai para scoreboard BRT+UTC quando summary falha", async () => {
+  const originalFetch = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (input, init = {}) => {
+    const url = String(input); seen.push(url);
+    if (url.includes('/summary?')) return new Response('x', { status: 503 });
+    if (url.includes('dates=20260906')) {
+      return new Response(JSON.stringify({ events: [{ id: "g1", status: { type: { state: "post", completed: true } } }] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ events: [] }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const out = await probeEspn([{ id: "g1", kickoffMs: parseDate("2026-09-05T21:00:00-03:00") }], NOW);
+    assert.equal(out.states.g1.state, "post");
+    assert.equal(out.errors.length, 0);
+    assert.ok(seen.some((u) => u.includes('dates=20260905')));
+    assert.ok(seen.some((u) => u.includes('dates=20260906')));
   } finally { globalThis.fetch = originalFetch; }
 });
 
@@ -204,7 +248,7 @@ test("FINAL ESPN entra em debounce e não vira pipeline por gol", () => {
   const pending = collectNewFinals(snap, { g1: { state: "post" } }, {}, NOW);
   assert.ok(pending.g1);
   assert.equal(chooseFinalCandidate(snap, pending, NOW + 30_000, DEFAULTS), null);
-  assert.equal(chooseFinalCandidate(snap, pending, NOW + 100_000, DEFAULTS).action, ACTIONS.MAIN);
+  assert.equal(chooseFinalCandidate(snap, pending, NOW + 50_000, DEFAULTS).action, ACTIONS.FAST);
 });
 
 test("FINAL já presente em resultados é deduplicado na memória", () => {
@@ -242,9 +286,15 @@ test("próximo slow check é antecipado pela fronteira de bloco", () => {
   assert.equal(new Date(next).toISOString(), new Date(parseDate("2026-09-03T17:35:00-03:00")).toISOString());
 });
 
-test("ações automáticas possíveis são somente as cinco aprovadas", () => {
+test("orquestrador sempre chama atualização completa nos fluxos pesados", () => {
+  assert.deepEqual(WORKFLOW_BY_ACTION[ACTIONS.MAIN].inputs, { coleta_completa: "true", forcar_af: "false" });
+  assert.deepEqual(WORKFLOW_BY_ACTION[ACTIONS.MAIN_AF].inputs, { coleta_completa: "true", forcar_af: "true" });
+});
+
+test("ações automáticas possíveis são somente as seis aprovadas", () => {
   assert.deepEqual(Object.values(ACTIONS).sort(), [
     "apurar_apostas",
+    "atualizar_nucleo_brasileirao",
     "atualizar_brasileirao",
     "atualizar_brasileirao_forcar_af",
     "none",
@@ -338,10 +388,10 @@ test("integração: ACTIVE agrupa FINAL e despacha somente Atualizar Brasileirã
     clock += 100_000;
     const second = await durable.tick();
     const secondBody = await second.json();
-    assert.equal(secondBody.action, ACTIONS.MAIN);
+    assert.equal(secondBody.action, ACTIONS.FAST);
     assert.equal(secondBody.result, "dispatched");
     assert.equal(dispatches.length, 1);
-    assert.match(dispatches[0].url, /atualizar-brasileirao\.yml\/dispatches$/);
+    assert.match(dispatches[0].url, /atualizar-nucleo-brasileirao\.yml\/dispatches$/);
     assert.deepEqual(dispatches[0].body, { ref: "main", inputs: {} });
     const persisted = storageMap.get("state");
     assert.ok(persisted.pendingFinals.g1); // dispatch != publicação

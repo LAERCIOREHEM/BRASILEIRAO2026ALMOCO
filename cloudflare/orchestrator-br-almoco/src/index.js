@@ -1,5 +1,5 @@
 /*
- * Brasileirão 2026 Almoço — Orchestrator 1.0.1
+ * Brasileirão 2026 Almoço — Orchestrator 1.1.0
  *
  * Escopo deliberadamente EXCLUÍDO:
  * - AO VIVO / placar em browser
@@ -12,12 +12,13 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "1.0.1";
+export const VERSION = "1.1.0";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
 export const ACTIONS = Object.freeze({
   NONE: "none",
+  FAST: "atualizar_nucleo_brasileirao",
   MAIN: "atualizar_brasileirao",
   MAIN_AF: "atualizar_brasileirao_forcar_af",
   APURAR: "apurar_apostas",
@@ -26,8 +27,9 @@ export const ACTIONS = Object.freeze({
 });
 
 export const WORKFLOW_BY_ACTION = Object.freeze({
-  [ACTIONS.MAIN]: { file: "atualizar-brasileirao.yml", inputs: {} },
-  [ACTIONS.MAIN_AF]: { file: "atualizar-brasileirao.yml", inputs: { forcar_af: "true" } },
+  [ACTIONS.FAST]: { file: "atualizar-nucleo-brasileirao.yml", inputs: {} },
+  [ACTIONS.MAIN]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "true", forcar_af: "false" } },
+  [ACTIONS.MAIN_AF]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "true", forcar_af: "true" } },
   [ACTIONS.APURAR]: { file: "apurar-brasileirao.yml", inputs: {} },
   [ACTIONS.BLOCKS]: { file: "sincronizar-blocos-apostas.yml", inputs: {} },
   [ACTIONS.TV]: { file: "buscar-transmissoes-aovivo-brasileirao.yml", inputs: { modo: "tv" } },
@@ -36,6 +38,7 @@ export const WORKFLOW_BY_ACTION = Object.freeze({
 // ÚNICOS workflows considerados escritores pelo novo orquestrador.
 // AO VIVO, públicos, melhores momentos, elencos e fair play não aparecem aqui.
 export const WRITER_WORKFLOW_NAMES = new Set([
+  "Atualizar núcleo rápido do Brasileirão",
   "Atualizar Brasileirao (ESPN)",
   "Apurar Apostas Brasileirão",
   "Auditar modelos AF-Previsão",
@@ -62,11 +65,12 @@ export const DEFAULTS = Object.freeze({
   slowRetryErrorMinutes: 5,
   fastProbeStartMinutes: 88,
   fastProbeEndMinutes: 300,
-  fastProbeIntervalSeconds: 90,
-  finalRecoveryEndMinutes: 1440,
-  finalRecoveryIntervalMinutes: 15,
-  finalDebounceSeconds: 90,
-  finalRetryMinutes: 15,
+  fastProbeIntervalSeconds: 60,
+  finalRecoveryEndMinutes: 720,
+  finalRecoveryIntervalMinutes: 5,
+  finalDebounceSeconds: 45,
+  finalRetryMinutes: 5,
+  fastCooldownMinutes: 3,
   mainCooldownMinutes: 8,
   apuracaoCooldownMinutes: 10,
   blocksCooldownMinutes: 10,
@@ -87,6 +91,7 @@ export const DEFAULTS = Object.freeze({
   blockSafetyNearDays: 7,
   blockSafetyNearHours: 72,
   blockSafetyFarHours: 168,
+  blockPastDueRetryHours: 1,
   githubRunsLimit: 50,
   recentDecisionsLimit: 20,
 });
@@ -107,6 +112,7 @@ export function runtimeConfig(env = {}) {
     finalRecoveryIntervalMinutes: n(env, "FINAL_RECOVERY_INTERVAL_MINUTES", DEFAULTS.finalRecoveryIntervalMinutes),
     finalDebounceSeconds: n(env, "FINAL_DEBOUNCE_SECONDS", DEFAULTS.finalDebounceSeconds),
     finalRetryMinutes: n(env, "FINAL_RETRY_MINUTES", DEFAULTS.finalRetryMinutes),
+    fastCooldownMinutes: n(env, "FAST_COOLDOWN_MINUTES", DEFAULTS.fastCooldownMinutes),
     mainCooldownMinutes: n(env, "MAIN_COOLDOWN_MINUTES", DEFAULTS.mainCooldownMinutes),
     apuracaoCooldownMinutes: n(env, "APURACAO_COOLDOWN_MINUTES", DEFAULTS.apuracaoCooldownMinutes),
     blocksCooldownMinutes: n(env, "BLOCKS_COOLDOWN_MINUTES", DEFAULTS.blocksCooldownMinutes),
@@ -127,6 +133,7 @@ export function runtimeConfig(env = {}) {
     blockSafetyNearDays: n(env, "BLOCK_SAFETY_NEAR_DAYS", DEFAULTS.blockSafetyNearDays),
     blockSafetyNearHours: n(env, "BLOCK_SAFETY_NEAR_HOURS", DEFAULTS.blockSafetyNearHours),
     blockSafetyFarHours: n(env, "BLOCK_SAFETY_FAR_HOURS", DEFAULTS.blockSafetyFarHours),
+    blockPastDueRetryHours: n(env, "BLOCK_PAST_DUE_RETRY_HOURS", DEFAULTS.blockPastDueRetryHours),
     githubRunsLimit: n(env, "GITHUB_RUNS_LIMIT", DEFAULTS.githubRunsLimit),
     recentDecisionsLimit: n(env, "RECENT_DECISIONS_LIMIT", DEFAULTS.recentDecisionsLimit),
   };
@@ -336,6 +343,7 @@ export function buildRepositorySnapshot(files, nowMs) {
 }
 
 function cooldownMs(action, cfg) {
+  if (action === ACTIONS.FAST) return cfg.fastCooldownMinutes * 60_000;
   if (action === ACTIONS.MAIN) return cfg.mainCooldownMinutes * 60_000;
   if (action === ACTIONS.MAIN_AF) return cfg.afCooldownMinutes * 60_000;
   if (action === ACTIONS.APURAR) return cfg.apuracaoCooldownMinutes * 60_000;
@@ -344,9 +352,11 @@ function cooldownMs(action, cfg) {
 }
 
 function lastActionMs(state, action) {
-  // MAIN e MAIN_AF compartilham família para não criar duas atualizações pesadas seguidas.
-  if (action === ACTIONS.MAIN || action === ACTIONS.MAIN_AF) {
+  // FAST/MAIN/MAIN_AF compartilham família apenas para observar a última escrita
+  // esportiva. O FINAL usa retry próprio e pode convergir rapidamente.
+  if (action === ACTIONS.FAST || action === ACTIONS.MAIN || action === ACTIONS.MAIN_AF) {
     return maxFinite([
+      parseDate(state?.lastDispatchAt?.[ACTIONS.FAST]),
       parseDate(state?.lastDispatchAt?.[ACTIONS.MAIN]),
       parseDate(state?.lastDispatchAt?.[ACTIONS.MAIN_AF]),
     ]);
@@ -444,6 +454,14 @@ export function chooseSlowCandidate(snapshot, state, nowMs, cfg = DEFAULTS) {
       return candidate(ACTIONS.BLOCKS, `Auditoria de blocos tem ${blockAge.toFixed(1)}h e o próximo evento está em ${days.toFixed(1)} dia(s); atualizar somente como safety net.`);
     }
   }
+  // 1.1.0: checkpoint vencido nunca pode morrer silenciosamente. Se a auditoria
+  // ainda aponta para um evento passado, tenta recompor em workflow dedicado.
+  if (Number.isFinite(blockEvent) && blockEvent <= nowMs && blockAge >= cfg.blockPastDueRetryHours) {
+    if (isCooldownElapsed(state, ACTIONS.BLOCKS, nowMs, cfg)) {
+      const overdueHours = (nowMs - blockEvent) / 3_600_000;
+      return candidate(ACTIONS.BLOCKS, `Checkpoint de bloco está vencido há ${overdueHours.toFixed(1)}h; recompor auditoria/janela automaticamente.`, { checkpoint: snapshot.blocks.nextEventAt });
+    }
+  }
 
   return null;
 }
@@ -516,7 +534,7 @@ export function chooseFinalCandidate(snapshot, pendingFinals, nowMs, cfg = DEFAU
   }
   if (!ready.length) return null;
   const labels = ready.slice(0, 6).map(formatGame).join(", ");
-  return candidate(ACTIONS.MAIN, `ESPN marcou FINAL ainda não incorporado: ${labels}.`, { eventIds: ready.map((g) => g.id) });
+  return candidate(ACTIONS.FAST, `ESPN marcou FINAL ainda não incorporado: ${labels}.`, { eventIds: ready.map((g) => g.id) });
 }
 
 function defaultState() {
@@ -563,7 +581,7 @@ function githubHeaders(env) {
     "accept": "application/vnd.github+json",
     "authorization": `Bearer ${token}`,
     "x-github-api-version": "2026-03-10",
-    "user-agent": "Brasileirao-Almoco-Orchestrator/1.0.1",
+    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.0",
   };
 }
 
@@ -624,39 +642,90 @@ async function loadRepositoryFiles(env) {
   return { files, errors };
 }
 
+export function dateKeyUtc(ms) {
+  if (!Number.isFinite(ms)) return "";
+  return new Date(ms).toISOString().slice(0, 10).replaceAll("-", "");
+}
+
+export function espnStateFromPayload(data) {
+  const candidates = [
+    data?.header?.competitions?.[0]?.status?.type,
+    data?.competitions?.[0]?.status?.type,
+    data?.status?.type,
+  ].filter(Boolean);
+  for (const type of candidates) {
+    let state = String(type?.state || "").toLowerCase();
+    if (type?.completed === true) state = "post";
+    if (["pre", "in", "post"].includes(state)) return state;
+  }
+  return "";
+}
+
+function espnNoCacheOptions() {
+  return {
+    cache: "no-store",
+    headers: {
+      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.0",
+      "accept": "application/json",
+      "cache-control": "no-cache",
+      "pragma": "no-cache",
+    },
+    cf: { cacheTtl: 0, cacheEverything: false },
+  };
+}
+
 export async function probeEspn(games, nowMs = Date.now()) {
-  const days = [...new Set(games.map((g) => dateKeyBrt(g.kickoffMs)))];
-  const wanted = new Set(games.map((g) => g.id));
+  const wantedGames = (games || []).filter((g) => g?.id);
+  const wanted = new Set(wantedGames.map((g) => String(g.id)));
   const states = {};
   const errors = [];
-  await Promise.all(days.map(async (day) => {
-    // FINAL_CONVERGENCE_1_0_1: sinal de FINAL sempre foge de cache intermediário.
-    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=${day}&limit=100&_=${Math.trunc(nowMs)}`;
+  const diagnostics = [];
+
+  // Fonte primária: summary por event_id. Não depende de qual dia a ESPN
+  // indexou um jogo que cruza meia-noite UTC/BRT.
+  await Promise.all(wantedGames.map(async (game) => {
+    const id = String(game.id);
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=${encodeURIComponent(id)}&_=${Math.trunc(nowMs)}`;
     try {
-      const response = await fetch(url, {
-        cache: "no-store",
-        headers: {
-          "user-agent": "Brasileirao-Almoco-Orchestrator/1.0.1",
-          "accept": "application/json",
-          "cache-control": "no-cache",
-          "pragma": "no-cache",
-        },
-        cf: { cacheTtl: 0, cacheEverything: false },
-      });
+      const response = await fetch(url, espnNoCacheOptions());
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      for (const event of data.events || []) {
-        const id = String(event?.id || "");
-        if (!wanted.has(id)) continue;
-        const type = event?.status?.type || {};
-        let state = String(type.state || "").toLowerCase();
-        if (type.completed === true) state = "post";
-        states[id] = { state: ["pre", "in", "post"].includes(state) ? state : "" };
-      }
+      const state = espnStateFromPayload(data);
+      if (state) states[id] = { state, source: "summary" };
     } catch (error) {
-      errors.push(`ESPN ${day}: ${error?.message || error}`);
+      diagnostics.push(`ESPN summary ${id}: ${error?.message || error}`);
     }
   }));
+
+  // Fallback: scoreboard em AMBAS as partições possíveis (dia BRT e dia UTC).
+  // Serve para indisponibilidade pontual do summary, não como fonte primária.
+  const unresolved = wantedGames.filter((g) => !states[String(g.id)]?.state);
+  const days = [...new Set(unresolved.flatMap((g) => [dateKeyBrt(g.kickoffMs), dateKeyUtc(g.kickoffMs)]).filter(Boolean))];
+  if (days.length) {
+    await Promise.all(days.map(async (day) => {
+      const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=${day}&limit=100&_=${Math.trunc(nowMs)}`;
+      try {
+        const response = await fetch(url, espnNoCacheOptions());
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        for (const event of data.events || []) {
+          const id = String(event?.id || "");
+          if (!wanted.has(id) || states[id]?.state) continue;
+          const type = event?.status?.type || {};
+          let state = String(type.state || "").toLowerCase();
+          if (type.completed === true) state = "post";
+          if (["pre", "in", "post"].includes(state)) states[id] = { state, source: `scoreboard:${day}` };
+        }
+      } catch (error) {
+        diagnostics.push(`ESPN scoreboard ${day}: ${error?.message || error}`);
+      }
+    }));
+  }
+  // Falhas de uma fonte que foram resolvidas pelo fallback não degradam o Worker.
+  const stillUnresolved = wantedGames.filter((g) => !states[String(g.id)]?.state);
+  if (stillUnresolved.length && diagnostics.length) {
+    errors.push(`ESPN sem estado para ${stillUnresolved.map((g) => g.id).join(", ")}: ${diagnostics.join(" | ")}`);
+  }
   return { states, errors };
 }
 async function listRuns(env, limit) {
@@ -832,13 +901,15 @@ export class BrAlmocoOrchestratorStateV1 {
     }
     let selected = chooseFinalCandidate(state.snapshot, state.pendingFinals, nowMs, cfg);
     const hasPendingFinalDebounce = Object.keys(state.pendingFinals || {}).length > 0;
-    if (!selected && !hasPendingFinalDebounce && probeGames.length === 0) {
+    // 1.1.0: recovery de FINAL NÃO bloqueia mais o slow path. Só preservamos a
+    // prioridade por poucos segundos enquanto um FINAL confirmado está no debounce.
+    if (!selected && !hasPendingFinalDebounce) {
       selected = chooseSlowCandidate(state.snapshot, state, nowMs, cfg);
     }
-    if (!selected && (hasPendingFinalDebounce || probeGames.length > 0)) {
-      state.resultReason = hasPendingFinalDebounce
-        ? "FINAL em debounce/deduplicação; slow path temporariamente adiado"
-        : "janela provável de encerramento de jogo; slow path temporariamente adiado";
+    if (!selected && hasPendingFinalDebounce) {
+      state.resultReason = "FINAL confirmado em debounce curto; demais rotinas voltam a ser elegíveis imediatamente depois";
+    } else if (!selected && probeGames.length > 0) {
+      state.resultReason = "monitorando encerramento por event_id; nenhuma outra ação útil";
     }
     state.candidate = selected;
 
@@ -848,7 +919,7 @@ export class BrAlmocoOrchestratorStateV1 {
     }
 
     // FINAL: revalida resultados imediatamente antes do dispatch para evitar duplicata por cache.
-    if (selected.action === ACTIONS.MAIN && Array.isArray(selected.eventIds) && selected.eventIds.length) {
+    if (selected.action === ACTIONS.FAST && Array.isArray(selected.eventIds) && selected.eventIds.length) {
       try {
         const freshIds = await refreshResultIds(this.env);
         const missing = selected.eventIds.filter((id) => !freshIds.has(id));
@@ -872,8 +943,8 @@ export class BrAlmocoOrchestratorStateV1 {
       }
     }
 
-    const isFinalConvergence = selected.action === ACTIONS.MAIN && Array.isArray(selected.eventIds) && selected.eventIds.length > 0;
-    const lastMain = isFinalConvergence ? lastActionMs(state, ACTIONS.MAIN) : null;
+    const isFinalConvergence = selected.action === ACTIONS.FAST && Array.isArray(selected.eventIds) && selected.eventIds.length > 0;
+    const lastMain = isFinalConvergence ? parseDate(state?.lastDispatchAt?.[ACTIONS.FAST]) : null;
     const finalCooldownOk = !isFinalConvergence || !Number.isFinite(lastMain) || nowMs - lastMain >= cfg.finalRetryMinutes * 60_000;
     if (!finalCooldownOk || (!isFinalConvergence && !isCooldownElapsed(state, selected.action, nowMs, cfg))) {
       state.result = "none";
@@ -910,7 +981,7 @@ export class BrAlmocoOrchestratorStateV1 {
       state.resultReason = selected.reason;
       recordDecision(state, nowMs, { action: selected.action, reason: selected.reason, result: "dispatched", workflow, checkpoint: selected.checkpoint || null }, cfg);
 
-      // 1.0.1: dispatch não significa publicação. pendingFinals permanece até
+      // 1.1.0: dispatch não significa publicação. pendingFinals permanece até
       // resultados.json realmente conter o event_id; então a revalidação o remove.
       // Após qualquer writer, refresca o repositório cedo para observar o novo estado.
       state.nextSlowAt = iso(nowMs + 2 * 60_000);
