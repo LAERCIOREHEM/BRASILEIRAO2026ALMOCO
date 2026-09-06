@@ -292,8 +292,25 @@ test("probe ESPN usa SCOREBOARD como fonte primária com User-Agent browser-like
     assert.match(call.init.headers["user-agent"], /^Mozilla\/5\.0/);
     assert.equal(call.init.cache, "no-store");
     assert.equal(call.init.headers["cache-control"], "no-cache");
-    assert.equal(call.init.cf.cacheTtl, 0);
-    assert.equal(call.init.cf.cacheEverything, false);
+    assert.equal(call.init.cf, undefined);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("regressão 1.1.6: fetch ESPN não combina cache no-store com cf.cacheTtl", async () => {
+  const originalFetch = globalThis.fetch;
+  let captured = null;
+  globalThis.fetch = async (input, init = {}) => {
+    captured = init;
+    return new Response(JSON.stringify({
+      events: [{ id: "g1", status: { type: { state: "post", completed: true } } }]
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const out = await probeEspn([{ id: "g1", kickoffMs: parseDate("2026-09-03T16:00") }], NOW);
+    assert.equal(out.states.g1.state, "post");
+    assert.equal(captured.cache, "no-store");
+    assert.equal(captured.cf, undefined);
+    assert.equal(captured.headers["cache-control"], "no-cache");
   } finally { globalThis.fetch = originalFetch; }
 });
 

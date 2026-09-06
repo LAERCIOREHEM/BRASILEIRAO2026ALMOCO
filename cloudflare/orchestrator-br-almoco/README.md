@@ -1,6 +1,6 @@
-# Orchestrator BR Almoço 1.1.5 — FINAL redundante e safety trigger
+# Orchestrator BR Almoço 1.1.6 — correção do fetch ESPN na Cloudflare
 
-A versão 1.1.5 mantém um único workflow esportivo robusto: `Atualizar Brasileirao (ESPN)`.
+A versão 1.1.6 mantém um único workflow esportivo robusto: `Atualizar Brasileirao (ESPN)`.
 
 ## Correção principal
 
@@ -34,3 +34,12 @@ coletor robusto GitHub/curl_cffi decide o estado real
 ```
 
 Excluídos do escopo: AO VIVO, públicos, melhores momentos, elencos e fair play.
+
+
+## Correção 1.1.6
+
+A 1.1.5 combinava `cache: "no-store"` com `cf.cacheTtl = 0`.
+O runtime Cloudflare rejeitava a subrequest antes de acessar a ESPN.
+
+A 1.1.6 mantém `cache: "no-store"`, headers `no-cache` e a query
+`orch=<minuto>` para cache-busting, removendo somente `cf.cacheTtl`.

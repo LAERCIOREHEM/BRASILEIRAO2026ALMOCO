@@ -1,0 +1,10 @@
+PATCH BR ALMOÇO ORQUESTRADOR 1.1.6
+
+Corrige o erro Cloudflare: CacheTtl: 0 incompatível com cache: no-store.
+Mantém scoreboard primário, summary fallback, safety trigger T+110 e Atualizar Brasileirão robusto.
+
+- .github/workflows/deploy-orchestrator-br-almoco.yml
+- cloudflare/orchestrator-br-almoco/README.md
+- cloudflare/orchestrator-br-almoco/package.json
+- cloudflare/orchestrator-br-almoco/src/index.js
+- cloudflare/orchestrator-br-almoco/test/orchestrator.test.mjs

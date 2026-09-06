@@ -1,5 +1,5 @@
 /*
- * Brasileirão 2026 Almoço — Orchestrator 1.1.5
+ * Brasileirão 2026 Almoço — Orchestrator 1.1.6
  *
  * Escopo deliberadamente EXCLUÍDO:
  * - AO VIVO / placar em browser
@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "1.1.5";
+export const VERSION = "1.1.6";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -631,7 +631,7 @@ function githubHeaders(env) {
     "accept": "application/vnd.github+json",
     "authorization": `Bearer ${token}`,
     "x-github-api-version": "2026-03-10",
-    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.5",
+    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.6",
   };
 }
 
@@ -724,16 +724,17 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = ESPN_TIMEOUT_MS) 
 }
 
 function espnNoCacheOptions() {
+  // 1.1.6: não combinar RequestInit.cache="no-store" com cf.cacheTtl=0.
+  // O runtime Cloudflare rejeita essa combinação antes da requisição.
+  // A query ?orch=<minuto> já faz cache-busting e "no-store" evita cache da subrequest.
   return {
     cache: "no-store",
     headers: {
       "accept": "application/json,text/plain,*/*",
       "cache-control": "no-cache",
       "pragma": "no-cache",
-      // Mesma estratégia browser-like já comprovada no orquestrador do Fórmula do Gol.
-      "user-agent": "Mozilla/5.0 (compatible; BrasileiroAlmoco-Orchestrator/1.1.5)",
+      "user-agent": "Mozilla/5.0 (compatible; BrasileiroAlmoco-Orchestrator/1.1.6)",
     },
-    cf: { cacheTtl: 0, cacheEverything: false },
   };
 }
 
@@ -744,7 +745,7 @@ export async function probeEspn(games, nowMs = Date.now()) {
   const errors = [];
   const notes = [];
 
-  // 1.1.5: SCOREBOARD é a fonte primária, espelhando o mecanismo comprovado
+  // 1.1.6: SCOREBOARD é a fonte primária, espelhando o mecanismo comprovado
   // do Fórmula do Gol. Consultamos tanto o dia BRT quanto UTC para jogos noturnos.
   const days = [...new Set(wantedGames.flatMap((g) => [dateKeyBrt(g.kickoffMs), dateKeyUtc(g.kickoffMs)]).filter(Boolean))];
   const scoreboardHits = new Set();
@@ -940,6 +941,7 @@ export class BrAlmocoOrchestratorStateV1 {
       fastPath: {
         scoreboardPrimary: true,
         browserLikeScoreboard: true,
+        cloudflareFetchCachePolicy: "request_no_store_without_cf_cacheTtl",
         summaryFallbackByEventId: true,
         passesEventIdsToMainWorkflow: true,
         probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
@@ -973,6 +975,7 @@ export class BrAlmocoOrchestratorStateV1 {
       fastPath: {
         scoreboardPrimary: true,
         browserLikeScoreboard: true,
+        cloudflareFetchCachePolicy: "request_no_store_without_cf_cacheTtl",
         summaryFallbackByEventId: true,
         passesEventIdsToMainWorkflow: true,
         probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
