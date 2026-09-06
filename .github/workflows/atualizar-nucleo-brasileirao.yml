@@ -1,0 +1,187 @@
+name: Atualizar núcleo rápido do Brasileirão
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: repo-write-main
+  cancel-in-progress: false
+
+jobs:
+  atualizar-nucleo:
+    name: Resultado + tabela + apostas + bolão
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout raso
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validar somente o caminho crítico
+        run: |
+          set -euo pipefail
+          python -m py_compile atualizar_espn.py fontes_brasileirao.py scripts/apurar_rodada.py
+          python atualizar_espn.py --selftest
+          python scripts/apurar_rodada.py --self-test
+
+      - name: Registrar resultados anteriores
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          data=json.loads(Path('resultados.json').read_text(encoding='utf-8'))
+          raw=json.dumps(data.get('resultados') or [],ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
+          Path('/tmp/resultados_antes.sha256').write_text(hashlib.sha256(raw).hexdigest(),encoding='utf-8')
+          PY
+
+      - name: Coleta COMPLETA ESPN/CBF do núcleo
+        id: espn
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          API_FOOTBALL_LEAGUE_ID: ${{ secrets.API_FOOTBALL_LEAGUE_ID }}
+          ESPN_COLETA_COMPLETA: 'true'
+          ESPN_MAX_TENTATIVAS_SINCRONIA: '2'
+          ESPN_ESPERA_SINCRONIA_SEGUNDOS: '15'
+        run: python atualizar_espn.py
+
+      - name: Detectar resultado novo
+        id: resultado
+        if: steps.espn.outputs.sincronizado == 'true'
+        run: |
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          data=json.loads(Path('resultados.json').read_text(encoding='utf-8'))
+          raw=json.dumps(data.get('resultados') or [],ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
+          atual=hashlib.sha256(raw).hexdigest()
+          anterior=Path('/tmp/resultados_antes.sha256').read_text(encoding='utf-8').strip()
+          mudou=atual != anterior
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as f: f.write(f'mudou={str(mudou).lower()}\n')
+          print(f'Resultado novo: {mudou}')
+          PY
+
+      - name: Apurar apostas/ranking imediatamente
+        id: apurar
+        if: steps.espn.outputs.sincronizado == 'true' && steps.resultado.outputs.mudou == 'true'
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BRASILEIRAO_TEMPORADA: '2026'
+        run: python scripts/apurar_rodada.py
+
+      - name: Validar snapshot essencial
+        if: steps.espn.outputs.sincronizado == 'true'
+        env:
+          APURACAO_OUTCOME: ${{ steps.apurar.outcome }}
+          RESULTADO_MUDOU: ${{ steps.resultado.outputs.mudou }}
+        run: |
+          set -euo pipefail
+          for f in tabela.json espn_eventos.json jogos.json resultados.json dados-br/calendario-completo.json dados-br/status-atualizacao.json; do
+            python -m json.tool "$f" >/dev/null
+          done
+          if [[ "${RESULTADO_MUDOU:-false}" == "true" && "${APURACAO_OUTCOME:-}" == "success" ]]; then
+            python -m json.tool dados-br/apuracao.json >/dev/null
+            python -m json.tool dados-br/ranking-apostas.json >/dev/null
+          fi
+          python - <<'PY'
+          import json
+          t=json.load(open('tabela.json',encoding='utf-8'))
+          r=json.load(open('resultados.json',encoding='utf-8'))
+          assert len(t.get('tabela') or []) == 20
+          finais=r.get('resultados') or []
+          assert int(r.get('total_resultados') or len(finais)) == len(finais)
+          ids=[str(x.get('event_id') or '').strip() for x in finais]
+          assert all(ids) and len(ids) == len(set(ids))
+          print(f'Núcleo íntegro: tabela=20, resultados={len(finais)}')
+          PY
+
+      - name: Publicar núcleo crítico no main
+        id: publish
+        if: steps.espn.outputs.sincronizado == 'true'
+        env:
+          RESULTADO_MUDOU: ${{ steps.resultado.outputs.mudou }}
+          APURACAO_OUTCOME: ${{ steps.apurar.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "published=false" >> "$GITHUB_OUTPUT"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          FILES=(
+            tabela.json
+            espn_eventos.json
+            jogos.json
+            resultados.json
+            dados-br/calendario-completo.json
+            dados-br/status-atualizacao.json
+          )
+          if [[ "${RESULTADO_MUDOU:-false}" == "true" && "${APURACAO_OUTCOME:-}" == "success" ]]; then
+            FILES+=(dados-br/apuracao.json dados-br/ranking-apostas.json)
+          fi
+
+          if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
+            echo "Núcleo já está atualizado."
+            exit 0
+          fi
+
+          TMP="$(mktemp -d)"
+          for f in "${FILES[@]}"; do
+            test -f "$f"
+            mkdir -p "$TMP/$(dirname "$f")"
+            cp -a "$f" "$TMP/$f"
+          done
+
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
+            for f in "${FILES[@]}"; do
+              mkdir -p "$(dirname "$f")"
+              cp -a "$TMP/$f" "$f"
+            done
+            if [[ -z "$(git status --porcelain -- "${FILES[@]}")" ]]; then
+              echo "Outro writer já publicou o mesmo núcleo."
+              exit 0
+            fi
+            git add -- "${FILES[@]}"
+            git commit -m "Atualizar núcleo rápido do Brasileirão - $(TZ='America/Sao_Paulo' date '+%d/%m/%Y %H:%M BRT')"
+            if git push origin HEAD:main; then
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Falha ao publicar núcleo após 5 tentativas." >&2
+          exit 1
+
+      - name: Enfileirar atualização completa em segundo plano
+        if: steps.publish.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run atualizar-brasileirao.yml --ref main -f coleta_completa=true -f forcar_af=false
+          echo "Núcleo já publicado; derivados completos foram enfileirados com coleta_completa=true."
+
+      - name: Recuperar blocos se a apuração falhou
+        if: steps.espn.outputs.sincronizado == 'true' && steps.resultado.outputs.mudou == 'true' && steps.apurar.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run apurar-brasileirao.yml --ref main
+          echo "Apuração dedicada enfileirada como recuperação."

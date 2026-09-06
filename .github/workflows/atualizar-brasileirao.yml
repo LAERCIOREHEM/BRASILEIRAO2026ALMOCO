@@ -14,7 +14,7 @@ on:
       coleta_completa:
         description: 'Forçar varredura completa do scoreboard ESPN nesta execução'
         required: false
-        default: false
+        default: true
         type: boolean
 
 permissions:
@@ -367,15 +367,9 @@ jobs:
           echo "ERRO: não foi possível publicar o snapshot essencial."
           exit 1
 
-      - name: Deploy imediato do snapshot essencial
-        if: steps.publish_essential.outputs.published == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh workflow run deploy.yml --ref main
-          echo "Deploy disparado: resultado e apuração normal chegam juntos."
+      # O snapshot essencial é consumido diretamente do main pelas telas dinâmicas.
+      # Não espere um GitHub Pages de ~200 MB para mostrar RESULTADOS/TABELA/BOLÃO.
+      # O deploy completo continua no fim, somente para derivados/assets.
 
       - name: Informar preservação por dessincronia temporária da ESPN
         if: steps.espn.outputs.sincronizado != 'true'
