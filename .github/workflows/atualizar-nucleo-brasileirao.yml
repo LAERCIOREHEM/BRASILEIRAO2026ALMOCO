@@ -2,6 +2,12 @@ name: Atualizar núcleo rápido do Brasileirão
 
 on:
   workflow_dispatch:
+    inputs:
+      event_ids:
+        description: 'event_id ESPN já confirmado como FINAL pelo orquestrador (opcional; aceita lista separada por vírgula)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -30,6 +36,10 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Instalar transporte ESPN resistente a 403
+        run: |
+          python -m pip install --disable-pip-version-check --no-cache-dir curl-cffi==0.15.0
+
       - name: Validar somente o caminho crítico
         run: |
           set -euo pipefail
@@ -52,9 +62,12 @@ jobs:
         env:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           API_FOOTBALL_LEAGUE_ID: ${{ secrets.API_FOOTBALL_LEAGUE_ID }}
-          ESPN_COLETA_COMPLETA: 'true'
+          # FAST CORE deve ser incremental e cirúrgico. A varredura completa
+          # fica para o workflow pesado enfileirado após a publicação.
+          ESPN_COLETA_COMPLETA: 'false'
+          ESPN_FORCE_SUMMARY_EVENT_IDS: ${{ inputs.event_ids }}
           ESPN_MAX_TENTATIVAS_SINCRONIA: '2'
-          ESPN_ESPERA_SINCRONIA_SEGUNDOS: '15'
+          ESPN_ESPERA_SINCRONIA_SEGUNDOS: '10'
         run: python atualizar_espn.py
 
       - name: Detectar resultado novo
