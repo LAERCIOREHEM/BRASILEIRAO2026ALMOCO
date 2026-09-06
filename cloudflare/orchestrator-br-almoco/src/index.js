@@ -1,5 +1,5 @@
 /*
- * Brasileirão 2026 Almoço — Orchestrator 1.1.3
+ * Brasileirão 2026 Almoço — Orchestrator 1.1.4
  *
  * Escopo deliberadamente EXCLUÍDO:
  * - AO VIVO / placar em browser
@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "1.1.3";
+export const VERSION = "1.1.4";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -83,6 +83,7 @@ export const DEFAULTS = Object.freeze({
   apuracaoCooldownMinutes: 10,
   blocksCooldownMinutes: 10,
   afCooldownMinutes: 20,
+  afSameDivergenceBackoffMinutes: 120,
   tvCriticalRetryHours: 3,
   tv14dRetryHours: 24,
   tv35dRetryHours: 48,
@@ -127,6 +128,7 @@ export function runtimeConfig(env = {}) {
     apuracaoCooldownMinutes: n(env, "APURACAO_COOLDOWN_MINUTES", DEFAULTS.apuracaoCooldownMinutes),
     blocksCooldownMinutes: n(env, "BLOCKS_COOLDOWN_MINUTES", DEFAULTS.blocksCooldownMinutes),
     afCooldownMinutes: n(env, "AF_COOLDOWN_MINUTES", DEFAULTS.afCooldownMinutes),
+    afSameDivergenceBackoffMinutes: n(env, "AF_SAME_DIVERGENCE_BACKOFF_MINUTES", DEFAULTS.afSameDivergenceBackoffMinutes),
     tvCriticalRetryHours: n(env, "TV_CRITICAL_RETRY_HOURS", DEFAULTS.tvCriticalRetryHours),
     tv14dRetryHours: n(env, "TV_14D_RETRY_HOURS", DEFAULTS.tv14dRetryHours),
     tv35dRetryHours: n(env, "TV_35D_RETRY_HOURS", DEFAULTS.tv35dRetryHours),
@@ -409,8 +411,19 @@ export function chooseSlowCandidate(snapshot, state, nowMs, cfg = DEFAULTS) {
   if (!snapshot.apuracao?.ok && isCooldownElapsed(state, ACTIONS.APURAR, nowMs, cfg)) {
     return candidate(ACTIONS.APURAR, `Apuração está atrás dos resultados: ${(snapshot.apuracao.divergences || []).slice(0, 4).join("; ")}`);
   }
-  if (!snapshot.af?.ok && isCooldownElapsed(state, ACTIONS.MAIN_AF, nowMs, cfg)) {
-    return candidate(ACTIONS.MAIN_AF, `AF-Previsão está defasado: resultados=${snapshot.af.results}, AF reconhece=${snapshot.af.recognized}.`);
+  if (!snapshot.af?.ok) {
+    const signature = `${safeInt(snapshot.af.results)}:${safeInt(snapshot.af.recognized)}`;
+    const lastAttemptMs = parseDate(state?.afLastAttempt?.at);
+    const sameSignature = String(state?.afLastAttempt?.signature || "") === signature;
+    const backoffMs = cfg.afSameDivergenceBackoffMinutes * 60_000;
+    const sameDivergenceBackoff = sameSignature && Number.isFinite(lastAttemptMs) && nowMs - lastAttemptMs < backoffMs;
+    if (!sameDivergenceBackoff && isCooldownElapsed(state, ACTIONS.MAIN_AF, nowMs, cfg)) {
+      return candidate(
+        ACTIONS.MAIN_AF,
+        `AF-Previsão está defasado: resultados=${snapshot.af.results}, AF reconhece=${snapshot.af.recognized}.`,
+        { afSignature: signature },
+      );
+    }
   }
 
   // 3) Atualização principal por estado real dos artefatos, nunca apenas porque virou o dia.
@@ -562,6 +575,7 @@ function defaultState() {
     resultReason: "ainda não executado",
     errors: [],
     recentDecisions: [],
+    afLastAttempt: null,
   };
 }
 
@@ -589,7 +603,7 @@ function githubHeaders(env) {
     "accept": "application/vnd.github+json",
     "authorization": `Bearer ${token}`,
     "x-github-api-version": "2026-03-10",
-    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.3",
+    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.4",
   };
 }
 
@@ -673,7 +687,7 @@ function espnNoCacheOptions() {
   return {
     cache: "no-store",
     headers: {
-      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.3",
+      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.4",
       "accept": "application/json",
       "cache-control": "no-cache",
       "pragma": "no-cache",
@@ -803,11 +817,21 @@ async function dispatchWorkflow(env, action, context = {}) {
     headers: { ...githubHeaders(env), "content-type": "application/json" },
     body: JSON.stringify({ ref: branch, inputs }),
   });
-  if (response.status !== 204) {
-    const body = (await response.text()).slice(0, 500);
-    throw new Error(`workflow_dispatch ${spec.file}: HTTP ${response.status}: ${body}`);
+  const bodyText = await response.text();
+  if (!response.ok) {
+    throw new Error(`workflow_dispatch ${spec.file}: HTTP ${response.status}: ${bodyText.slice(0, 500)}`);
   }
-  return spec.file;
+
+  let payload = null;
+  if (bodyText.trim()) {
+    try { payload = JSON.parse(bodyText); } catch { payload = null; }
+  }
+  return {
+    file: spec.file,
+    httpStatus: response.status,
+    workflowRunId: payload?.workflow_run_id ?? null,
+    runUrl: payload?.html_url ?? payload?.run_url ?? null,
+  };
 }
 
 async function refreshResultIds(env) {
@@ -853,7 +877,7 @@ export class BrAlmocoOrchestratorStateV1 {
       githubTokenConfigured: Boolean(String(this.env.GITHUB_TOKEN || "").trim()),
       fastPath: {
         summaryByEventId: true,
-        passesEventIdsToFastCore: true,
+        passesEventIdsToMainWorkflow: true,
         probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
         finalDebounceSeconds: runtimeConfig(this.env).finalDebounceSeconds,
         finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
@@ -882,7 +906,7 @@ export class BrAlmocoOrchestratorStateV1 {
       errors: state.errors || [],
       fastPath: {
         summaryByEventId: true,
-        passesEventIdsToFastCore: true,
+        passesEventIdsToMainWorkflow: true,
         probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
         finalDebounceSeconds: runtimeConfig(this.env).finalDebounceSeconds,
         finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
@@ -899,6 +923,10 @@ export class BrAlmocoOrchestratorStateV1 {
         },
         apuracao: snap.apuracao,
         af: snap.af,
+        afControl: {
+          lastAttempt: state.afLastAttempt || null,
+          sameDivergenceBackoffMinutes: runtimeConfig(this.env).afSameDivergenceBackoffMinutes,
+        },
         transmissoesTv: {
           games35d: snap.tv?.games35d,
           covered35d: snap.tv?.covered35d,
@@ -1056,6 +1084,13 @@ export class BrAlmocoOrchestratorStateV1 {
 
       const workflow = await dispatchWorkflow(this.env, selected.action, selected);
       state.lastDispatchAt = { ...(state.lastDispatchAt || {}), [selected.action]: iso(nowMs) };
+      if (selected.action === ACTIONS.MAIN_AF) {
+        state.afLastAttempt = {
+          signature: String(selected.afSignature || `${safeInt(state.snapshot?.af?.results)}:${safeInt(state.snapshot?.af?.recognized)}`),
+          at: iso(nowMs),
+          retryAfter: iso(nowMs + cfg.afSameDivergenceBackoffMinutes * 60_000),
+        };
+      }
       state.result = "dispatched";
       state.resultReason = selected.reason;
       recordDecision(state, nowMs, { action: selected.action, reason: selected.reason, result: "dispatched", workflow, checkpoint: selected.checkpoint || null }, cfg);

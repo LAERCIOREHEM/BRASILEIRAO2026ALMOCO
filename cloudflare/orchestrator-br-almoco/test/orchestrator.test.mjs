@@ -186,6 +186,27 @@ test("AF só dispara quando reconhece menos resultados", () => {
   assert.equal(chooseSlowCandidate(snap, state(), NOW, DEFAULTS).action, ACTIONS.MAIN_AF);
 });
 
+
+test("mesma divergência AF entra em backoff e não repete Action", () => {
+  const f = baseFiles();
+  f.afAudit.integridade.partidas_2026_concluidas = 0;
+  const snap = buildRepositorySnapshot(f, NOW);
+  const st = state();
+  st.afLastAttempt = { signature: "1:0", at: new Date(NOW - 30 * 60_000).toISOString() };
+  assert.equal(chooseSlowCandidate(snap, st, NOW, DEFAULTS), null);
+});
+
+test("nova divergência AF não fica presa no backoff da divergência anterior", () => {
+  const f = baseFiles();
+  f.results.resultados.push({ event_id: "r21", rodada: 21 });
+  f.apuracao.rodadas.push({ rodada: 21, jogos_apurados: 1 });
+  f.afAudit.integridade.partidas_2026_concluidas = 1;
+  const snap = buildRepositorySnapshot(f, NOW);
+  const st = state();
+  st.afLastAttempt = { signature: "1:0", at: new Date(NOW - 10 * 60_000).toISOString() };
+  assert.equal(chooseSlowCandidate(snap, st, NOW, DEFAULTS).action, ACTIONS.MAIN_AF);
+});
+
 test("manutenção usa idade real dos artefatos, não troca de data civil", () => {
   const f = baseFiles();
   f.calendar.gerado_em = "2026-09-02T16:00:00-03:00";
@@ -418,7 +439,10 @@ test("integração: ACTIVE despacha Atualizar Brasileirão no mesmo tick e envia
     }
     if (url.hostname === "api.github.com" && url.pathname.includes("/actions/workflows/") && url.pathname.endsWith("/dispatches")) {
       dispatches.push({ url: url.pathname, body: JSON.parse(init.body) });
-      return new Response(null, { status: 204 });
+      return new Response(JSON.stringify({
+        workflow_run_id: 34054483168,
+        html_url: "https://github.com/LAERCIOREHEM/BRASILEIRAO2026ALMOCO/actions/runs/34054483168",
+      }), { status: 200, headers: { "content-type": "application/json" } });
     }
     throw new Error(`fetch mock não previsto: ${url}`);
   };
@@ -434,6 +458,9 @@ test("integração: ACTIVE despacha Atualizar Brasileirão no mesmo tick e envia
     assert.deepEqual(dispatches[0].body, { ref: "main", inputs: { coleta_completa: "true", forcar_af: "false", event_ids: "g1" } });
     const persisted = storageMap.get("state");
     assert.ok(persisted.pendingFinals.g1); // dispatch != publicação
+    const lastDecision = persisted.recentDecisions.at(-1);
+    assert.equal(lastDecision.workflow.httpStatus, 200);
+    assert.equal(lastDecision.workflow.workflowRunId, 34054483168);
   } finally {
     globalThis.fetch = originalFetch;
     Date.now = originalNow;

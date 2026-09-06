@@ -1,0 +1,17 @@
+PATCH BR ALMOÇO 1.1.4
+
+Arquivos alterados:
+- .github/workflows/deploy-orchestrator-br-almoco.yml
+- cloudflare/orchestrator-br-almoco/README.md
+- cloudflare/orchestrator-br-almoco/package.json
+- cloudflare/orchestrator-br-almoco/wrangler.toml
+- cloudflare/orchestrator-br-almoco/src/index.js
+- cloudflare/orchestrator-br-almoco/test/orchestrator.test.mjs
+
+Correções:
+- HTTP 200/2xx de workflow_dispatch é sucesso, não degraded.
+- Backoff de 120 min para a mesma divergência AF.
+- Nova divergência AF continua elegível.
+- Removido rótulo residual passesEventIdsToFastCore.
+
+Aplicação: subir os arquivos preservando as pastas e rodar Deploy Orchestrator BR Almoço em active.
