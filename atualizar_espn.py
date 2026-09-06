@@ -1647,6 +1647,146 @@ def _evento_bruto_do_summary(payload: dict[str, Any], event_id: str) -> dict[str
     }
 
 
+
+def _event_ids_forcados_summary() -> set[str]:
+    """IDs que o orquestrador confirmou como FINAL e quer reconciliar já.
+
+    O valor chega pelo FAST CORE como lista separada por vírgula/espaço. IDs
+    desconhecidos são ignorados; o coletor nunca inventa confronto nem placar.
+    """
+    raw = str(os.environ.get("ESPN_FORCE_SUMMARY_EVENT_IDS") or "").strip()
+    if not raw:
+        return set()
+    return {token for token in re.findall(r"\d+", raw) if token}
+
+
+def _candidatos_summary_proativo(
+    eventos: list[dict[str, Any]],
+    *,
+    agora: datetime | None = None,
+    janela_horas: int = 12,
+    limite: int = 12,
+) -> list[dict[str, Any]]:
+    """Seleciona jogos recentes ainda não finalizados para confirmação individual.
+
+    O scoreboard agregado da ESPN pode ficar congelado/defasado mesmo quando o
+    endpoint individual ``summary?event=...`` já publicou o FINAL. Antes desta
+    rotina, o summary só era consultado quando standings x resultados divergiam;
+    se AMBOS estivessem igualmente atrasados, nada disparava o fallback.
+
+    IDs explicitamente enviados pelo orquestrador têm prioridade e não dependem
+    da janela temporal. Para execução manual, jogos iniciados há pelo menos 75
+    minutos e no máximo ``janela_horas`` também são verificados.
+    """
+    agora = agora or agora_brt()
+    forcados = _event_ids_forcados_summary()
+    candidatos: list[tuple[int, float, dict[str, Any]]] = []
+    for evento in eventos:
+        event_id = str(evento.get("event_id") or "").strip()
+        if not event_id:
+            continue
+        if evento_realmente_finalizado(evento, agora):
+            continue
+        if evento.get("data_definir") is True:
+            continue
+        inicio = evento.get("data_dt")
+        forçado = event_id in forcados
+        recente = bool(
+            isinstance(inicio, datetime)
+            and agora - timedelta(hours=max(1, janela_horas)) <= inicio <= agora - timedelta(minutes=75)
+        )
+        if not (forçado or recente):
+            continue
+        # Forçados primeiro; dentro do grupo, o kickoff mais recente primeiro.
+        sort_ts = float(inicio.timestamp()) if isinstance(inicio, datetime) else 0.0
+        candidatos.append((0 if forçado else 1, -sort_ts, evento))
+    candidatos.sort(key=lambda item: (item[0], item[1]))
+    return [item[2] for item in candidatos[: max(1, int(limite))]]
+
+
+def aplicar_resumos_proativos_espn(
+    eventos: list[dict[str, Any]],
+    *,
+    agora: datetime | None = None,
+) -> int:
+    """Confirma FINAL pelo endpoint individual ESPN sem depender de divergência.
+
+    Esta é a via crítica do FAST CORE. Só promove um evento quando o summary
+    individual confirma ``post/completed`` e o confronto (mandante/visitante)
+    coincide com o snapshot canônico. Falha do summary não interrompe a coleta;
+    o scoreboard/CBF continuam disponíveis como caminhos normais.
+    """
+    agora = agora or agora_brt()
+    aplicados = 0
+    candidatos = _candidatos_summary_proativo(eventos, agora=agora)
+    if not candidatos:
+        return 0
+    for alvo in candidatos:
+        event_id = str(alvo.get("event_id") or "").strip()
+        try:
+            payload = fetch_json(
+                f"{URL_RESUMO_EVENTO}?event={urllib.parse.quote(event_id)}",
+                timeout=20,
+                tentativas=1,
+                cache_bust=True,
+            )
+            bruto = _evento_bruto_do_summary(payload, event_id)
+            if not bruto:
+                continue
+            normalizados = normalizar_eventos_scoreboard([bruto], finalizar=False)
+            if not normalizados:
+                continue
+            resumo = normalizados[0]
+            if not evento_realmente_finalizado(resumo, agora):
+                continue
+            if resumo.get("placar_mandante") is None or resumo.get("placar_visitante") is None:
+                continue
+            if (
+                resumo.get("mandante_nome") != alvo.get("mandante_nome")
+                or resumo.get("visitante_nome") != alvo.get("visitante_nome")
+            ):
+                print(
+                    f"::warning::Summary ESPN {event_id} ignorado: confronto divergente "
+                    f"({resumo.get('mandante_nome')} x {resumo.get('visitante_nome')})."
+                )
+                continue
+            antes = (
+                alvo.get("placar_mandante"), alvo.get("placar_visitante"),
+                alvo.get("estado"), alvo.get("concluido"),
+            )
+            _aplicar_placar_complementar(
+                alvo,
+                placar_mandante=int(resumo["placar_mandante"]),
+                placar_visitante=int(resumo["placar_visitante"]),
+                fonte="ESPN summary",
+                origem=f"{URL_RESUMO_EVENTO}?event={event_id}",
+                motivo=(
+                    "FINAL confirmado proativamente no summary individual da ESPN; "
+                    "não depende da atualização do scoreboard agregado."
+                ),
+                status=str(resumo.get("status") or "Encerrado"),
+            )
+            depois = (
+                alvo.get("placar_mandante"), alvo.get("placar_visitante"),
+                alvo.get("estado"), alvo.get("concluido"),
+            )
+            if antes != depois:
+                aplicados += 1
+                print(
+                    f"FINAL proativo ESPN: {alvo.get('mandante_nome')} "
+                    f"{alvo.get('placar_mandante')} x {alvo.get('placar_visitante')} "
+                    f"{alvo.get('visitante_nome')} (event_id={event_id})"
+                )
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"::warning::Summary ESPN proativo indisponível para {event_id}: "
+                f"{type(exc).__name__}: {exc}"
+            )
+    if aplicados:
+        print(f"Resultados recuperados proativamente pelo summary ESPN: {aplicados}")
+    return aplicados
+
+
 def aplicar_resumos_alternativos_espn(
     eventos: list[dict[str, Any]], discrepancias: list[dict[str, Any]]
 ) -> int:
@@ -2978,6 +3118,85 @@ def selftest_execucao_6() -> None:
     finally:
         globals()["fetch_json"] = fetch_original
 
+    # FAST CORE 1.1.2: summary proativo independe de divergência standings.
+    fetch_original = globals()["fetch_json"]
+    env_force_original = os.environ.get("ESPN_FORCE_SUMMARY_EVENT_IDS")
+    try:
+        now_summary = datetime(2026, 9, 6, 14, 0, tzinfo=FUSO_BRASILIA)
+        kickoff_summary = now_summary - timedelta(hours=3)
+        alvo_summary = {
+            "event_id": "401841219",
+            "rodada": 26,
+            "data_dt": kickoff_summary,
+            "data_iso": kickoff_summary.strftime("%Y-%m-%dT%H:%M"),
+            "_sort": kickoff_summary.timestamp(),
+            "mandante_nome": "Coritiba",
+            "visitante_nome": "Mirassol",
+            "mandante": info_time("Coritiba"),
+            "visitante": info_time("Mirassol"),
+            "estadio": "Couto Pereira",
+            "transmissao": "",
+            "status": "0'",
+            "estado": "pre",
+            "concluido": False,
+            "adiado": False,
+            "placar_mandante": 0,
+            "placar_visitante": 0,
+            "data_definir": False,
+        }
+        def _fetch_summary_teste(url: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            assert "summary?event=401841219" in url
+            return {
+                "header": {
+                    "id": "401841219",
+                    "competitions": [{
+                        "date": "2026-09-06T14:00Z",
+                        "status": {
+                            "type": {
+                                "completed": True,
+                                "state": "post",
+                                "displayClock": "90'+6'",
+                                "shortDetail": "Final",
+                            }
+                        },
+                        "competitors": [
+                            {
+                                "homeAway": "home",
+                                "score": "1",
+                                "team": {
+                                    "displayName": "Coritiba",
+                                    "shortDisplayName": "Coritiba",
+                                    "abbreviation": "CFC",
+                                },
+                            },
+                            {
+                                "homeAway": "away",
+                                "score": "0",
+                                "team": {
+                                    "displayName": "Mirassol",
+                                    "shortDisplayName": "Mirassol",
+                                    "abbreviation": "MIR",
+                                },
+                            },
+                        ],
+                    }],
+                }
+            }
+        globals()["fetch_json"] = _fetch_summary_teste
+        os.environ["ESPN_FORCE_SUMMARY_EVENT_IDS"] = "401841219"
+        assert aplicar_resumos_proativos_espn([alvo_summary], agora=now_summary) == 1
+        assert alvo_summary["estado"] == "post"
+        assert alvo_summary["concluido"] is True
+        assert alvo_summary["placar_mandante"] == 1
+        assert alvo_summary["placar_visitante"] == 0
+        assert alvo_summary["fonte_resultado"] == "ESPN summary"
+    finally:
+        globals()["fetch_json"] = fetch_original
+        if env_force_original is None:
+            os.environ.pop("ESPN_FORCE_SUMMARY_EVENT_IDS", None)
+        else:
+            os.environ["ESPN_FORCE_SUMMARY_EVENT_IDS"] = env_force_original
+
     print("Selftest Execução 6, sincronização cruzada e coleta incremental OK")
 
 
@@ -3025,6 +3244,14 @@ def main() -> None:
                 print(f"Kickoffs provisórios suprimidos: {provisoria}")
 
             aplicar_transmissoes_manuais(eventos_normalizados)
+            # FAST CORE: confirma por event_id jogos recentes/forçados ANTES da
+            # auditoria standings x resultados. Assim um scoreboard agregado
+            # congelado não consegue mais esconder um FINAL já disponível no
+            # summary individual da ESPN.
+            summary_proativos = aplicar_resumos_proativos_espn(eventos_normalizados)
+            coleta_scoreboard["resultados_summary_proativos"] = summary_proativos
+            if summary_proativos:
+                eventos_normalizados = finalizar_eventos_normalizados(eventos_normalizados)
             print(
                 "Snapshot consolidado: "
                 f"{estatisticas_mesclagem['eventos_historicos']} históricos + "

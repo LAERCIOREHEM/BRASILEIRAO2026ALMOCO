@@ -1,5 +1,5 @@
 /*
- * Brasileirão 2026 Almoço — Orchestrator 1.1.0
+ * Brasileirão 2026 Almoço — Orchestrator 1.1.2
  *
  * Escopo deliberadamente EXCLUÍDO:
  * - AO VIVO / placar em browser
@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "1.1.1";
+export const VERSION = "1.1.2";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -77,8 +77,8 @@ export const DEFAULTS = Object.freeze({
   fastProbeIntervalSeconds: 60,
   finalRecoveryEndMinutes: 720,
   finalRecoveryIntervalMinutes: 5,
-  finalDebounceSeconds: 45,
-  finalRetryMinutes: 5,
+  finalDebounceSeconds: 0,
+  finalRetryMinutes: 3,
   fastCooldownMinutes: 3,
   mainCooldownMinutes: 8,
   apuracaoCooldownMinutes: 10,
@@ -590,7 +590,7 @@ function githubHeaders(env) {
     "accept": "application/vnd.github+json",
     "authorization": `Bearer ${token}`,
     "x-github-api-version": "2026-03-10",
-    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.1",
+    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.2",
   };
 }
 
@@ -674,7 +674,7 @@ function espnNoCacheOptions() {
   return {
     cache: "no-store",
     headers: {
-      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.1",
+      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.2",
       "accept": "application/json",
       "cache-control": "no-cache",
       "pragma": "no-cache",
@@ -762,10 +762,15 @@ export function recentActionRunGuard(runs, action, nowMs, cfg = DEFAULTS) {
 
   // Defesa externa ao Durable Object: mesmo que o estado local seja perdido,
   // o histórico do GitHub impede re-dispatch imediato da mesma ação.
-  if (ageMin >= 0 && ageMin < cfg.duplicateRunGuardMinutes) {
+  // FINAL/FAST é exceção deliberada: se o run terminou verde mas a ESPN não
+  // convergiu, a recuperação não pode ficar presa no guard genérico de 15 min.
+  const guardMinutes = action === ACTIONS.FAST
+    ? Math.min(cfg.duplicateRunGuardMinutes, cfg.finalRetryMinutes)
+    : cfg.duplicateRunGuardMinutes;
+  if (ageMin >= 0 && ageMin < guardMinutes) {
     return {
       blocked: true,
-      reason: `circuit breaker: ${workflowName} já teve run há ${ageMin.toFixed(1)} min (${latest.status || "?"}/${latest.conclusion || "?"})`,
+      reason: `circuit breaker: ${workflowName} já teve run há ${ageMin.toFixed(1)} min (${latest.status || "?"}/${latest.conclusion || "?"}); guard=${guardMinutes}min`,
       run: latest,
     };
   }
@@ -784,15 +789,20 @@ export function recentActionRunGuard(runs, action, nowMs, cfg = DEFAULTS) {
   return null;
 }
 
-async function dispatchWorkflow(env, action) {
+async function dispatchWorkflow(env, action, context = {}) {
   const spec = WORKFLOW_BY_ACTION[action];
   if (!spec) throw new Error(`Ação sem workflow: ${action}`);
   const branch = String(env.GITHUB_BRANCH || "main");
   const url = `${repoBase(env)}/actions/workflows/${encodeURIComponent(spec.file)}/dispatches`;
+  const inputs = { ...(spec.inputs || {}) };
+  if (action === ACTIONS.FAST) {
+    const eventIds = uniqueStrings(context?.eventIds || []);
+    if (eventIds.length) inputs.event_ids = eventIds.join(",");
+  }
   const response = await fetch(url, {
     method: "POST",
     headers: { ...githubHeaders(env), "content-type": "application/json" },
-    body: JSON.stringify({ ref: branch, inputs: spec.inputs }),
+    body: JSON.stringify({ ref: branch, inputs }),
   });
   if (response.status !== 204) {
     const body = (await response.text()).slice(0, 500);
@@ -842,6 +852,13 @@ export class BrAlmocoOrchestratorStateV1 {
       liveIgnored: true,
       excludedDomains: ["ao_vivo", "publicos", "melhores_momentos", "elencos", "fair_play"],
       githubTokenConfigured: Boolean(String(this.env.GITHUB_TOKEN || "").trim()),
+      fastPath: {
+        summaryByEventId: true,
+        passesEventIdsToFastCore: true,
+        probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
+        finalDebounceSeconds: runtimeConfig(this.env).finalDebounceSeconds,
+        finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
+      },
       lastTickAt: state.lastTickAt,
     });
   }
@@ -864,6 +881,13 @@ export class BrAlmocoOrchestratorStateV1 {
       result: state.result,
       resultReason: state.resultReason,
       errors: state.errors || [],
+      fastPath: {
+        summaryByEventId: true,
+        passesEventIdsToFastCore: true,
+        probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
+        finalDebounceSeconds: runtimeConfig(this.env).finalDebounceSeconds,
+        finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
+      },
       hints: snap ? {
         nextGameAt: snap.nextGameAt,
         nextGame: snap.nextGameLabel,
@@ -1031,7 +1055,7 @@ export class BrAlmocoOrchestratorStateV1 {
         return jsonResponse({ ok: true, action: ACTIONS.NONE, reason: state.resultReason });
       }
 
-      const workflow = await dispatchWorkflow(this.env, selected.action);
+      const workflow = await dispatchWorkflow(this.env, selected.action, selected);
       state.lastDispatchAt = { ...(state.lastDispatchAt || {}), [selected.action]: iso(nowMs) };
       state.result = "dispatched";
       state.resultReason = selected.reason;
