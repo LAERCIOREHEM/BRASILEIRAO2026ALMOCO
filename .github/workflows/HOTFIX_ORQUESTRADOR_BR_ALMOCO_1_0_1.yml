@@ -1,0 +1,74 @@
+name: HOTFIX · Orquestrador BR Almoço 1.0.1
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repo-write-main
+  cancel-in-progress: false
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar HEAD atual
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Aplicar HOTFIX sobre os arquivos atuais
+        run: python scripts/aplicar_hotfix_orquestrador_br_almoco_1_0_1.py
+
+      - name: Validar exaustivamente antes de publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd cloudflare/orchestrator-br-almoco
+          npm run validate
+          cd "$GITHUB_WORKSPACE"
+          node --check cloudflare/orchestrator-br-almoco/src/index.js
+          python - <<'PY'
+          import json, pathlib
+          json.loads(pathlib.Path('cloudflare/orchestrator-br-almoco/package.json').read_text(encoding='utf-8'))
+          s=pathlib.Path('index.html').read_text(encoding='utf-8')
+          assert 'const ESPN_LIVE_DISABLED = true;' in s
+          assert 'ESPN · resultado recém-finalizado' not in s
+          w=pathlib.Path('cloudflare/orchestrator-br-almoco/wrangler.toml').read_text(encoding='utf-8')
+          assert 'FINAL_RECOVERY_END_MINUTES = "1440"' in w
+          assert 'FINAL_RETRY_MINUTES = "15"' in w
+          print('Gates estáticos: OK')
+          PY
+          git diff --check
+
+      - name: Publicar correção e remover instalador temporário
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            cloudflare/orchestrator-br-almoco/src/index.js \
+            cloudflare/orchestrator-br-almoco/test/orchestrator.test.mjs \
+            cloudflare/orchestrator-br-almoco/package.json \
+            cloudflare/orchestrator-br-almoco/wrangler.toml \
+            cloudflare/orchestrator-br-almoco/README.md \
+            .github/workflows/deploy-orchestrator-br-almoco.yml \
+            index.html
+
+          git rm -f .github/workflows/HOTFIX_ORQUESTRADOR_BR_ALMOCO_1_0_1.yml
+          git rm -f scripts/aplicar_hotfix_orquestrador_br_almoco_1_0_1.py
+
+          git commit -m "Corrigir convergência de resultados finais no orquestrador"
+          git push origin HEAD:main
