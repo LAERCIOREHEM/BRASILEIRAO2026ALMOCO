@@ -1,5 +1,5 @@
 /*
- * Brasileirão 2026 Almoço — Orchestrator 1.0.0
+ * Brasileirão 2026 Almoço — Orchestrator 1.0.1
  *
  * Escopo deliberadamente EXCLUÍDO:
  * - AO VIVO / placar em browser
@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "1.0.0";
+export const VERSION = "1.0.1";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -63,7 +63,10 @@ export const DEFAULTS = Object.freeze({
   fastProbeStartMinutes: 88,
   fastProbeEndMinutes: 300,
   fastProbeIntervalSeconds: 90,
+  finalRecoveryEndMinutes: 1440,
+  finalRecoveryIntervalMinutes: 15,
   finalDebounceSeconds: 90,
+  finalRetryMinutes: 15,
   mainCooldownMinutes: 8,
   apuracaoCooldownMinutes: 10,
   blocksCooldownMinutes: 10,
@@ -100,7 +103,10 @@ export function runtimeConfig(env = {}) {
     fastProbeStartMinutes: n(env, "FAST_PROBE_START_MINUTES", DEFAULTS.fastProbeStartMinutes),
     fastProbeEndMinutes: n(env, "FAST_PROBE_END_MINUTES", DEFAULTS.fastProbeEndMinutes),
     fastProbeIntervalSeconds: n(env, "FAST_PROBE_INTERVAL_SECONDS", DEFAULTS.fastProbeIntervalSeconds),
+    finalRecoveryEndMinutes: n(env, "FINAL_RECOVERY_END_MINUTES", DEFAULTS.finalRecoveryEndMinutes),
+    finalRecoveryIntervalMinutes: n(env, "FINAL_RECOVERY_INTERVAL_MINUTES", DEFAULTS.finalRecoveryIntervalMinutes),
     finalDebounceSeconds: n(env, "FINAL_DEBOUNCE_SECONDS", DEFAULTS.finalDebounceSeconds),
+    finalRetryMinutes: n(env, "FINAL_RETRY_MINUTES", DEFAULTS.finalRetryMinutes),
     mainCooldownMinutes: n(env, "MAIN_COOLDOWN_MINUTES", DEFAULTS.mainCooldownMinutes),
     apuracaoCooldownMinutes: n(env, "APURACAO_COOLDOWN_MINUTES", DEFAULTS.apuracaoCooldownMinutes),
     blocksCooldownMinutes: n(env, "BLOCKS_COOLDOWN_MINUTES", DEFAULTS.blocksCooldownMinutes),
@@ -458,10 +464,34 @@ export function relevantFinalProbeGames(snapshot, nowMs, cfg = DEFAULTS) {
   return (snapshot?.games || []).filter((g) => {
     if (g.concluded || g.tba || !Number.isFinite(g.kickoffMs) || results.has(g.id)) return false;
     const elapsedMin = (nowMs - g.kickoffMs) / 60_000;
-    return elapsedMin >= cfg.fastProbeStartMinutes && elapsedMin <= cfg.fastProbeEndMinutes;
+    return elapsedMin >= cfg.fastProbeStartMinutes && elapsedMin <= cfg.finalRecoveryEndMinutes;
   });
 }
 
+export function finalProbeIntervalMs(games, nowMs, cfg = DEFAULTS) {
+  const xs = Array.isArray(games) ? games : [];
+  const normalWindow = xs.some((g) => {
+    if (!Number.isFinite(g?.kickoffMs)) return false;
+    const elapsedMin = (nowMs - g.kickoffMs) / 60_000;
+    return elapsedMin <= cfg.fastProbeEndMinutes;
+  });
+  return normalWindow
+    ? cfg.fastProbeIntervalSeconds * 1000
+    : cfg.finalRecoveryIntervalMinutes * 60_000;
+}
+
+export function collectRepositoryFinals(snapshot, pendingFinals, nowMs) {
+  const results = resultIdSet(snapshot);
+  const next = { ...(pendingFinals || {}) };
+  for (const id of Object.keys(next)) {
+    if (results.has(id)) delete next[id];
+  }
+  for (const game of snapshot?.games || []) {
+    if (!game?.id || !game.concluded || results.has(game.id) || next[game.id]) continue;
+    next[game.id] = iso(nowMs);
+  }
+  return next;
+}
 export function collectNewFinals(snapshot, espnStates, pendingFinals, nowMs) {
   const results = resultIdSet(snapshot);
   const next = { ...(pendingFinals || {}) };
@@ -533,7 +563,7 @@ function githubHeaders(env) {
     "accept": "application/vnd.github+json",
     "authorization": `Bearer ${token}`,
     "x-github-api-version": "2026-03-10",
-    "user-agent": "Brasileirao-Almoco-Orchestrator/1.0",
+    "user-agent": "Brasileirao-Almoco-Orchestrator/1.0.1",
   };
 }
 
@@ -594,15 +624,25 @@ async function loadRepositoryFiles(env) {
   return { files, errors };
 }
 
-async function probeEspn(games) {
+export async function probeEspn(games, nowMs = Date.now()) {
   const days = [...new Set(games.map((g) => dateKeyBrt(g.kickoffMs)))];
   const wanted = new Set(games.map((g) => g.id));
   const states = {};
   const errors = [];
   await Promise.all(days.map(async (day) => {
-    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=${day}&limit=100`;
+    // FINAL_CONVERGENCE_1_0_1: sinal de FINAL sempre foge de cache intermediário.
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=${day}&limit=100&_=${Math.trunc(nowMs)}`;
     try {
-      const response = await fetch(url, { headers: { "user-agent": "Brasileirao-Almoco-Orchestrator/1.0", "accept": "application/json" } });
+      const response = await fetch(url, {
+        cache: "no-store",
+        headers: {
+          "user-agent": "Brasileirao-Almoco-Orchestrator/1.0.1",
+          "accept": "application/json",
+          "cache-control": "no-cache",
+          "pragma": "no-cache",
+        },
+        cf: { cacheTtl: 0, cacheEverything: false },
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       for (const event of data.events || []) {
@@ -619,7 +659,6 @@ async function probeEspn(games) {
   }));
   return { states, errors };
 }
-
 async function listRuns(env, limit) {
   const branch = encodeURIComponent(String(env.GITHUB_BRANCH || "main"));
   const perPage = Math.max(10, Math.min(100, Math.trunc(limit || 50)));
@@ -771,13 +810,19 @@ export class BrAlmocoOrchestratorStateV1 {
     }
 
     // FAST PATH: apenas detectar FINAL. Não há AO VIVO, gols, placar ou eventos no escopo.
+    // FINAL já conhecido no calendário mas ainda ausente em resultados também entra
+    // na fila de convergência, sem depender de uma nova resposta da ESPN.
+    state.pendingFinals = collectRepositoryFinals(state.snapshot, state.pendingFinals, nowMs);
+
+    // Janela normal: +88..+300 min. Recovery: até +24h, a cada 15 min.
     const probeGames = relevantFinalProbeGames(state.snapshot, nowMs, cfg);
     state.relevantSportsGames = probeGames.length;
     const lastFast = parseDate(state.lastFastProbeAt);
-    if (probeGames.length && (!Number.isFinite(lastFast) || nowMs - lastFast >= cfg.fastProbeIntervalSeconds * 1000)) {
+    const probeIntervalMs = finalProbeIntervalMs(probeGames, nowMs, cfg);
+    if (probeGames.length && (!Number.isFinite(lastFast) || nowMs - lastFast >= probeIntervalMs)) {
       const cacheAge = ageHours(state.snapshot?.fetchedAtMs, nowMs);
       if (cacheAge <= cfg.staleCacheMaxHoursForFinal) {
-        const probed = await probeEspn(probeGames);
+        const probed = await probeEspn(probeGames, nowMs);
         state.lastFastProbeAt = iso(nowMs);
         if (probed.errors.length) state.errors.push(...probed.errors);
         state.pendingFinals = collectNewFinals(state.snapshot, probed.states, state.pendingFinals, nowMs);
@@ -785,7 +830,6 @@ export class BrAlmocoOrchestratorStateV1 {
         state.errors.push(`cache do repositório velho demais para FINAL (${cacheAge.toFixed(1)}h)`);
       }
     }
-
     let selected = chooseFinalCandidate(state.snapshot, state.pendingFinals, nowMs, cfg);
     const hasPendingFinalDebounce = Object.keys(state.pendingFinals || {}).length > 0;
     if (!selected && !hasPendingFinalDebounce && probeGames.length === 0) {
@@ -828,9 +872,14 @@ export class BrAlmocoOrchestratorStateV1 {
       }
     }
 
-    if (!isCooldownElapsed(state, selected.action, nowMs, cfg)) {
+    const isFinalConvergence = selected.action === ACTIONS.MAIN && Array.isArray(selected.eventIds) && selected.eventIds.length > 0;
+    const lastMain = isFinalConvergence ? lastActionMs(state, ACTIONS.MAIN) : null;
+    const finalCooldownOk = !isFinalConvergence || !Number.isFinite(lastMain) || nowMs - lastMain >= cfg.finalRetryMinutes * 60_000;
+    if (!finalCooldownOk || (!isFinalConvergence && !isCooldownElapsed(state, selected.action, nowMs, cfg))) {
       state.result = "none";
-      state.resultReason = `cooldown ativo para ${selected.action}`;
+      state.resultReason = isFinalConvergence
+        ? `FINAL ainda não convergiu; retry liberado após ${cfg.finalRetryMinutes} min`
+        : `cooldown ativo para ${selected.action}`;
       await this.writeState(state);
       return jsonResponse({ ok: true, action: ACTIONS.NONE, reason: state.resultReason });
     }
@@ -861,9 +910,8 @@ export class BrAlmocoOrchestratorStateV1 {
       state.resultReason = selected.reason;
       recordDecision(state, nowMs, { action: selected.action, reason: selected.reason, result: "dispatched", workflow, checkpoint: selected.checkpoint || null }, cfg);
 
-      if (selected.action === ACTIONS.MAIN && Array.isArray(selected.eventIds)) {
-        for (const id of selected.eventIds) delete state.pendingFinals[id];
-      }
+      // 1.0.1: dispatch não significa publicação. pendingFinals permanece até
+      // resultados.json realmente conter o event_id; então a revalidação o remove.
       // Após qualquer writer, refresca o repositório cedo para observar o novo estado.
       state.nextSlowAt = iso(nowMs + 2 * 60_000);
       await this.writeState(state);

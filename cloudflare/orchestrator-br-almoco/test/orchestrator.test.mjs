@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import {
   ACTIONS,
   BrAlmocoOrchestratorStateV1,
@@ -10,11 +13,14 @@ import {
   chooseSlowCandidate,
   chooseFinalCandidate,
   collectNewFinals,
+  collectRepositoryFinals,
   computeNextSlowAt,
+  finalProbeIntervalMs,
   dateKeyBrt,
   findActiveWriter,
   normalizeMode,
   parseDate,
+  probeEspn,
   relevantFinalProbeGames,
 } from "../src/index.js";
 
@@ -146,6 +152,51 @@ test("fast path começa apenas perto do horário provável de FINAL", () => {
   assert.deepEqual(relevantFinalProbeGames(snap, NOW, DEFAULTS).map((g) => g.id), ["g1"]);
 });
 
+test("recovery path mantém jogo elegível até 24h após kickoff", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-03T10:00";
+  const snap = buildRepositorySnapshot(f, NOW);
+  assert.deepEqual(relevantFinalProbeGames(snap, NOW, DEFAULTS).map((g) => g.id), ["g1"]);
+  const muitoAntigo = parseDate("2026-09-04T11:00:01-03:00");
+  assert.equal(relevantFinalProbeGames(snap, muitoAntigo, DEFAULTS).length, 0);
+});
+
+test("recovery path reduz polling ESPN para 15 minutos depois de +300 min", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-03T15:30";
+  let snap = buildRepositorySnapshot(f, NOW);
+  assert.equal(finalProbeIntervalMs(relevantFinalProbeGames(snap, NOW, DEFAULTS), NOW, DEFAULTS), 90_000);
+  f.calendar.jogos[0].data_iso = "2026-09-03T10:00";
+  snap = buildRepositorySnapshot(f, NOW);
+  assert.equal(finalProbeIntervalMs(relevantFinalProbeGames(snap, NOW, DEFAULTS), NOW, DEFAULTS), 15 * 60_000);
+});
+
+test("FINAL consolidado no calendário mas ausente em resultados vira pendência", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].estado = "post";
+  f.calendar.jogos[0].concluido = true;
+  const snap = buildRepositorySnapshot(f, NOW);
+  assert.ok(collectRepositoryFinals(snap, {}, NOW).g1);
+});
+
+test("probe ESPN de FINAL força no-cache em todas as camadas", async () => {
+  const originalFetch = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (input, init = {}) => {
+    seen.push({ url: String(input), init });
+    return new Response(JSON.stringify({ events: [{ id: "g1", status: { type: { state: "post", completed: true } } }] }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const out = await probeEspn([{ id: "g1", kickoffMs: parseDate("2026-09-03T16:00") }], NOW);
+    assert.equal(out.states.g1.state, "post");
+    assert.match(seen[0].url, /&_=[0-9]+$/);
+    assert.equal(seen[0].init.cache, "no-store");
+    assert.equal(seen[0].init.headers["cache-control"], "no-cache");
+    assert.equal(seen[0].init.cf.cacheTtl, 0);
+    assert.equal(seen[0].init.cf.cacheEverything, false);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test("FINAL ESPN entra em debounce e não vira pipeline por gol", () => {
   const f = baseFiles();
   f.calendar.jogos[0].data_iso = "2026-09-03T16:00";
@@ -200,6 +251,16 @@ test("ações automáticas possíveis são somente as cinco aprovadas", () => {
     "sincronizar_blocos_apostas",
     "transmissoes_tv",
   ].sort());
+});
+
+test("browser não arma polling AO VIVO nem injeta resultado provisório", () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const html = readFileSync(resolve(here, "../../../index.html"), "utf8");
+  assert.match(html, /const ESPN_LIVE_DISABLED = true;/);
+  assert.match(html, /function espnLiveArmar\(\) \{\s*if \(ESPN_LIVE_DISABLED\) return;/);
+  assert.doesNotMatch(html, /ESPN · resultado recém-finalizado/);
+  const fn = html.match(/function resultadosComFinaisRecentesESPN\(listaBase\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.doesNotMatch(fn, /state\.espnLive/);
 });
 
 
@@ -282,6 +343,8 @@ test("integração: ACTIVE agrupa FINAL e despacha somente Atualizar Brasileirã
     assert.equal(dispatches.length, 1);
     assert.match(dispatches[0].url, /atualizar-brasileirao\.yml\/dispatches$/);
     assert.deepEqual(dispatches[0].body, { ref: "main", inputs: {} });
+    const persisted = storageMap.get("state");
+    assert.ok(persisted.pendingFinals.g1); // dispatch != publicação
   } finally {
     globalThis.fetch = originalFetch;
     Date.now = originalNow;

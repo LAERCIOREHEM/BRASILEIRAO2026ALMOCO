@@ -1,4 +1,4 @@
-# Orchestrator BR Almoço 1.0.0
+# Orchestrator BR Almoço 1.0.1
 
 Este pacote cria um orquestrador **independente** para o repositório `LAERCIOREHEM/BRASILEIRAO2026ALMOCO`.
 
@@ -91,3 +91,12 @@ Depois da validação:
 2. imediatamente faça novo deploy deste Worker em `active`;
 3. mantenha o cron externo apenas pausado por alguns dias como contingência;
 4. o workflow antigo pode permanecer no GitHub para execução manual/dry-run.
+
+
+## Convergência de FINAL — 1.0.1
+
+- ESPN FINAL: anti-cache em query, headers e `cf.cacheTtl=0`.
+- Recovery path até +24h; após +300 min, polling a cada 15 min.
+- `pendingFinals` só é resolvido quando `resultados.json` contém o `event_id`.
+- Sem convergência, novo dispatch é permitido após 15 min, respeitando writer gate.
+- AO VIVO do navegador desativado; Resultados usa somente o snapshot consolidado.

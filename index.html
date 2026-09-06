@@ -4502,11 +4502,11 @@ function nomeJogadorCurtoESPN(atleta) {
 }
 
 // ========================================================================
-// AO VIVO — ESPN (bra.1), direto do navegador, a cada 30 segundos.
-// Mesma técnica do módulo da Copa (aovivo.js): a API da ESPN aceita CORS,
-// então o placar em tempo real NÃO depende do GitHub Actions.
-// Fora da janela de jogo o motor dorme (zero requisições).
+// AO VIVO do Brasileirão foi DESCONTINUADO neste site.
+// Compatibilidade legada permanece abaixo, mas nenhum polling ESPN é armado.
+// Resultados refletem exclusivamente resultados.json consolidado.
 // ========================================================================
+const ESPN_LIVE_DISABLED = true;
 const ESPN_SCOREBOARD_BR = 'https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard';
 const ESPN_LIVE_MS = 30000;          // durante jogo: 30s
 const ESPN_JANELA_ANTES_MIN = 20;    // começa a olhar 20 min antes do 1º jogo
@@ -4653,6 +4653,7 @@ async function espnLiveBuscar() {
 let _espnTimer = null;
 async function espnLiveTick() {
   _espnTimer = null;
+  if (ESPN_LIVE_DISABLED) return;
   // Só trabalha quando a aba Jogos está visível e há janela de jogo.
   const deveConsultar = state.view === 'resultados' || espnJanelaAtiva();
   if (document.hidden || !['jogos', 'tabela', 'resultados'].includes(state.view) || !deveConsultar) {
@@ -4671,6 +4672,7 @@ async function espnLiveTick() {
 }
 
 function espnLiveArmar() {
+  if (ESPN_LIVE_DISABLED) return;
   if (_espnTimer) return;
   espnLiveTick();
 }
@@ -4758,24 +4760,9 @@ function formatarDataResultado(dataIso) {
 }
 
 function resultadosComFinaisRecentesESPN(listaBase) {
+  // Assinatura mantida por compatibilidade. Resultado provisório de AO VIVO
+  // foi removido: a página usa somente o snapshot consolidado.
   const lista = Array.isArray(listaBase) ? listaBase.slice() : [];
-  const chaves = new Set(lista.map(r => espnChaveJogo((r.mandante || {}).nome, (r.visitante || {}).nome)));
-  for (const live of Object.values(state.espnLive || {})) {
-    if (!espnLiveEhFinalReal(live)) continue;
-    const chave = espnChaveJogo(live.mandante, live.visitante);
-    if (!chave || chaves.has(chave)) continue;
-    const pm = numeroPlacarLive(live.placarMandante), pv = numeroPlacarLive(live.placarVisitante);
-    if (pm === null || pv === null) continue;
-    const data = live.dataIso || new Date().toISOString();
-    lista.unshift({
-      event_id: live.eventId || '', rodada: live.rodada || '', data_iso: data,
-      status: 'Encerrado', estado: 'post', placar_mandante: pm, placar_visitante: pv,
-      mandante: { nome: live.mandante, escudo: (escudoDe(live.mandante) || {}).escudo || '', sigla: (escudoDe(live.mandante) || {}).sigla || '' },
-      visitante: { nome: live.visitante, escudo: (escudoDe(live.visitante) || {}).escudo || '', sigla: (escudoDe(live.visitante) || {}).sigla || '' },
-      _provisorioESPN: true
-    });
-    chaves.add(chave);
-  }
   return lista.sort((a,b) => String(b.data_iso || '').localeCompare(String(a.data_iso || '')));
 }
 
@@ -4887,7 +4874,7 @@ function renderResultados() {
       html += `<div class="resultado-card ${classeJogo}">
         <div class="resultado-meta">
           <span class="resultado-rodada">R${r.rodada}</span>
-          <span class="resultado-data">${dataFmt}${r._provisorioESPN ? ' · <strong style="color:var(--accent)">ESPN · resultado recém-finalizado</strong>' : ''}</span>
+          <span class="resultado-data">${dataFmt}</span>
         </div>
         <div class="resultado-jogo">
           ${linkClubeBrasileirao(m.nome, `<span class="resultado-team-text"><span class="resultado-nome">${m.nome || '?'}</span></span><span class="resultado-escudo">${escudoMandante}</span>`, 'resultado-time mandante br-club-link')}
