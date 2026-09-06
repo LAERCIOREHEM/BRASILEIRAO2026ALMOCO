@@ -1,0 +1,27 @@
+BRASILEIRAO 2026 ALMOCO — ORQUESTRADOR 1.1.5
+
+ARQUIVOS ALTERADOS (6):
+.github/workflows/deploy-orchestrator-br-almoco.yml
+cloudflare/orchestrator-br-almoco/README.md
+cloudflare/orchestrator-br-almoco/package.json
+cloudflare/orchestrator-br-almoco/wrangler.toml
+cloudflare/orchestrator-br-almoco/src/index.js
+cloudflare/orchestrator-br-almoco/test/orchestrator.test.mjs
+
+CORRECOES:
+- scoreboard ESPN vira fonte primaria do FINAL, com User-Agent browser-like, no-cache e timeout de 8s;
+- consulta BRT + UTC;
+- summary por event_id vira fallback;
+- safety trigger independente em T+110 min chama Atualizar Brasileirao robusto mesmo se Cloudflare nao conseguir ler a ESPN;
+- safety retry minimo 5 min + writer gate + circuit breaker + revalidacao resultados.json;
+- status expõe diagnostico do probe;
+- nenhuma reintroducao do workflow Nucleo Rapido;
+- AO VIVO, publicos, melhores momentos, elencos e fair play continuam fora do escopo.
+
+VALIDACAO LOCAL:
+- npm run validate: 42/42 PASS
+- node --check: PASS
+- YAML parse: PASS
+- TOML parse: PASS
+- integração ESPN 403 -> safety trigger -> Atualizar Brasileirao: PASS
+- wrangler dry-run local: não concluído por timeout de download do pacote npx; o workflow de deploy mantém dry-run obrigatório antes do deploy real.

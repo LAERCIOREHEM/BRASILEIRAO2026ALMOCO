@@ -1,5 +1,5 @@
 /*
- * Brasileirão 2026 Almoço — Orchestrator 1.1.4
+ * Brasileirão 2026 Almoço — Orchestrator 1.1.5
  *
  * Escopo deliberadamente EXCLUÍDO:
  * - AO VIVO / placar em browser
@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "1.1.4";
+export const VERSION = "1.1.5";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -78,6 +78,8 @@ export const DEFAULTS = Object.freeze({
   finalRecoveryIntervalMinutes: 5,
   finalDebounceSeconds: 0,
   finalRetryMinutes: 3,
+  finalSafetyStartMinutes: 110,
+  finalSafetyRetryMinutes: 5,
   fastCooldownMinutes: 3,
   mainCooldownMinutes: 8,
   apuracaoCooldownMinutes: 10,
@@ -123,6 +125,8 @@ export function runtimeConfig(env = {}) {
     finalRecoveryIntervalMinutes: n(env, "FINAL_RECOVERY_INTERVAL_MINUTES", DEFAULTS.finalRecoveryIntervalMinutes),
     finalDebounceSeconds: n(env, "FINAL_DEBOUNCE_SECONDS", DEFAULTS.finalDebounceSeconds),
     finalRetryMinutes: n(env, "FINAL_RETRY_MINUTES", DEFAULTS.finalRetryMinutes),
+    finalSafetyStartMinutes: n(env, "FINAL_SAFETY_START_MINUTES", DEFAULTS.finalSafetyStartMinutes),
+    finalSafetyRetryMinutes: n(env, "FINAL_SAFETY_RETRY_MINUTES", DEFAULTS.finalSafetyRetryMinutes),
     fastCooldownMinutes: n(env, "FAST_COOLDOWN_MINUTES", DEFAULTS.fastCooldownMinutes),
     mainCooldownMinutes: n(env, "MAIN_COOLDOWN_MINUTES", DEFAULTS.mainCooldownMinutes),
     apuracaoCooldownMinutes: n(env, "APURACAO_COOLDOWN_MINUTES", DEFAULTS.apuracaoCooldownMinutes),
@@ -558,6 +562,27 @@ export function chooseFinalCandidate(snapshot, pendingFinals, nowMs, cfg = DEFAU
   return candidate(ACTIONS.FINAL, `ESPN marcou FINAL ainda não incorporado: ${labels}.`, { eventIds: ready.map((g) => g.id) });
 }
 
+export function chooseSafetyFinalCandidate(snapshot, state, nowMs, cfg = DEFAULTS) {
+  const results = resultIdSet(snapshot);
+  const lastByEvent = state?.finalSafetyLastAttempt || {};
+  const eligible = [];
+  for (const game of snapshot?.games || []) {
+    if (!game?.id || game.concluded || game.tba || !Number.isFinite(game.kickoffMs) || results.has(game.id)) continue;
+    const elapsedMin = (nowMs - game.kickoffMs) / 60_000;
+    if (elapsedMin < cfg.finalSafetyStartMinutes || elapsedMin > cfg.finalRecoveryEndMinutes) continue;
+    const lastMs = parseDate(lastByEvent[game.id]);
+    if (Number.isFinite(lastMs) && nowMs - lastMs < cfg.finalSafetyRetryMinutes * 60_000) continue;
+    eligible.push(game);
+  }
+  if (!eligible.length) return null;
+  const labels = eligible.slice(0, 6).map(formatGame).join(", ");
+  return candidate(
+    ACTIONS.FINAL,
+    `Safety trigger: ${labels} já passou de T+${cfg.finalSafetyStartMinutes}min e ainda não consta em resultados; chamar Atualizar Brasileirão robusto mesmo sem confirmação do probe Cloudflare.`,
+    { eventIds: eligible.map((g) => g.id), safetyTrigger: true },
+  );
+}
+
 function defaultState() {
   return {
     schemaVersion: 1,
@@ -567,6 +592,8 @@ function defaultState() {
     lastSlowAt: null,
     nextSlowAt: null,
     lastFastProbeAt: null,
+    lastFastProbeDiagnostics: null,
+    fastProbeWarnings: [],
     lastDispatchAt: {},
     snapshot: null,
     pendingFinals: {},
@@ -576,6 +603,7 @@ function defaultState() {
     errors: [],
     recentDecisions: [],
     afLastAttempt: null,
+    finalSafetyLastAttempt: {},
   };
 }
 
@@ -603,7 +631,7 @@ function githubHeaders(env) {
     "accept": "application/vnd.github+json",
     "authorization": `Bearer ${token}`,
     "x-github-api-version": "2026-03-10",
-    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.4",
+    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.5",
   };
 }
 
@@ -683,14 +711,27 @@ export function espnStateFromPayload(data) {
   return "";
 }
 
+const ESPN_TIMEOUT_MS = 8000;
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = ESPN_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort("timeout"), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function espnNoCacheOptions() {
   return {
     cache: "no-store",
     headers: {
-      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.4",
-      "accept": "application/json",
+      "accept": "application/json,text/plain,*/*",
       "cache-control": "no-cache",
       "pragma": "no-cache",
+      // Mesma estratégia browser-like já comprovada no orquestrador do Fórmula do Gol.
+      "user-agent": "Mozilla/5.0 (compatible; BrasileiroAlmoco-Orchestrator/1.1.5)",
     },
     cf: { cacheTtl: 0, cacheEverything: false },
   };
@@ -701,55 +742,76 @@ export async function probeEspn(games, nowMs = Date.now()) {
   const wanted = new Set(wantedGames.map((g) => String(g.id)));
   const states = {};
   const errors = [];
-  const diagnostics = [];
+  const notes = [];
 
-  // Fonte primária: summary por event_id. Não depende de qual dia a ESPN
-  // indexou um jogo que cruza meia-noite UTC/BRT.
-  await Promise.all(wantedGames.map(async (game) => {
-    const id = String(game.id);
-    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=${encodeURIComponent(id)}&_=${Math.trunc(nowMs)}`;
+  // 1.1.5: SCOREBOARD é a fonte primária, espelhando o mecanismo comprovado
+  // do Fórmula do Gol. Consultamos tanto o dia BRT quanto UTC para jogos noturnos.
+  const days = [...new Set(wantedGames.flatMap((g) => [dateKeyBrt(g.kickoffMs), dateKeyUtc(g.kickoffMs)]).filter(Boolean))];
+  const scoreboardHits = new Set();
+  await Promise.all(days.map(async (day) => {
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=${day}&limit=100&orch=${Math.floor(nowMs / 60_000)}`;
     try {
-      const response = await fetch(url, espnNoCacheOptions());
+      const response = await fetchWithTimeout(url, espnNoCacheOptions());
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      const state = espnStateFromPayload(data);
-      if (state) states[id] = { state, source: "summary" };
+      for (const event of data?.events || []) {
+        const id = String(event?.id || "");
+        if (!wanted.has(id)) continue;
+        scoreboardHits.add(id);
+        const type = event?.status?.type || {};
+        let state = String(type?.state || "").toLowerCase();
+        if (type?.completed === true) state = "post";
+        if (["pre", "in", "post"].includes(state)) {
+          states[id] = { state, source: `scoreboard:${day}` };
+        }
+      }
     } catch (error) {
-      diagnostics.push(`ESPN summary ${id}: ${error?.message || error}`);
+      notes.push(`scoreboard ${day}: ${error?.name || "Error"}: ${error?.message || error}`);
     }
   }));
 
-  // Fallback: scoreboard em AMBAS as partições possíveis (dia BRT e dia UTC).
-  // Serve para indisponibilidade pontual do summary, não como fonte primária.
-  const unresolved = wantedGames.filter((g) => !states[String(g.id)]?.state);
-  const days = [...new Set(unresolved.flatMap((g) => [dateKeyBrt(g.kickoffMs), dateKeyUtc(g.kickoffMs)]).filter(Boolean))];
-  if (days.length) {
-    await Promise.all(days.map(async (day) => {
-      const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=${day}&limit=100&_=${Math.trunc(nowMs)}`;
-      try {
-        const response = await fetch(url, espnNoCacheOptions());
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        for (const event of data.events || []) {
-          const id = String(event?.id || "");
-          if (!wanted.has(id) || states[id]?.state) continue;
-          const type = event?.status?.type || {};
-          let state = String(type.state || "").toLowerCase();
-          if (type.completed === true) state = "post";
-          if (["pre", "in", "post"].includes(state)) states[id] = { state, source: `scoreboard:${day}` };
-        }
-      } catch (error) {
-        diagnostics.push(`ESPN scoreboard ${day}: ${error?.message || error}`);
+  // Fallback/segunda opinião: summary individual somente para eventos que o
+  // scoreboard não resolveu. Falha aqui também não impede o safety trigger temporal.
+  const unresolvedAfterScoreboard = wantedGames.filter((g) => !states[String(g.id)]?.state);
+  const summaryHits = new Set();
+  await Promise.all(unresolvedAfterScoreboard.map(async (game) => {
+    const id = String(game.id);
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=${encodeURIComponent(id)}&orch=${Math.floor(nowMs / 60_000)}`;
+    try {
+      const response = await fetchWithTimeout(url, espnNoCacheOptions());
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      const state = espnStateFromPayload(data);
+      if (state) {
+        states[id] = { state, source: "summary" };
+        summaryHits.add(id);
       }
-    }));
+    } catch (error) {
+      notes.push(`summary ${id}: ${error?.name || "Error"}: ${error?.message || error}`);
+    }
+  }));
+
+  const unresolved = wantedGames.filter((g) => !states[String(g.id)]?.state).map((g) => String(g.id));
+  if (unresolved.length) {
+    errors.push(`ESPN sem estado para ${unresolved.join(", ")}${notes.length ? `: ${notes.join(" | ")}` : ""}`);
   }
-  // Falhas de uma fonte que foram resolvidas pelo fallback não degradam o Worker.
-  const stillUnresolved = wantedGames.filter((g) => !states[String(g.id)]?.state);
-  if (stillUnresolved.length && diagnostics.length) {
-    errors.push(`ESPN sem estado para ${stillUnresolved.map((g) => g.id).join(", ")}: ${diagnostics.join(" | ")}`);
-  }
-  return { states, errors };
+
+  return {
+    states,
+    errors,
+    diagnostics: {
+      strategy: "scoreboard_primary_browser_ua+summary_fallback+safety_clock",
+      wanted: [...wanted],
+      scoreboardDays: days,
+      scoreboardHits: [...scoreboardHits],
+      summaryFallbackRequested: unresolvedAfterScoreboard.map((g) => String(g.id)),
+      summaryHits: [...summaryHits],
+      unresolved,
+      notes,
+    },
+  };
 }
+
 async function listRuns(env, limit) {
   const branch = encodeURIComponent(String(env.GITHUB_BRANCH || "main"));
   const perPage = Math.max(10, Math.min(100, Math.trunc(limit || 50)));
@@ -876,11 +938,15 @@ export class BrAlmocoOrchestratorStateV1 {
       excludedDomains: ["ao_vivo", "publicos", "melhores_momentos", "elencos", "fair_play"],
       githubTokenConfigured: Boolean(String(this.env.GITHUB_TOKEN || "").trim()),
       fastPath: {
-        summaryByEventId: true,
+        scoreboardPrimary: true,
+        browserLikeScoreboard: true,
+        summaryFallbackByEventId: true,
         passesEventIdsToMainWorkflow: true,
         probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
         finalDebounceSeconds: runtimeConfig(this.env).finalDebounceSeconds,
         finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
+        safetyTriggerMinutes: runtimeConfig(this.env).finalSafetyStartMinutes,
+        safetyRetryMinutes: runtimeConfig(this.env).finalSafetyRetryMinutes,
       },
       lastTickAt: state.lastTickAt,
     });
@@ -905,11 +971,15 @@ export class BrAlmocoOrchestratorStateV1 {
       resultReason: state.resultReason,
       errors: state.errors || [],
       fastPath: {
-        summaryByEventId: true,
+        scoreboardPrimary: true,
+        browserLikeScoreboard: true,
+        summaryFallbackByEventId: true,
         passesEventIdsToMainWorkflow: true,
         probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
         finalDebounceSeconds: runtimeConfig(this.env).finalDebounceSeconds,
         finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
+        safetyTriggerMinutes: runtimeConfig(this.env).finalSafetyStartMinutes,
+        safetyRetryMinutes: runtimeConfig(this.env).finalSafetyRetryMinutes,
       },
       hints: snap ? {
         nextGameAt: snap.nextGameAt,
@@ -936,6 +1006,9 @@ export class BrAlmocoOrchestratorStateV1 {
           updatedAt: snap.tv?.updatedAt,
         },
         pendingFinals: state.pendingFinals || {},
+        finalSafetyLastAttempt: state.finalSafetyLastAttempt || {},
+        lastFastProbeDiagnostics: state.lastFastProbeDiagnostics || null,
+        fastProbeWarnings: state.fastProbeWarnings || [],
       } : null,
       recentDecisions: state.recentDecisions || [],
     });
@@ -949,6 +1022,7 @@ export class BrAlmocoOrchestratorStateV1 {
     state.lastTickAt = iso(nowMs);
     state.slowEvaluated = false;
     state.errors = [];
+    state.fastProbeWarnings = [];
     state.candidate = null;
     state.result = "none";
     state.resultReason = "nenhuma ação útil";
@@ -979,7 +1053,7 @@ export class BrAlmocoOrchestratorStateV1 {
     // na fila de convergência, sem depender de uma nova resposta da ESPN.
     state.pendingFinals = collectRepositoryFinals(state.snapshot, state.pendingFinals, nowMs);
 
-    // Janela normal: +88..+300 min. Recovery: até +24h, a cada 15 min.
+    // Janela normal: +88..+300 min. Recovery: até +12h, a cada 5 min.
     const probeGames = relevantFinalProbeGames(state.snapshot, nowMs, cfg);
     state.relevantSportsGames = probeGames.length;
     const lastFast = parseDate(state.lastFastProbeAt);
@@ -989,13 +1063,15 @@ export class BrAlmocoOrchestratorStateV1 {
       if (cacheAge <= cfg.staleCacheMaxHoursForFinal) {
         const probed = await probeEspn(probeGames, nowMs);
         state.lastFastProbeAt = iso(nowMs);
-        if (probed.errors.length) state.errors.push(...probed.errors);
+        state.lastFastProbeDiagnostics = probed.diagnostics || null;
+        state.fastProbeWarnings = probed.errors || [];
         state.pendingFinals = collectNewFinals(state.snapshot, probed.states, state.pendingFinals, nowMs);
       } else {
         state.errors.push(`cache do repositório velho demais para FINAL (${cacheAge.toFixed(1)}h)`);
       }
     }
     let selected = chooseFinalCandidate(state.snapshot, state.pendingFinals, nowMs, cfg);
+    if (!selected) selected = chooseSafetyFinalCandidate(state.snapshot, state, nowMs, cfg);
     const hasPendingFinalDebounce = Object.keys(state.pendingFinals || {}).length > 0;
     // 1.1.0: recovery de FINAL NÃO bloqueia mais o slow path. Só preservamos a
     // prioridade por poucos segundos enquanto um FINAL confirmado está no debounce.
@@ -1005,7 +1081,7 @@ export class BrAlmocoOrchestratorStateV1 {
     if (!selected && hasPendingFinalDebounce) {
       state.resultReason = "FINAL confirmado em debounce curto; demais rotinas voltam a ser elegíveis imediatamente depois";
     } else if (!selected && probeGames.length > 0) {
-      state.resultReason = "monitorando encerramento por event_id; nenhuma outra ação útil";
+      state.resultReason = `monitorando encerramento; scoreboard primário + summary fallback; safety trigger em T+${cfg.finalSafetyStartMinutes}min`;
     }
     state.candidate = selected;
 
@@ -1018,8 +1094,13 @@ export class BrAlmocoOrchestratorStateV1 {
     if (selected.action === ACTIONS.FINAL && Array.isArray(selected.eventIds) && selected.eventIds.length) {
       try {
         const freshIds = await refreshResultIds(this.env);
+        const alreadyPresent = selected.eventIds.filter((id) => freshIds.has(id));
         const missing = selected.eventIds.filter((id) => !freshIds.has(id));
-        for (const id of selected.eventIds.filter((id) => freshIds.has(id))) delete state.pendingFinals[id];
+        for (const id of alreadyPresent) delete state.pendingFinals[id];
+        if (alreadyPresent.length && state.snapshot) {
+          state.snapshot.resultIds = uniqueStrings([...(state.snapshot.resultIds || []), ...alreadyPresent]);
+          state.snapshot.resultCount = Math.max(safeInt(state.snapshot.resultCount), state.snapshot.resultIds.length);
+        }
         if (!missing.length) {
           state.candidate = null;
           state.result = "none";
@@ -1084,6 +1165,11 @@ export class BrAlmocoOrchestratorStateV1 {
 
       const workflow = await dispatchWorkflow(this.env, selected.action, selected);
       state.lastDispatchAt = { ...(state.lastDispatchAt || {}), [selected.action]: iso(nowMs) };
+      if (selected.action === ACTIONS.FINAL && selected.safetyTrigger === true) {
+        const map = { ...(state.finalSafetyLastAttempt || {}) };
+        for (const id of uniqueStrings(selected.eventIds || [])) map[id] = iso(nowMs);
+        state.finalSafetyLastAttempt = map;
+      }
       if (selected.action === ACTIONS.MAIN_AF) {
         state.afLastAttempt = {
           signature: String(selected.afSignature || `${safeInt(state.snapshot?.af?.results)}:${safeInt(state.snapshot?.af?.recognized)}`),

@@ -12,6 +12,7 @@ import {
   buildRepositorySnapshot,
   chooseSlowCandidate,
   chooseFinalCandidate,
+  chooseSafetyFinalCandidate,
   collectNewFinals,
   collectRepositoryFinals,
   computeNextSlowAt,
@@ -268,43 +269,101 @@ test("FINAL consolidado no calendário mas ausente em resultados vira pendência
   assert.ok(collectRepositoryFinals(snap, {}, NOW).g1);
 });
 
-test("probe ESPN usa summary por event_id e força no-cache", async () => {
+test("probe ESPN usa SCOREBOARD como fonte primária com User-Agent browser-like", async () => {
   const originalFetch = globalThis.fetch;
   const seen = [];
   globalThis.fetch = async (input, init = {}) => {
-    seen.push({ url: String(input), init });
-    return new Response(JSON.stringify({ header: { competitions: [{ status: { type: { state: "post", completed: true } } }] } }), { status: 200, headers: { "content-type": "application/json" } });
+    const url = String(input);
+    seen.push({ url, init });
+    if (url.includes('/scoreboard?')) {
+      return new Response(JSON.stringify({ events: [{ id: "g1", status: { type: { state: "post", completed: true } } }] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    throw new Error(`summary não deveria ser necessário: ${url}`);
   };
   try {
     const out = await probeEspn([{ id: "g1", kickoffMs: parseDate("2026-09-03T16:00") }], NOW);
     assert.equal(out.states.g1.state, "post");
-    assert.equal(out.states.g1.source, "summary");
-    assert.match(seen[0].url, /summary\?event=g1/);
-    assert.equal(seen[0].init.cache, "no-store");
-    assert.equal(seen[0].init.headers["cache-control"], "no-cache");
-    assert.equal(seen[0].init.cf.cacheTtl, 0);
-    assert.equal(seen[0].init.cf.cacheEverything, false);
+    assert.match(out.states.g1.source, /^scoreboard:/);
+    assert.equal(out.errors.length, 0);
+    assert.equal(out.diagnostics.strategy, "scoreboard_primary_browser_ua+summary_fallback+safety_clock");
+    assert.ok(seen.some((x) => x.url.includes('/scoreboard?')));
+    assert.equal(seen.some((x) => x.url.includes('/summary?')), false);
+    const call = seen.find((x) => x.url.includes('/scoreboard?'));
+    assert.match(call.init.headers["user-agent"], /^Mozilla\/5\.0/);
+    assert.equal(call.init.cache, "no-store");
+    assert.equal(call.init.headers["cache-control"], "no-cache");
+    assert.equal(call.init.cf.cacheTtl, 0);
+    assert.equal(call.init.cf.cacheEverything, false);
   } finally { globalThis.fetch = originalFetch; }
 });
 
-test("probe ESPN cai para scoreboard BRT+UTC quando summary falha", async () => {
+test("probe ESPN consulta scoreboard BRT+UTC e cai para summary por event_id só se necessário", async () => {
   const originalFetch = globalThis.fetch;
   const seen = [];
   globalThis.fetch = async (input, init = {}) => {
     const url = String(input); seen.push(url);
-    if (url.includes('/summary?')) return new Response('x', { status: 503 });
-    if (url.includes('dates=20260906')) {
-      return new Response(JSON.stringify({ events: [{ id: "g1", status: { type: { state: "post", completed: true } } }] }), { status: 200, headers: { "content-type": "application/json" } });
+    if (url.includes('/scoreboard?')) {
+      return new Response(JSON.stringify({ events: [] }), { status: 200, headers: { "content-type": "application/json" } });
     }
-    return new Response(JSON.stringify({ events: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    if (url.includes('/summary?event=g1')) {
+      return new Response(JSON.stringify({ header: { competitions: [{ status: { type: { state: "post", completed: true } } }] } }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    throw new Error(`fetch mock não previsto: ${url}`);
   };
   try {
     const out = await probeEspn([{ id: "g1", kickoffMs: parseDate("2026-09-05T21:00:00-03:00") }], NOW);
     assert.equal(out.states.g1.state, "post");
+    assert.equal(out.states.g1.source, "summary");
     assert.equal(out.errors.length, 0);
     assert.ok(seen.some((u) => u.includes('dates=20260905')));
     assert.ok(seen.some((u) => u.includes('dates=20260906')));
+    assert.ok(seen.some((u) => u.includes('/summary?event=g1')));
+    assert.deepEqual(out.diagnostics.summaryHits, ["g1"]);
   } finally { globalThis.fetch = originalFetch; }
+});
+
+test("falha de scoreboard e summary fica diagnosticada, mas não remove a safety net temporal", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response('bloqueado', { status: 403 });
+  try {
+    const out = await probeEspn([{ id: "g1", kickoffMs: parseDate("2026-09-03T15:30") }], NOW);
+    assert.equal(out.states.g1, undefined);
+    assert.equal(out.diagnostics.unresolved.includes("g1"), true);
+    assert.equal(out.errors.length, 1);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("safety trigger temporal chama Atualizar Brasileirão a partir de T+110 sem depender da ESPN", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-03T15:40"; // T+110 em NOW 17:30
+  const snap = buildRepositorySnapshot(f, NOW);
+  const dec = chooseSafetyFinalCandidate(snap, { finalSafetyLastAttempt: {} }, NOW, DEFAULTS);
+  assert.equal(dec.action, ACTIONS.FINAL);
+  assert.equal(dec.safetyTrigger, true);
+  assert.deepEqual(dec.eventIds, ["g1"]);
+  assert.match(dec.reason, /Safety trigger/);
+});
+
+test("safety trigger não dispara antes de T+110 e respeita retry de 5 minutos", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-03T15:41"; // T+109
+  let snap = buildRepositorySnapshot(f, NOW);
+  assert.equal(chooseSafetyFinalCandidate(snap, { finalSafetyLastAttempt: {} }, NOW, DEFAULTS), null);
+
+  f.calendar.jogos[0].data_iso = "2026-09-03T15:40";
+  snap = buildRepositorySnapshot(f, NOW);
+  const recent = { finalSafetyLastAttempt: { g1: new Date(NOW - 4 * 60_000).toISOString() } };
+  assert.equal(chooseSafetyFinalCandidate(snap, recent, NOW, DEFAULTS), null);
+  const old = { finalSafetyLastAttempt: { g1: new Date(NOW - 6 * 60_000).toISOString() } };
+  assert.equal(chooseSafetyFinalCandidate(snap, old, NOW, DEFAULTS).action, ACTIONS.FINAL);
+});
+
+test("safety trigger desaparece assim que o event_id entra em resultados", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-03T15:40";
+  f.results.resultados.push({ event_id: "g1", rodada: 26 });
+  const snap = buildRepositorySnapshot(f, NOW);
+  assert.equal(chooseSafetyFinalCandidate(snap, { finalSafetyLastAttempt: {} }, NOW, DEFAULTS), null);
 });
 
 test("FINAL ESPN confirmado por event_id chama Atualizar Brasileirão robusto imediatamente", () => {
@@ -330,6 +389,70 @@ test("FINAL já presente em resultados é deduplicado na memória", () => {
 test("writer ativo bloqueável é reconhecido", () => {
   assert.ok(findActiveWriter([{ name: "Atualizar Brasileirao (ESPN)", status: "in_progress" }]));
   assert.equal(findActiveWriter([{ name: "Deploy site", status: "in_progress" }]), null);
+});
+
+test("integração: safety trigger dispara workflow robusto mesmo quando ESPN devolve 403", async () => {
+  const files = baseFiles();
+  files.calendar.jogos[0].data_iso = "2026-09-03T15:30"; // T+120
+  files.calendar.gerado_em = "2026-09-03T17:29:00-03:00";
+  files.results.atualizado_em = "2026-09-03T17:29:00-03:00";
+  files.generalAudit.gerado_em = "2026-09-03T17:29:00-03:00";
+  files.blocksAudit.gerado_em = "2026-09-03T17:29:00-03:00";
+  files.tv.atualizado_em = "2026-09-03T17:29:00-03:00";
+
+  const repoFiles = {
+    "dados-br/calendario-completo.json": files.calendar,
+    "resultados.json": files.results,
+    "dados-br/apuracao.json": files.apuracao,
+    "dados-br/ranking-apostas.json": files.ranking,
+    "dados-br/apostas-config.json": files.apostasConfig,
+    "dados-br/auditoria-probabilidades.json": files.afAudit,
+    "dados-br/probabilidades-bolao.json": files.afBolao,
+    "dados-br/transmissoes-tv.json": files.tv,
+    "dados-br/auditoria-transmissoes-tv.json": files.tvAudit,
+    "dados-br/auditoria-blocos-apostas.json": files.blocksAudit,
+    "dados-br/auditoria-geral.json": files.generalAudit,
+  };
+  const storageMap = new Map();
+  const ctx = { storage: { async get(k) { return storageMap.get(k); }, async put(k,v) { storageMap.set(k, structuredClone(v)); } } };
+  const env = { ORCHESTRATOR_MODE: "active", GITHUB_REPOSITORY: "LAERCIOREHEM/BRASILEIRAO2026ALMOCO", GITHUB_BRANCH: "main", GITHUB_TOKEN: "token" };
+  const dispatches = [];
+  const originalFetch = globalThis.fetch;
+  const originalNow = Date.now;
+  Date.now = () => NOW;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    if (url.hostname === "api.github.com" && url.pathname.includes("/contents/")) {
+      const path = decodeURIComponent(url.pathname.split("/contents/")[1]);
+      const payload = repoFiles[path];
+      const content = Buffer.from(JSON.stringify(payload), "utf8").toString("base64");
+      return new Response(JSON.stringify({ type: "file", content }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.hostname === "site.api.espn.com") return new Response("forbidden", { status: 403 });
+    if (url.hostname === "api.github.com" && url.pathname.endsWith("/actions/runs")) {
+      return new Response(JSON.stringify({ workflow_runs: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.hostname === "api.github.com" && url.pathname.includes("/actions/workflows/") && url.pathname.endsWith("/dispatches")) {
+      dispatches.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ workflow_run_id: 999, html_url: "https://github.test/run/999" }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    throw new Error(`fetch mock não previsto: ${url}`);
+  };
+  try {
+    const durable = new BrAlmocoOrchestratorStateV1(ctx, env);
+    const response = await durable.tick();
+    const body = await response.json();
+    assert.equal(body.action, ACTIONS.FINAL);
+    assert.equal(body.result, "dispatched");
+    assert.equal(dispatches.length, 1);
+    assert.deepEqual(dispatches[0].inputs, { coleta_completa: "true", forcar_af: "false", event_ids: "g1" });
+    const persisted = storageMap.get("state");
+    assert.ok(persisted.finalSafetyLastAttempt.g1);
+    assert.equal(persisted.lastFastProbeDiagnostics.unresolved.includes("g1"), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+    Date.now = originalNow;
+  }
 });
 
 test("matriz de ações não possui ação de AO VIVO nem módulos descontinuados", () => {
