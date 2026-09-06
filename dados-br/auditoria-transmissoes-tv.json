@@ -1,11 +1,11 @@
 {
   "descricao": "Auditoria da consolidação de transmissões do Brasileirão.",
   "resumo": {
-    "jogos_na_janela": 31,
-    "jogos_com_transmissao": 31,
+    "jogos_na_janela": 28,
+    "jogos_com_transmissao": 28,
     "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 12,
+    "registros_preservados": 8,
     "fontes_com_falha": 1
   },
   "fontes": {
@@ -15,34 +15,25 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 19,
-      "duracao_ms": 8886
+      "jogos_com_canal": 12,
+      "duracao_ms": 5109
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 0,
-      "jogos_com_canal": 0,
-      "duracao_ms": 3272
+      "artigos_consultados": 10,
+      "jogos_com_canal": 11,
+      "duracao_ms": 93119
     },
     "espn": {
       "ok": true,
-      "eventos_na_janela": 31,
+      "eventos_na_janela": 28,
       "scoreboard_com_canal": 0,
       "summary_com_canal": 0,
-      "duracao_ms": 2373
+      "duracao_ms": 2206
     }
   },
   "sem_transmissao": [],
   "preservados": [
-    {
-      "event_id": "401841219",
-      "jogo": "Coritiba x Mirassol",
-      "canais": [
-        "Premiere",
-        "Globo",
-        "GE TV"
-      ]
-    },
     {
       "event_id": "401841225",
       "jogo": "Remo x Flamengo",
@@ -54,27 +45,6 @@
       ]
     },
     {
-      "event_id": "401841218",
-      "jogo": "Cruzeiro x Athletico-PR",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841221",
-      "jogo": "Botafogo x Palmeiras",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841222",
-      "jogo": "Vitória x Grêmio",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
       "event_id": "401841232",
       "jogo": "Coritiba x Athletico-PR",
       "canais": [
@@ -83,17 +53,22 @@
       ]
     },
     {
-      "event_id": "401841228",
-      "jogo": "Chapecoense x Internacional",
+      "event_id": "401841231",
+      "jogo": "Atlético-MG x Fluminense",
       "canais": [
-        "Globo"
+        "Premiere",
+        "SporTV"
       ]
     },
     {
-      "event_id": "401841229",
-      "jogo": "Botafogo x Bragantino",
+      "event_id": "401841235",
+      "jogo": "Mirassol x Vitória",
       "canais": [
-        "Globo"
+        "Premiere",
+        "SporTV",
+        "Globo",
+        "Prime Video",
+        "GE TV"
       ]
     },
     {
@@ -109,19 +84,20 @@
       ]
     },
     {
+      "event_id": "401841176",
+      "jogo": "Botafogo x Grêmio",
+      "canais": [
+        "Prime Video",
+        "SporTV"
+      ]
+    },
+    {
       "event_id": "401841247",
       "jogo": "Vasco da Gama x Coritiba",
       "canais": [
         "Premiere",
         "SporTV",
         "Disney+ / ESPN"
-      ]
-    },
-    {
-      "event_id": "401841246",
-      "jogo": "Grêmio x Palmeiras",
-      "canais": [
-        "Globo"
       ]
     },
     {
@@ -136,6 +112,17 @@
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis"
   ],
-  "artigos_ge_descobertos": [],
-  "atualizado_em": "2026-09-03T19:10:43-03:00"
+  "artigos_ge_descobertos": [
+    "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/09/06/corinthians-x-chapecoense-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/sp/campinas-e-regiao/futebol/brasileirao-serie-b/noticia/2026/09/06/ponte-preta-x-sao-bernardo-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/mg/futebol/brasileirao-serie-a/noticia/2026/09/06/cruzeiro-x-athletico-pr-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/pa/futebol/brasileirao-serie-a/noticia/2026/09/06/remo-x-flamengo-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/pr/futebol/brasileirao-serie-a/noticia/2026/09/05/coritiba-x-mirassol-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/sp/vale-do-paraiba-regiao/futebol/brasileirao-serie-a/noticia/2026/09/05/bragantino-x-bahia-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/pr/futebol/noticia/2026/09/05/parana-clube-x-cascavel-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/09/05/sao-paulo-x-atletico-mg-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/09/05/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-26a-rodada.ghtml",
+    "https://ge.globo.com/rj/futebol/brasileirao-serie-a/noticia/2026/09/05/fluminense-x-vasco-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
+  ],
+  "atualizado_em": "2026-09-06T09:39:34-03:00"
 }
