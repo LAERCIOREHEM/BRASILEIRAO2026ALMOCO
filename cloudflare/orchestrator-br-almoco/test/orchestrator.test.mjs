@@ -20,6 +20,7 @@ import {
   dateKeyUtc,
   espnStateFromPayload,
   findActiveWriter,
+  recentActionRunGuard,
   normalizeMode,
   parseDate,
   probeEspn,
@@ -115,14 +116,46 @@ test("auditoria crítica de blocos dispara imediatamente", () => {
   assert.equal(chooseSlowCandidate(snap, state(), NOW, DEFAULTS).action, ACTIONS.BLOCKS);
 });
 
-test("checkpoint de bloco vencido vira recuperação automática", () => {
+test("checkpoint de bloco vencido sozinho NÃO dispara workflow", () => {
   const f = baseFiles();
   f.blocksAudit.gerado_em = "2026-09-03T14:00:00-03:00";
   f.blocksAudit.proximo_evento_em = "2026-09-03T15:00:00-03:00";
   const snap = buildRepositorySnapshot(f, NOW);
-  const dec = chooseSlowCandidate(snap, state(), NOW, DEFAULTS);
-  assert.equal(dec.action, ACTIONS.BLOCKS);
-  assert.match(dec.reason, /vencido/);
+  assert.equal(chooseSlowCandidate(snap, state(), NOW, DEFAULTS), null);
+});
+
+test("circuit breaker bloqueia repetição imediata do mesmo workflow", () => {
+  const runs = [{
+    name: "Sincronizar blocos de apostas",
+    status: "completed",
+    conclusion: "failure",
+    created_at: new Date(NOW - 60_000).toISOString(),
+  }];
+  const guard = recentActionRunGuard(runs, ACTIONS.BLOCKS, NOW, DEFAULTS);
+  assert.equal(guard.blocked, true);
+  assert.match(guard.reason, /circuit breaker/);
+});
+
+test("falha de blocos mantém backoff externo por 6h", () => {
+  const runs = [{
+    name: "Sincronizar blocos de apostas",
+    status: "completed",
+    conclusion: "failure",
+    created_at: new Date(NOW - 2 * 3_600_000).toISOString(),
+  }];
+  const guard = recentActionRunGuard(runs, ACTIONS.BLOCKS, NOW, DEFAULTS);
+  assert.equal(guard.blocked, true);
+  assert.match(guard.reason, /6h/);
+});
+
+test("falha antiga de blocos não bloqueia para sempre", () => {
+  const runs = [{
+    name: "Sincronizar blocos de apostas",
+    status: "completed",
+    conclusion: "failure",
+    created_at: new Date(NOW - 7 * 3_600_000).toISOString(),
+  }];
+  assert.equal(recentActionRunGuard(runs, ACTIONS.BLOCKS, NOW, DEFAULTS), null);
 });
 
 test("apuração só dispara quando realmente diverge dos resultados", () => {

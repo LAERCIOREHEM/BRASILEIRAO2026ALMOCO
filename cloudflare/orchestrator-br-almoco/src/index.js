@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "1.1.0";
+export const VERSION = "1.1.1";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -33,6 +33,15 @@ export const WORKFLOW_BY_ACTION = Object.freeze({
   [ACTIONS.APURAR]: { file: "apurar-brasileirao.yml", inputs: {} },
   [ACTIONS.BLOCKS]: { file: "sincronizar-blocos-apostas.yml", inputs: {} },
   [ACTIONS.TV]: { file: "buscar-transmissoes-aovivo-brasileirao.yml", inputs: { modo: "tv" } },
+});
+
+export const WORKFLOW_NAME_BY_ACTION = Object.freeze({
+  [ACTIONS.FAST]: "Atualizar núcleo rápido do Brasileirão",
+  [ACTIONS.MAIN]: "Atualizar Brasileirao (ESPN)",
+  [ACTIONS.MAIN_AF]: "Atualizar Brasileirao (ESPN)",
+  [ACTIONS.APURAR]: "Apurar Apostas Brasileirão",
+  [ACTIONS.BLOCKS]: "Sincronizar blocos de apostas",
+  [ACTIONS.TV]: "Buscar transmissões ao vivo do Brasileirão",
 });
 
 // ÚNICOS workflows considerados escritores pelo novo orquestrador.
@@ -92,6 +101,8 @@ export const DEFAULTS = Object.freeze({
   blockSafetyNearHours: 72,
   blockSafetyFarHours: 168,
   blockPastDueRetryHours: 1,
+  blocksFailureBackoffHours: 6,
+  duplicateRunGuardMinutes: 15,
   githubRunsLimit: 50,
   recentDecisionsLimit: 20,
 });
@@ -134,6 +145,8 @@ export function runtimeConfig(env = {}) {
     blockSafetyNearHours: n(env, "BLOCK_SAFETY_NEAR_HOURS", DEFAULTS.blockSafetyNearHours),
     blockSafetyFarHours: n(env, "BLOCK_SAFETY_FAR_HOURS", DEFAULTS.blockSafetyFarHours),
     blockPastDueRetryHours: n(env, "BLOCK_PAST_DUE_RETRY_HOURS", DEFAULTS.blockPastDueRetryHours),
+    blocksFailureBackoffHours: n(env, "BLOCKS_FAILURE_BACKOFF_HOURS", DEFAULTS.blocksFailureBackoffHours),
+    duplicateRunGuardMinutes: n(env, "DUPLICATE_RUN_GUARD_MINUTES", DEFAULTS.duplicateRunGuardMinutes),
     githubRunsLimit: n(env, "GITHUB_RUNS_LIMIT", DEFAULTS.githubRunsLimit),
     recentDecisionsLimit: n(env, "RECENT_DECISIONS_LIMIT", DEFAULTS.recentDecisionsLimit),
   };
@@ -454,14 +467,10 @@ export function chooseSlowCandidate(snapshot, state, nowMs, cfg = DEFAULTS) {
       return candidate(ACTIONS.BLOCKS, `Auditoria de blocos tem ${blockAge.toFixed(1)}h e o próximo evento está em ${days.toFixed(1)} dia(s); atualizar somente como safety net.`);
     }
   }
-  // 1.1.0: checkpoint vencido nunca pode morrer silenciosamente. Se a auditoria
-  // ainda aponta para um evento passado, tenta recompor em workflow dedicado.
-  if (Number.isFinite(blockEvent) && blockEvent <= nowMs && blockAge >= cfg.blockPastDueRetryHours) {
-    if (isCooldownElapsed(state, ACTIONS.BLOCKS, nowMs, cfg)) {
-      const overdueHours = (nowMs - blockEvent) / 3_600_000;
-      return candidate(ACTIONS.BLOCKS, `Checkpoint de bloco está vencido há ${overdueHours.toFixed(1)}h; recompor auditoria/janela automaticamente.`, { checkpoint: snapshot.blocks.nextEventAt });
-    }
-  }
+  // 1.1.1: checkpoint vencido, sozinho, NÃO dispara workflow.
+  // Um checkpoint passado pode ser apenas auditoria velha. Repetir a RPC quando ela
+  // está falhando cria tempestade de Actions. A recuperação ocorre por fronteira
+  // futura/estado crítico e pelo circuit breaker baseado no histórico real do GitHub.
 
   return null;
 }
@@ -581,7 +590,7 @@ function githubHeaders(env) {
     "accept": "application/vnd.github+json",
     "authorization": `Bearer ${token}`,
     "x-github-api-version": "2026-03-10",
-    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.0",
+    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.1",
   };
 }
 
@@ -665,7 +674,7 @@ function espnNoCacheOptions() {
   return {
     cache: "no-store",
     headers: {
-      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.0",
+      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.1",
       "accept": "application/json",
       "cache-control": "no-cache",
       "pragma": "no-cache",
@@ -737,6 +746,42 @@ async function listRuns(env, limit) {
 
 export function findActiveWriter(runs) {
   return (runs || []).find((run) => WRITER_WORKFLOW_NAMES.has(String(run?.name || "")) && ["queued", "in_progress", "waiting", "pending", "requested"].includes(String(run?.status || ""))) || null;
+}
+
+export function recentActionRunGuard(runs, action, nowMs, cfg = DEFAULTS) {
+  const workflowName = WORKFLOW_NAME_BY_ACTION[action];
+  if (!workflowName) return null;
+  const matches = (runs || [])
+    .filter((run) => String(run?.name || "") === workflowName)
+    .map((run) => ({ ...run, _ms: parseDate(run?.created_at || run?.run_started_at || run?.updated_at) }))
+    .filter((run) => Number.isFinite(run._ms))
+    .sort((a, b) => b._ms - a._ms);
+  const latest = matches[0];
+  if (!latest) return null;
+  const ageMin = (nowMs - latest._ms) / 60_000;
+
+  // Defesa externa ao Durable Object: mesmo que o estado local seja perdido,
+  // o histórico do GitHub impede re-dispatch imediato da mesma ação.
+  if (ageMin >= 0 && ageMin < cfg.duplicateRunGuardMinutes) {
+    return {
+      blocked: true,
+      reason: `circuit breaker: ${workflowName} já teve run há ${ageMin.toFixed(1)} min (${latest.status || "?"}/${latest.conclusion || "?"})`,
+      run: latest,
+    };
+  }
+
+  // Blocos têm proteção adicional: falha de RPC não pode virar loop automático.
+  if (action === ACTIONS.BLOCKS && String(latest.conclusion || "") === "failure") {
+    const ageHours = ageMin / 60;
+    if (ageHours >= 0 && ageHours < cfg.blocksFailureBackoffHours) {
+      return {
+        blocked: true,
+        reason: `circuit breaker: última sincronização de blocos falhou há ${ageHours.toFixed(2)}h; nova tentativa automática bloqueada por ${cfg.blocksFailureBackoffHours}h`,
+        run: latest,
+      };
+    }
+  }
+  return null;
 }
 
 async function dispatchWorkflow(env, action) {
@@ -971,6 +1016,17 @@ export class BrAlmocoOrchestratorStateV1 {
         state.result = "none";
         state.resultReason = `writer já ativo: ${writer.name} (${writer.status})`;
         recordDecision(state, nowMs, { action: ACTIONS.NONE, reason: state.resultReason, result: "writer_busy" }, cfg);
+        await this.writeState(state);
+        return jsonResponse({ ok: true, action: ACTIONS.NONE, reason: state.resultReason });
+      }
+
+      const guard = recentActionRunGuard(runs, selected.action, nowMs, cfg);
+      if (guard?.blocked) {
+        state.result = "none";
+        state.resultReason = guard.reason;
+        recordDecision(state, nowMs, { action: ACTIONS.NONE, reason: guard.reason, result: "circuit_breaker" }, cfg);
+        // Não martela o GitHub a cada minuto quando a condição de origem persiste.
+        state.nextSlowAt = iso(nowMs + Math.max(5, cfg.slowIntervalMinutes) * 60_000);
         await this.writeState(state);
         return jsonResponse({ ok: true, action: ACTIONS.NONE, reason: state.resultReason });
       }

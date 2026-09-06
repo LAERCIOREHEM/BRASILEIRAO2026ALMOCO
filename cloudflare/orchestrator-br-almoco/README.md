@@ -1,4 +1,4 @@
-# Orchestrator BR Almoço 1.1.0 — FAST CORE
+# Orchestrator BR Almoço 1.1.1 — FAST CORE
 
 Orquestrador independente do repositório `LAERCIOREHEM/BRASILEIRAO2026ALMOCO`.
 O site continua no GitHub Pages; Cloudflare é usado somente para o Worker/DO de decisão.
@@ -24,7 +24,7 @@ O motor NÃO observa nem dispara:
 
 Nenhum token/secret do Fórmula do Gol é reutilizado.
 
-## Arquitetura 1.1.0
+## Arquitetura 1.1.1
 
 `Cloudflare Cron (1 min) -> Worker -> Durable Object -> decisão -> workflow_dispatch somente se necessário`
 
@@ -63,4 +63,10 @@ As telas críticas consultam primeiro o `main` bruto do GitHub e usam GitHub Pag
 - `shadow`: calcula e registra candidatos sem disparar GitHub;
 - `active`: habilita `workflow_dispatch`.
 
-Após subir esta versão, redeploy do Worker em `active` é necessário para o código 1.1.0 entrar em produção.
+Após subir esta versão, redeploy do Worker em `active` é necessário para o código 1.1.1 entrar em produção.
+
+
+## 1.1.1 — circuit breaker de blocos
+- checkpoint passado não dispara sincronização sozinho;
+- run recente do mesmo workflow bloqueia duplicação mesmo se o estado do DO for perdido;
+- falha de `Sincronizar blocos de apostas` impõe backoff automático de 6h.

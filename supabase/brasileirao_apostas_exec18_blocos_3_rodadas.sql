@@ -188,6 +188,15 @@ begin
     raise exception 'A rodada % não pertence ao bloco %–%.', new.rodada, v_bloco.rodada_inicio, v_bloco.rodada_fim;
   end if;
 
+  -- HOTFIX 2026-09-06: linhas já publicadas/apuradas são histórico imutável.
+  -- A Execução 21 preserva intencionalmente abre_em/fecha_em desses registros;
+  -- portanto a trigger não pode exigir que acompanhem uma janela do bloco que
+  -- tenha sido recalculada posteriormente. O vínculo temporada/rodada/bloco
+  -- continua sendo validado acima.
+  if new.status in ('publicada','apurada') then
+    return new;
+  end if;
+
   if v_bloco.abre_em is null or v_bloco.fecha_em is null then
     raise exception 'O bloco %–% ainda não possui janela configurada.', v_bloco.rodada_inicio, v_bloco.rodada_fim;
   end if;

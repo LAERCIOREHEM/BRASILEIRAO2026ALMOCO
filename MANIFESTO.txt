@@ -1,26 +1,20 @@
-PATCH ORQUESTRADOR BRASILEIRAO 2026 ALMOCO — 1.0.0
-Data: 03/09/2026
+BR Almoço — Hotfix 1.1.1 — 06/09/2026
 
-NOVOS ARQUIVOS
-.github/workflows/deploy-orchestrator-br-almoco.yml
-cloudflare/orchestrator-br-almoco/package.json
-cloudflare/orchestrator-br-almoco/wrangler.toml
-cloudflare/orchestrator-br-almoco/src/index.js
-cloudflare/orchestrator-br-almoco/test/orchestrator.test.mjs
-cloudflare/orchestrator-br-almoco/README.md
+INCIDENTE
+- Worker entrou em tempestade de workflow_dispatch para Sincronizar blocos de apostas.
+- A RPC Supabase falhava deterministicamente com P0001 na Rodada 21.
 
-ARQUIVOS EXISTENTES ALTERADOS: ZERO
+CORREÇÕES
+1. checkpoint de bloco vencido, sozinho, não dispara mais workflow;
+2. circuit breaker consulta o histórico REAL do GitHub antes de novo dispatch;
+3. qualquer run recente do mesmo workflow bloqueia duplicação por 15 min;
+4. falha de Sincronizar blocos impõe backoff automático de 6h;
+5. hotfix Supabase permite que rodada já publicada/apurada preserve a janela histórica;
+6. source SQL Execução 18 atualizado para não reintroduzir a incompatibilidade.
 
-EXCLUSÕES DO ESCOPO AUTOMÁTICO
-- AO VIVO
-- públicos
-- melhores momentos
-- elencos
-- fair play
-
-SECRETS NOVOS E EXCLUSIVOS
-- BR_ALMOCO_CF_API_TOKEN
-- BR_ALMOCO_CF_ACCOUNT_ID
-- BR_ALMOCO_ORCHESTRATOR_GITHUB_TOKEN
-
-NÃO reutilizar tokens/secrets do Fórmula do Gol.
+APLICAÇÃO
+- Primeiro coloque o Worker em SHADOW para cessar os disparos.
+- Rode supabase/HOTFIX_20260906_blocos_publicados.sql no SQL Editor do Supabase.
+- Suba este patch no GitHub.
+- Rode Sincronizar blocos de apostas UMA vez manualmente e confirme verde.
+- Deploy Orchestrator BR Almoço -> active.
