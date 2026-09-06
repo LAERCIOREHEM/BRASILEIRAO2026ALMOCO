@@ -1,5 +1,5 @@
 /*
- * Brasileirão 2026 Almoço — Orchestrator 1.1.2
+ * Brasileirão 2026 Almoço — Orchestrator 1.1.3
  *
  * Escopo deliberadamente EXCLUÍDO:
  * - AO VIVO / placar em browser
@@ -12,13 +12,13 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "1.1.2";
+export const VERSION = "1.1.3";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
 export const ACTIONS = Object.freeze({
   NONE: "none",
-  FAST: "atualizar_nucleo_brasileirao",
+  FINAL: "atualizar_brasileirao_final",
   MAIN: "atualizar_brasileirao",
   MAIN_AF: "atualizar_brasileirao_forcar_af",
   APURAR: "apurar_apostas",
@@ -27,7 +27,7 @@ export const ACTIONS = Object.freeze({
 });
 
 export const WORKFLOW_BY_ACTION = Object.freeze({
-  [ACTIONS.FAST]: { file: "atualizar-nucleo-brasileirao.yml", inputs: {} },
+  [ACTIONS.FINAL]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "true", forcar_af: "false" } },
   [ACTIONS.MAIN]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "true", forcar_af: "false" } },
   [ACTIONS.MAIN_AF]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "true", forcar_af: "true" } },
   [ACTIONS.APURAR]: { file: "apurar-brasileirao.yml", inputs: {} },
@@ -36,7 +36,7 @@ export const WORKFLOW_BY_ACTION = Object.freeze({
 });
 
 export const WORKFLOW_NAME_BY_ACTION = Object.freeze({
-  [ACTIONS.FAST]: "Atualizar núcleo rápido do Brasileirão",
+  [ACTIONS.FINAL]: "Atualizar Brasileirao (ESPN)",
   [ACTIONS.MAIN]: "Atualizar Brasileirao (ESPN)",
   [ACTIONS.MAIN_AF]: "Atualizar Brasileirao (ESPN)",
   [ACTIONS.APURAR]: "Apurar Apostas Brasileirão",
@@ -47,7 +47,6 @@ export const WORKFLOW_NAME_BY_ACTION = Object.freeze({
 // ÚNICOS workflows considerados escritores pelo novo orquestrador.
 // AO VIVO, públicos, melhores momentos, elencos e fair play não aparecem aqui.
 export const WRITER_WORKFLOW_NAMES = new Set([
-  "Atualizar núcleo rápido do Brasileirão",
   "Atualizar Brasileirao (ESPN)",
   "Apurar Apostas Brasileirão",
   "Auditar modelos AF-Previsão",
@@ -356,7 +355,7 @@ export function buildRepositorySnapshot(files, nowMs) {
 }
 
 function cooldownMs(action, cfg) {
-  if (action === ACTIONS.FAST) return cfg.fastCooldownMinutes * 60_000;
+  if (action === ACTIONS.FINAL) return cfg.fastCooldownMinutes * 60_000;
   if (action === ACTIONS.MAIN) return cfg.mainCooldownMinutes * 60_000;
   if (action === ACTIONS.MAIN_AF) return cfg.afCooldownMinutes * 60_000;
   if (action === ACTIONS.APURAR) return cfg.apuracaoCooldownMinutes * 60_000;
@@ -365,11 +364,11 @@ function cooldownMs(action, cfg) {
 }
 
 function lastActionMs(state, action) {
-  // FAST/MAIN/MAIN_AF compartilham família apenas para observar a última escrita
+  // FINAL/MAIN/MAIN_AF compartilham família apenas para observar a última escrita
   // esportiva. O FINAL usa retry próprio e pode convergir rapidamente.
-  if (action === ACTIONS.FAST || action === ACTIONS.MAIN || action === ACTIONS.MAIN_AF) {
+  if (action === ACTIONS.FINAL || action === ACTIONS.MAIN || action === ACTIONS.MAIN_AF) {
     return maxFinite([
-      parseDate(state?.lastDispatchAt?.[ACTIONS.FAST]),
+      parseDate(state?.lastDispatchAt?.[ACTIONS.FINAL]),
       parseDate(state?.lastDispatchAt?.[ACTIONS.MAIN]),
       parseDate(state?.lastDispatchAt?.[ACTIONS.MAIN_AF]),
     ]);
@@ -543,7 +542,7 @@ export function chooseFinalCandidate(snapshot, pendingFinals, nowMs, cfg = DEFAU
   }
   if (!ready.length) return null;
   const labels = ready.slice(0, 6).map(formatGame).join(", ");
-  return candidate(ACTIONS.FAST, `ESPN marcou FINAL ainda não incorporado: ${labels}.`, { eventIds: ready.map((g) => g.id) });
+  return candidate(ACTIONS.FINAL, `ESPN marcou FINAL ainda não incorporado: ${labels}.`, { eventIds: ready.map((g) => g.id) });
 }
 
 function defaultState() {
@@ -590,7 +589,7 @@ function githubHeaders(env) {
     "accept": "application/vnd.github+json",
     "authorization": `Bearer ${token}`,
     "x-github-api-version": "2026-03-10",
-    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.2",
+    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.3",
   };
 }
 
@@ -674,7 +673,7 @@ function espnNoCacheOptions() {
   return {
     cache: "no-store",
     headers: {
-      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.2",
+      "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.3",
       "accept": "application/json",
       "cache-control": "no-cache",
       "pragma": "no-cache",
@@ -762,9 +761,9 @@ export function recentActionRunGuard(runs, action, nowMs, cfg = DEFAULTS) {
 
   // Defesa externa ao Durable Object: mesmo que o estado local seja perdido,
   // o histórico do GitHub impede re-dispatch imediato da mesma ação.
-  // FINAL/FAST é exceção deliberada: se o run terminou verde mas a ESPN não
+  // FINAL é exceção deliberada: se o run terminou verde mas a ESPN não
   // convergiu, a recuperação não pode ficar presa no guard genérico de 15 min.
-  const guardMinutes = action === ACTIONS.FAST
+  const guardMinutes = action === ACTIONS.FINAL
     ? Math.min(cfg.duplicateRunGuardMinutes, cfg.finalRetryMinutes)
     : cfg.duplicateRunGuardMinutes;
   if (ageMin >= 0 && ageMin < guardMinutes) {
@@ -795,7 +794,7 @@ async function dispatchWorkflow(env, action, context = {}) {
   const branch = String(env.GITHUB_BRANCH || "main");
   const url = `${repoBase(env)}/actions/workflows/${encodeURIComponent(spec.file)}/dispatches`;
   const inputs = { ...(spec.inputs || {}) };
-  if (action === ACTIONS.FAST) {
+  if (action === ACTIONS.FINAL) {
     const eventIds = uniqueStrings(context?.eventIds || []);
     if (eventIds.length) inputs.event_ids = eventIds.join(",");
   }
@@ -988,7 +987,7 @@ export class BrAlmocoOrchestratorStateV1 {
     }
 
     // FINAL: revalida resultados imediatamente antes do dispatch para evitar duplicata por cache.
-    if (selected.action === ACTIONS.FAST && Array.isArray(selected.eventIds) && selected.eventIds.length) {
+    if (selected.action === ACTIONS.FINAL && Array.isArray(selected.eventIds) && selected.eventIds.length) {
       try {
         const freshIds = await refreshResultIds(this.env);
         const missing = selected.eventIds.filter((id) => !freshIds.has(id));
@@ -1012,8 +1011,8 @@ export class BrAlmocoOrchestratorStateV1 {
       }
     }
 
-    const isFinalConvergence = selected.action === ACTIONS.FAST && Array.isArray(selected.eventIds) && selected.eventIds.length > 0;
-    const lastMain = isFinalConvergence ? parseDate(state?.lastDispatchAt?.[ACTIONS.FAST]) : null;
+    const isFinalConvergence = selected.action === ACTIONS.FINAL && Array.isArray(selected.eventIds) && selected.eventIds.length > 0;
+    const lastMain = isFinalConvergence ? parseDate(state?.lastDispatchAt?.[ACTIONS.FINAL]) : null;
     const finalCooldownOk = !isFinalConvergence || !Number.isFinite(lastMain) || nowMs - lastMain >= cfg.finalRetryMinutes * 60_000;
     if (!finalCooldownOk || (!isFinalConvergence && !isCooldownElapsed(state, selected.action, nowMs, cfg))) {
       state.result = "none";

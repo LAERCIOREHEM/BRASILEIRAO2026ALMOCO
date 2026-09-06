@@ -136,16 +136,16 @@ test("circuit breaker bloqueia repetição imediata do mesmo workflow", () => {
   assert.match(guard.reason, /circuit breaker/);
 });
 
-test("FAST usa guard curto de convergência, não os 15 min genéricos", () => {
+test("FINAL usa guard curto de convergência, não os 15 min genéricos", () => {
   const run2m = [{
-    name: "Atualizar núcleo rápido do Brasileirão",
+    name: "Atualizar Brasileirao (ESPN)",
     status: "completed",
     conclusion: "success",
     created_at: new Date(NOW - 2 * 60_000).toISOString(),
   }];
-  assert.equal(recentActionRunGuard(run2m, ACTIONS.FAST, NOW, DEFAULTS)?.blocked, true);
+  assert.equal(recentActionRunGuard(run2m, ACTIONS.FINAL, NOW, DEFAULTS)?.blocked, true);
   const run4m = [{ ...run2m[0], created_at: new Date(NOW - 4 * 60_000).toISOString() }];
-  assert.equal(recentActionRunGuard(run4m, ACTIONS.FAST, NOW, DEFAULTS), null);
+  assert.equal(recentActionRunGuard(run4m, ACTIONS.FINAL, NOW, DEFAULTS), null);
 });
 
 test("falha de blocos mantém backoff externo por 6h", () => {
@@ -286,14 +286,14 @@ test("probe ESPN cai para scoreboard BRT+UTC quando summary falha", async () => 
   } finally { globalThis.fetch = originalFetch; }
 });
 
-test("FINAL ESPN confirmado por event_id vira FAST imediatamente", () => {
+test("FINAL ESPN confirmado por event_id chama Atualizar Brasileirão robusto imediatamente", () => {
   const f = baseFiles();
   f.calendar.jogos[0].data_iso = "2026-09-03T16:00";
   const snap = buildRepositorySnapshot(f, NOW);
   const pending = collectNewFinals(snap, { g1: { state: "post" } }, {}, NOW);
   assert.ok(pending.g1);
   assert.equal(DEFAULTS.finalDebounceSeconds, 0);
-  assert.equal(chooseFinalCandidate(snap, pending, NOW).action, ACTIONS.FAST);
+  assert.equal(chooseFinalCandidate(snap, pending, NOW).action, ACTIONS.FINAL);
 });
 
 test("FINAL já presente em resultados é deduplicado na memória", () => {
@@ -339,7 +339,7 @@ test("orquestrador sempre chama atualização completa nos fluxos pesados", () =
 test("ações automáticas possíveis são somente as seis aprovadas", () => {
   assert.deepEqual(Object.values(ACTIONS).sort(), [
     "apurar_apostas",
-    "atualizar_nucleo_brasileirao",
+    "atualizar_brasileirao_final",
     "atualizar_brasileirao",
     "atualizar_brasileirao_forcar_af",
     "none",
@@ -359,7 +359,7 @@ test("browser não arma polling AO VIVO nem injeta resultado provisório", () =>
 });
 
 
-test("integração: ACTIVE despacha FAST no mesmo tick e envia event_id", async () => {
+test("integração: ACTIVE despacha Atualizar Brasileirão no mesmo tick e envia event_id", async () => {
   const files = baseFiles();
   files.calendar.jogos[0].data_iso = "2026-09-03T16:00";
   files.calendar.gerado_em = "2026-09-03T17:35:00-03:00";
@@ -427,11 +427,11 @@ test("integração: ACTIVE despacha FAST no mesmo tick e envia event_id", async 
     const durable = new BrAlmocoOrchestratorStateV1(ctx, env);
     const first = await durable.tick();
     const firstBody = await first.json();
-    assert.equal(firstBody.action, ACTIONS.FAST);
+    assert.equal(firstBody.action, ACTIONS.FINAL);
     assert.equal(firstBody.result, "dispatched");
     assert.equal(dispatches.length, 1);
-    assert.match(dispatches[0].url, /atualizar-nucleo-brasileirao\.yml\/dispatches$/);
-    assert.deepEqual(dispatches[0].body, { ref: "main", inputs: { event_ids: "g1" } });
+    assert.match(dispatches[0].url, /atualizar-brasileirao\.yml\/dispatches$/);
+    assert.deepEqual(dispatches[0].body, { ref: "main", inputs: { coleta_completa: "true", forcar_af: "false", event_ids: "g1" } });
     const persisted = storageMap.get("state");
     assert.ok(persisted.pendingFinals.g1); // dispatch != publicação
   } finally {
