@@ -16,6 +16,11 @@ on:
         required: false
         default: true
         type: boolean
+      event_ids:
+        description: 'event_id(s) ESPN para reconciliação direta via summary; uso do orquestrador'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: write
@@ -162,6 +167,7 @@ jobs:
           API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           API_FOOTBALL_LEAGUE_ID: ${{ secrets.API_FOOTBALL_LEAGUE_ID }}
           ESPN_COLETA_COMPLETA: ${{ inputs.coleta_completa }}
+          ESPN_FORCE_SUMMARY_EVENT_IDS: ${{ inputs.event_ids }}
         run: python atualizar_espn.py
 
       # Publicação prioritária: resultado final e ranking parcial não aguardam
