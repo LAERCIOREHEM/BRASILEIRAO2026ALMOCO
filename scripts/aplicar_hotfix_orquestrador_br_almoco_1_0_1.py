@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# REVISÃO R1: não modifica arquivos em .github/workflows; workflows são atualizados manualmente pelo usuário.
 """HOTFIX Orchestrator BR Almoço 1.0.1.
 
 Aplica sobre o HEAD ATUAL do repositório, sem substituir o site por uma cópia
@@ -16,7 +17,6 @@ WORKER = ROOT / "cloudflare/orchestrator-br-almoco/src/index.js"
 TESTS = ROOT / "cloudflare/orchestrator-br-almoco/test/orchestrator.test.mjs"
 PACKAGE = ROOT / "cloudflare/orchestrator-br-almoco/package.json"
 WRANGLER = ROOT / "cloudflare/orchestrator-br-almoco/wrangler.toml"
-DEPLOY = ROOT / ".github/workflows/deploy-orchestrator-br-almoco.yml"
 INDEX = ROOT / "index.html"
 README = ROOT / "cloudflare/orchestrator-br-almoco/README.md"
 
@@ -266,7 +266,7 @@ def patch_index() -> None:
     write(INDEX, s)
 
 
-def patch_package_wrangler_deploy() -> None:
+def patch_package_wrangler() -> None:
     data = json.loads(read(PACKAGE))
     data["version"] = "1.0.1"
     write(PACKAGE, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
@@ -281,27 +281,6 @@ def patch_package_wrangler_deploy() -> None:
         )
     write(WRANGLER, w)
 
-    y = read(DEPLOY)
-    y = y.replace('assert d.get("version")=="1.0.0"', 'assert d.get("version")=="1.0.1"')
-    y = y.replace('## Orchestrator BR Almoço 1.0.0', '## Orchestrator BR Almoço 1.0.1')
-    if 'Browser AO VIVO residual: desativado' not in y:
-        y = replace_once(
-            y,
-            '          npm run validate\n          npx --yes wrangler@4.128.0 --version',
-            '''          npm run validate
-          python - <<'PY'
-          from pathlib import Path
-          s = Path('../../index.html').read_text(encoding='utf-8')
-          assert 'const ESPN_LIVE_DISABLED = true;' in s
-          assert 'ESPN · resultado recém-finalizado' not in s
-          fn = s.split('function resultadosComFinaisRecentesESPN(listaBase) {', 1)[1].split('\\n}', 1)[0]
-          assert 'state.espnLive' not in fn
-          print('Browser AO VIVO residual: desativado; Resultados = snapshot consolidado')
-          PY
-          npx --yes wrangler@4.128.0 --version''',
-            "gate browser no deploy",
-        )
-    write(DEPLOY, y)
 
 
 def patch_tests() -> None:
@@ -440,15 +419,13 @@ def validate() -> None:
     w = read(WRANGLER)
     assert 'FINAL_RECOVERY_END_MINUTES = "1440"' in w
     assert 'FINAL_RETRY_MINUTES = "15"' in w
-    y = read(DEPLOY)
-    assert 'assert d.get("version")=="1.0.1"' in y
     print("Validação estrutural do HOTFIX 1.0.1: OK")
 
 
 def main() -> None:
     patch_worker()
     patch_index()
-    patch_package_wrangler_deploy()
+    patch_package_wrangler()
     patch_tests()
     patch_readme()
     validate()
