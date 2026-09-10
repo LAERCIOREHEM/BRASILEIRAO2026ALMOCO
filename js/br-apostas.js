@@ -1457,7 +1457,23 @@
     const iniciados = blocos
       .filter(b => b.automaticoElegivel && b.primeiroCanonico && b.primeiroCanonico <= agora)
       .sort((a, b) => b.inicio - a.inicio);
-    if (iniciados.length) return iniciados[0];
+    const ultimoIniciado = iniciados[0] || null;
+
+    // Bloco iniciado e ainda NÃO concluído continua sendo o contexto principal
+    // (disputa em andamento). Bloco concluído (30/30) não segura mais a navegação.
+    if (ultimoIniciado && !ultimoIniciado.concluido) return ultimoIniciado;
+
+    // Com o último bloco iniciado já concluído, o contexto avança para o bloco
+    // seguinte assim que a janela de apostas dele abrir (abertura canônica
+    // alcançada). Vale também entre o fechamento e o primeiro kickoff, para não
+    // haver retorno ao bloco concluído nessa hora. Blocos anteriores ainda em
+    // apuração por jogos adiados (ex.: R21–23) nunca são candidatos.
+    const pisoInicio = ultimoIniciado ? ultimoIniciado.inicio : 0;
+    const sucessorAberto = blocos
+      .filter(b => b.inicio > pisoInicio && !b.concluido && b.automaticoElegivel && b.abreCanonica && b.abreCanonica <= agora)
+      .sort((a, b) => a.inicio - b.inicio)[0] || null;
+    if (sucessorAberto) return sucessorAberto;
+    if (ultimoIniciado) return ultimoIniciado;
 
     const publicados = blocosRanking()
       .filter(b => b && b.publicada === true && b.sigilosa !== true)
@@ -1591,7 +1607,10 @@
     tabs.querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => trocarRodada(Number(btn.dataset.rodada), true)));
     const atualLabel = contextoLabel(state.rodadaAutomatica);
     const acaoApostas = blocoAcaoAtual();
-    const acaoLabel = acaoApostas && acaoApostas.statusApostas === "aberta" ? ` · apostas abertas: <strong>Bloco ${acaoApostas.inicio}–${acaoApostas.fim}</strong>` : "";
+    const acaoEhAtual = Boolean(acaoApostas && mesmoContextoRodadas(acaoApostas.inicio, state.rodadaAutomatica));
+    const acaoLabel = acaoApostas && acaoApostas.statusApostas === "aberta"
+      ? (acaoEhAtual ? " · apostas abertas" : ` · apostas abertas: <strong>Bloco ${acaoApostas.inicio}–${acaoApostas.fim}</strong>`)
+      : "";
     if (contexto) contexto.innerHTML = manual
       ? `Consultando <strong>${contextoLabel()}</strong> · bloco atual: <strong>${atualLabel}</strong>${acaoLabel}`
       : `Bloco atual: <strong>${atualLabel}</strong>${acaoLabel}`;
@@ -2081,10 +2100,11 @@
       state.rodadaAutomaticaResolvida = true;
       state.rodadaEscolhidaManualmente = false;
       state.rodada = campeonato.inicio;
-      // O bloco futuro aberto aparece no cartão "AÇÃO AGORA", mas não sequestra
-      // a navegação. Enquanto a R23 está em curso, abrir a página Ranking mostra
-      // R21–23. O avanço para R24–26 ocorre no primeiro kickoff desse bloco.
-      state.aba = "ranking";
+      // Bloco em disputa (kickoff já ocorrido) abre no Ranking. Bloco que virou
+      // atual por abertura de apostas (anterior concluído, kickoff ainda futuro)
+      // abre em Apostar, pois ainda não há ranking publicado para ele.
+      const disputaIniciada = Boolean(campeonato.primeiroCanonico && campeonato.primeiroCanonico <= new Date());
+      state.aba = disputaIniciada ? "ranking" : "apostas";
       return;
     }
 
