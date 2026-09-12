@@ -24,11 +24,11 @@
     "observacao": "As probabilidades V/E/D são obtidas diretamente da matriz de placares; as simulações Monte Carlo são usadas nas projeções do campeonato e não adicionam ruído a esta soma."
   },
   "base_corrente": {
-    "partidas_concluidas": 256,
-    "partidas_restantes": 124,
+    "partidas_concluidas": 257,
+    "partidas_restantes": 123,
     "partidas_totais": 380
   },
-  "total_jogos": 124,
+  "total_jogos": 123,
   "jogos": [
     {
       "event_id": "401841168",
@@ -123,39 +123,6 @@
       "gols_esperados": {
         "mandante": 1.5722,
         "visitante": 1.4375
-      },
-      "placar_modal": {
-        "mandante": 1,
-        "visitante": 1
-      }
-    },
-    {
-      "event_id": "401841232",
-      "rodada": 27,
-      "data_iso": "2026-09-11T21:00",
-      "mandante": "Coritiba",
-      "visitante": "Athletico-PR",
-      "estadio": "Couto Pereira",
-      "status": "pre_jogo",
-      "valido_ate": "inicio_da_partida",
-      "probabilidades_pct": {
-        "mandante": 37.9791,
-        "empate": 26.4375,
-        "visitante": 35.5834
-      },
-      "probabilidades_exibicao_pct": {
-        "mandante": 38.0,
-        "empate": 26.4,
-        "visitante": 35.6
-      },
-      "exibicao": {
-        "mandante": "38,0%",
-        "empate": "26,4%",
-        "visitante": "35,6%"
-      },
-      "gols_esperados": {
-        "mandante": 1.3208,
-        "visitante": 1.2697
       },
       "placar_modal": {
         "mandante": 1,
@@ -4126,5 +4093,15 @@
   "avisos": [
     "Probabilidades pré-jogo: deixam de representar o estado da partida quando a bola começa a rolar.",
     "Não são cotações de apostas nem garantia de resultado."
-  ]
+  ],
+  "escopo_reconciliado_em": "2026-09-11T23:00:44.124475-03:00",
+  "fallback_transitorio": {
+    "ativo": true,
+    "motivo": "feeds ESPN temporariamente dessincronizados",
+    "probabilidades_reutilizadas": true,
+    "escopo_reconciliado_com_resultados": true,
+    "jogos_retirados_por_resultado": [
+      "401841232"
+    ]
+  }
 }
