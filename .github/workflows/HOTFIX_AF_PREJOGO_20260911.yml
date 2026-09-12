@@ -1,0 +1,133 @@
+name: HOTFIX · AF pré-jogo após resultado
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: repo-write-main
+  cancel-in-progress: false
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Baixar repositório atual
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: requirements-af-previsao.txt
+
+      - name: Aplicar correção sobre a versão atual
+        run: python scripts/aplicar_hotfix_af_prejogo_20260911.py
+
+      - name: Instalar dependências do AF
+        run: python -m pip install --disable-pip-version-check -r requirements-af-previsao.txt
+
+      - name: Validar sintaxe e self-test
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/gerar_probabilidades_jogos.py
+          python scripts/gerar_probabilidades_jogos.py --self-test
+
+      - name: Reconciliar probabilidades pré-jogo com resultados atuais
+        run: python scripts/gerar_probabilidades_jogos.py
+
+      - name: Validar cobertura exata do calendário restante
+        run: |
+          python - <<'PY'
+          import json
+
+          r = json.load(open('resultados.json', encoding='utf-8'))
+          e = json.load(open('espn_eventos.json', encoding='utf-8'))
+          completo = json.load(open('dados-br/calendario-completo.json', encoding='utf-8'))
+          prob = json.load(open('dados-br/probabilidades-jogos.json', encoding='utf-8'))
+          aud = json.load(open('dados-br/auditoria-probabilidades-jogos.json', encoding='utf-8'))
+
+          ids_concluidos = {
+              str(item.get('event_id') or item.get('id') or '')
+              for item in (r.get('resultados') or [])
+              if str(item.get('event_id') or item.get('id') or '')
+          }
+
+          ids_espn_por_confronto = {}
+          for item in (e.get('eventos') or []):
+              eid = str(item.get('event_id') or '').strip()
+              chave = (str(item.get('mandante') or ''), str(item.get('visitante') or ''))
+              if eid and chave[0] and chave[1]:
+                  ids_espn_por_confronto[chave] = eid
+
+          mapa = {}
+          for item in (completo.get('jogos') or []):
+              mandante = str(item.get('mandante') or '')
+              visitante = str(item.get('visitante') or '')
+              rodada = int(item.get('rodada') or 0)
+              eid = (
+                  str(item.get('event_id') or '').strip()
+                  or ids_espn_por_confronto.get((mandante, visitante))
+                  or f'AF-{rodada:02d}-{mandante}-{visitante}'
+              )
+              mapa[eid] = (mandante, visitante)
+
+          esperados = set(mapa) - ids_concluidos
+          atuais = {
+              str(item.get('event_id') or '')
+              for item in (prob.get('jogos') or [])
+              if str(item.get('event_id') or '')
+          }
+
+          assert atuais == esperados, (
+              f'cobertura ainda divergente: ausentes={sorted(esperados-atuais)} '
+              f'extras={sorted(atuais-esperados)}'
+          )
+          assert int(prob.get('total_jogos') or -1) == len(esperados)
+          assert int((prob.get('base_corrente') or {}).get('partidas_concluidas') or -1) == len(ids_concluidos)
+          assert aud.get('status') == 'ok'
+          print(f'Cobertura pré-jogo reconciliada: {len(ids_concluidos)} concluídos / {len(esperados)} restantes.')
+          PY
+
+      - name: Publicar hotfix e artefatos reconciliados
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            scripts/gerar_probabilidades_jogos.py \
+            .github/workflows/atualizar-brasileirao.yml \
+            dados-br/probabilidades-jogos.json \
+            dados-br/auditoria-probabilidades-jogos.json
+
+          git rm -f .github/workflows/HOTFIX_AF_PREJOGO_20260911.yml
+          git rm -f scripts/aplicar_hotfix_af_prejogo_20260911.py
+
+          git diff --cached --check
+
+          if git diff --cached --quiet; then
+            echo "Nenhuma alteração necessária."
+          else
+            git commit -m "Corrigir AF pré-jogo após resultado recém-incorporado"
+            git push origin HEAD:main
+          fi
+
+      - name: Reexecutar Atualizar Brasileirão completo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run atualizar-brasileirao.yml \
+            --ref main \
+            -f coleta_completa=true \
+            -f forcar_af=true
