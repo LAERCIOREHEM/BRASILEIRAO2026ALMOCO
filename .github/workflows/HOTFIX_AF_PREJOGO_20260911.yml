@@ -1,4 +1,4 @@
-name: HOTFIX · AF pré-jogo após resultado
+name: HOTFIX · AF pré-jogo após resultado V2
 
 on:
   workflow_dispatch:
@@ -30,7 +30,7 @@ jobs:
           cache: 'pip'
           cache-dependency-path: requirements-af-previsao.txt
 
-      - name: Aplicar correção sobre a versão atual
+      - name: Aplicar correção sem tocar em workflow permanente
         run: python scripts/aplicar_hotfix_af_prejogo_20260911.py
 
       - name: Instalar dependências do AF
@@ -98,21 +98,19 @@ jobs:
           print(f'Cobertura pré-jogo reconciliada: {len(ids_concluidos)} concluídos / {len(esperados)} restantes.')
           PY
 
-      - name: Publicar hotfix e artefatos reconciliados
+      - name: Publicar correção e artefatos reconciliados
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # IMPORTANTE: não adiciona/modifica nenhum arquivo de .github/workflows.
+          # Isso evita a restrição do token GitHub App que bloqueou a V1.
           git add \
             scripts/gerar_probabilidades_jogos.py \
-            .github/workflows/atualizar-brasileirao.yml \
             dados-br/probabilidades-jogos.json \
             dados-br/auditoria-probabilidades-jogos.json
-
-          git rm -f .github/workflows/HOTFIX_AF_PREJOGO_20260911.yml
-          git rm -f scripts/aplicar_hotfix_af_prejogo_20260911.py
 
           git diff --cached --check
 
