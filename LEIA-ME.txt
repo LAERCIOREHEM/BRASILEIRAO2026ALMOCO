@@ -1,16 +1,19 @@
-HOTFIX AF PRÉ-JOGO — 11/09/2026
+HOTFIX AF PRÉ-JOGO V2 — 11/09/2026
 
-O erro ocorre porque resultados.json já incorporou Coritiba x Athletico-PR,
-mas probabilidades-jogos.json preservou o snapshot anterior e continuou
-contendo esse jogo como pré-jogo.
+A V1 falhou no push porque tentou alterar/excluir arquivos em .github/workflows.
+O token GitHub App do Actions não tem permissão para criar/alterar workflow.
 
-Suba:
-- .github/workflows/HOTFIX_AF_PREJOGO_20260911.yml
-- scripts/aplicar_hotfix_af_prejogo_20260911.py
+A V2:
+- NÃO altera atualizar-brasileirao.yml;
+- NÃO tenta apagar o próprio workflow;
+- corrige apenas scripts/gerar_probabilidades_jogos.py;
+- reconcilia probabilidades-jogos.json e auditoria;
+- faz push somente de arquivos fora de .github/workflows;
+- dispara Atualizar Brasileirao (ESPN) completo no final.
 
-Depois:
-Actions → HOTFIX · AF pré-jogo após resultado → Run workflow
-
-O hotfix corrige o código atual, reconcilia o artefato, publica, remove a si
-próprio e dispara Atualizar Brasileirao (ESPN) novamente com coleta completa e
-AF forçado.
+Aplicação:
+1. Substitua no GitHub estes dois arquivos pelos da V2:
+   .github/workflows/HOTFIX_AF_PREJOGO_20260911.yml
+   scripts/aplicar_hotfix_af_prejogo_20260911.py
+2. Actions → HOTFIX · AF pré-jogo após resultado V2 → Run workflow.
+3. Se ficar verde, APAGUE MANUALMENTE do repositório os dois arquivos temporários acima.

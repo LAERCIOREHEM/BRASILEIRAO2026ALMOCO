@@ -5,7 +5,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "gerar_probabilidades_jogos.py"
-WORKFLOW = ROOT / ".github" / "workflows" / "atualizar-brasileirao.yml"
 MARKER = "HOTFIX_AF_PREJOGO_20260911"
 
 HELPER = r"""
@@ -167,31 +166,11 @@ def patch_script(text: str) -> str:
     return text.replace(old, new, 1)
 
 
-def patch_workflow(text: str) -> str:
-    old = "assert set(ids_jogos) == ids_esperados, 'cobertura das probabilidades por jogo diverge do calendário restante'"
-    if old not in text:
-        if "ausentes_nas_probabilidades" in text and "extras_nas_probabilidades" in text:
-            return text
-        raise SystemExit("ERRO: assertion de cobertura não encontrada no workflow.")
-
-    new = (
-        "if set(ids_jogos) != ids_esperados:\n"
-        "              ausentes_nas_probabilidades = sorted(ids_esperados - set(ids_jogos))\n"
-        "              extras_nas_probabilidades = sorted(set(ids_jogos) - ids_esperados)\n"
-        "              raise AssertionError(\n"
-        "                  \"cobertura das probabilidades por jogo diverge do calendário restante: \"\n"
-        "                  f\"ausentes={ausentes_nas_probabilidades}; extras={extras_nas_probabilidades}\"\n"
-        "              )"
-    )
-    return text.replace(old, new, 1)
-
 
 def main() -> None:
     script = SCRIPT.read_text(encoding="utf-8")
-    workflow = WORKFLOW.read_text(encoding="utf-8")
     SCRIPT.write_text(patch_script(script), encoding="utf-8", newline="\n")
-    WORKFLOW.write_text(patch_workflow(workflow), encoding="utf-8", newline="\n")
-    print("HOTFIX_AF_PREJOGO_20260911 aplicado.")
+    print("HOTFIX_AF_PREJOGO_20260911_V2 aplicado sem alterar arquivos em .github/workflows permanentes.")
 
 
 if __name__ == "__main__":
