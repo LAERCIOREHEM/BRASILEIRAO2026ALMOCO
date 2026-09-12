@@ -1,32 +1,35 @@
 {
   "schema_version": 1,
-  "gerado_em": "2026-09-11T19:00:24-03:00",
-  "status": "ok",
+  "gerado_em": "2026-09-11T22:53:14-03:00",
+  "status": "warning",
   "fingerprint_critico": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "resumo": {
     "criticos": 0,
-    "avisos": 0,
-    "informativos": 1,
+    "avisos": 1,
+    "informativos": 0,
     "calendario_partidas": 380,
     "resultados_registros": 256,
     "resultados_fisicos": 256,
     "tabela_partidas": 256,
     "jogos_finais_bolao_desde_r20": 66,
     "jogos_apurados_bolao": 66,
-    "blocos_apostas_abertos": 1,
+    "blocos_apostas_abertos": 0,
     "blocos_apostas_em_apuracao": 1,
     "blocos_apostas_concluidos": 1,
     "jogos_sem_estatisticas": 0,
-    "auditoria_tv_idade_horas": 32.8
+    "auditoria_tv_idade_horas": 36.7
   },
   "criticos": [],
-  "avisos": [],
-  "informativos": [
+  "avisos": [
     {
-      "codigo": "SITE_INTEGRO",
-      "mensagem": "Nenhuma inconsistência relevante foi detectada."
+      "codigo": "AUDITORIA_TV_ANTIGA",
+      "mensagem": "A grade de transmissões está sem auditoria há mais de 36h.",
+      "detalhes": {
+        "horas": 36.7
+      }
     }
   ],
+  "informativos": [],
   "rodadas_divergentes_por_artefato": {
     "eventos": [],
     "jogos": [],
