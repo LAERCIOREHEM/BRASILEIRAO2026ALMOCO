@@ -1,32 +1,51 @@
 {
   "schema_version": 1,
-  "gerado_em": "2026-09-12T22:56:06-03:00",
-  "status": "ok",
-  "fingerprint_critico": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "gerado_em": "2026-09-12T23:02:51-03:00",
+  "status": "critical",
+  "fingerprint_critico": "5f5a1b9fcf5a65cea7d8cfdb20c80fb6b6276a9d40350830a51debcb579a36dc",
   "resumo": {
-    "criticos": 0,
+    "criticos": 2,
     "avisos": 0,
-    "informativos": 1,
+    "informativos": 0,
     "calendario_partidas": 380,
-    "resultados_registros": 262,
-    "resultados_fisicos": 262,
-    "tabela_partidas": 262,
-    "jogos_finais_bolao_desde_r20": 72,
+    "resultados_registros": 263,
+    "resultados_fisicos": 263,
+    "tabela_partidas": 263,
+    "jogos_finais_bolao_desde_r20": 73,
     "jogos_apurados_bolao": 72,
     "blocos_apostas_abertos": 0,
     "blocos_apostas_em_apuracao": 2,
     "blocos_apostas_concluidos": 1,
     "jogos_sem_estatisticas": 0,
-    "auditoria_tv_idade_horas": 12.7
+    "auditoria_tv_idade_horas": 12.9
   },
-  "criticos": [],
-  "avisos": [],
-  "informativos": [
+  "criticos": [
     {
-      "codigo": "SITE_INTEGRO",
-      "mensagem": "Nenhuma inconsistência relevante foi detectada."
+      "codigo": "APURACAO_RESULTADOS_DIVERGENTES",
+      "mensagem": "A pontuação do bolão não acompanha exatamente os resultados finais publicados desde a R20.",
+      "detalhes": {
+        "total_resultados_finais": 73,
+        "total_apurado_declarado": 72,
+        "rodadas": [
+          {
+            "rodada": 27,
+            "resultados_finais": 7,
+            "jogos_apurados": 6
+          }
+        ]
+      }
+    },
+    {
+      "codigo": "RANKING_APOSTAS_DEFASADO",
+      "mensagem": "O ranking geral do bolão declara quantidade de jogos diferente dos resultados finais publicados.",
+      "detalhes": {
+        "resultados_finais": 73,
+        "ranking_jogos": 72
+      }
     }
   ],
+  "avisos": [],
+  "informativos": [],
   "rodadas_divergentes_por_artefato": {
     "eventos": [],
     "jogos": [],
@@ -37,5 +56,6 @@
     "fontes": "Auditoria local; nenhum dado esportivo é inventado ou recalculado pela auditoria.",
     "blocos": "Blocos independentes: um bloco anterior parcial pode coexistir normalmente com o seguinte aberto."
   },
-  "alerta_email": "dispensado: sem problema crítico"
+  "alerta_email": "enviado",
+  "alerta_email_em": "2026-09-12T23:02:51-03:00"
 }
