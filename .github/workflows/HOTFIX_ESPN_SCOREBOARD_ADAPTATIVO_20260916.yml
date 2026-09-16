@@ -1,0 +1,141 @@
+name: HOTFIX · ESPN scoreboard adaptativo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: repo-write-main
+  cancel-in-progress: false
+
+jobs:
+  corrigir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Baixar repositório atual
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Aplicar hotfix sobre o main atual
+        run: python scripts/aplicar_hotfix_espn_adaptativo_20260916.py
+
+      - name: Validar coletor ESPN
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile atualizar_espn.py
+          python atualizar_espn.py --selftest
+
+      - name: Testar regressão HTTP 400 sem internet
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re
+          from datetime import datetime, timezone
+          import atualizar_espn as m
+
+          original = m.fetch_json
+          chamadas = []
+
+          def fake_fetch(url, timeout=25, tentativas=3, **kwargs):
+              chamadas.append(url)
+              match = re.search(r'[?&]dates=([^&]+)', url)
+              assert match, url
+              periodo = match.group(1)
+              if '-' in periodo:
+                  raise RuntimeError('HTTP Error 400: range rejeitado')
+              return {'events': [{'id': f'evt-{periodo}'}]}
+
+          m.fetch_json = fake_fetch
+          try:
+              inicio = datetime(2026, 9, 1, tzinfo=timezone.utc)
+              fim = datetime(2026, 9, 3, tzinfo=timezone.utc)
+              eventos = m._buscar_eventos_periodo(inicio, fim, bloco_dias=121)
+              ids = {e['id'] for e in eventos}
+              assert ids == {'evt-20260901', 'evt-20260902', 'evt-20260903'}, ids
+              assert any('-' in re.search(r'[?&]dates=([^&]+)', u).group(1) for u in chamadas)
+              assert any('dates=20260901&' in u for u in chamadas)
+              print('PASS: range 400 subdividido automaticamente até consultas diárias.')
+          finally:
+              m.fetch_json = original
+          PY
+
+      - name: Validar orquestrador
+        working-directory: cloudflare/orchestrator-br-almoco
+        run: npm run validate
+
+      - name: Confirmar contrato operacional
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          c = Path('atualizar_espn.py').read_text(encoding='utf-8')
+          w = Path('cloudflare/orchestrator-br-almoco/src/index.js').read_text(encoding='utf-8')
+          assert 'HOTFIX_ESPN_SCOREBOARD_ADAPTATIVO_20260916' in c
+          assert 'ESPN_BLOCO_SEGURO_DIAS' in c
+          assert '_buscar_scoreboard_faixa_adaptativa' in c
+          linhas = '\n'.join(
+              line for line in w.splitlines()
+              if '[ACTIONS.FINAL]' in line or '[ACTIONS.MAIN]' in line or '[ACTIONS.MAIN_AF]' in line
+          )
+          assert 'coleta_completa: "true"' not in linhas
+          assert linhas.count('coleta_completa: "false"') == 3
+          print('PASS: coletor adaptativo + Cloudflare incremental confirmados.')
+          PY
+
+      - name: Publicar arquivos permanentes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            atualizar_espn.py \
+            cloudflare/orchestrator-br-almoco/src/index.js \
+            cloudflare/orchestrator-br-almoco/test/orchestrator.test.mjs
+
+          git diff --cached --check
+
+          if git diff --cached --quiet; then
+            echo "Arquivos permanentes já estavam corrigidos."
+          else
+            git commit -m "Tornar coleta ESPN adaptativa e incremental"
+            git push origin HEAD:main
+          fi
+
+      - name: Redeploy Cloudflare em ACTIVE
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run deploy-orchestrator-br-almoco.yml \
+            --ref main \
+            -f mode=active
+
+      - name: Atualizar Brasileirão imediatamente em modo incremental
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run atualizar-brasileirao.yml \
+            --ref main \
+            -f coleta_completa=false \
+            -f forcar_af=false
