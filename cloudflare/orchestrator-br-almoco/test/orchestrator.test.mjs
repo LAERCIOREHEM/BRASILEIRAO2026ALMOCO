@@ -10,6 +10,13 @@ import {
   WRITER_WORKFLOW_NAMES,
   WORKFLOW_BY_ACTION,
   buildRepositorySnapshot,
+  agendaSignature,
+  agendaScoutGames,
+  agendaScoutIntervalMs,
+  computeWakePlan,
+  orchestratorPhase,
+  probeAgenda,
+  mainSignalBlocked,
   chooseSlowCandidate,
   chooseFinalCandidate,
   chooseSafetyFinalCandidate,
@@ -49,6 +56,7 @@ function baseFiles() {
     tvAudit: { atualizado_em: "2026-09-03T17:00:00-03:00" },
     blocksAudit: { status: "ok", gerado_em: "2026-09-03T17:00:00-03:00", proximo_evento_em: "2026-09-04T21:00:00-03:00", criticos: [], avisos: [] },
     generalAudit: { status: "ok", gerado_em: "2026-09-03T17:00:00-03:00", criticos: [] },
+    sourceStatus: { status: "ok", sincronizado: true, ultimo_sucesso: "2026-09-03T17:00:00-03:00", fingerprint: "src-ok" },
   };
 }
 
@@ -208,24 +216,22 @@ test("nova divergência AF não fica presa no backoff da divergência anterior",
   assert.equal(chooseSlowCandidate(snap, st, NOW, DEFAULTS).action, ACTIONS.MAIN_AF);
 });
 
-test("manutenção usa idade real dos artefatos, não troca de data civil", () => {
+test("snapshot velho sozinho NÃO dispara Atualizar Brasileirão", () => {
   const f = baseFiles();
-  f.calendar.gerado_em = "2026-09-02T16:00:00-03:00";
-  f.results.atualizado_em = "2026-09-02T16:00:00-03:00";
-  f.generalAudit.gerado_em = "2026-09-02T16:00:00-03:00";
+  f.calendar.gerado_em = "2026-09-01T10:00:00-03:00";
+  f.results.atualizado_em = "2026-09-01T10:00:00-03:00";
+  f.generalAudit.gerado_em = "2026-09-01T10:00:00-03:00";
   const snap = buildRepositorySnapshot(f, NOW);
-  assert.equal(chooseSlowCandidate(snap, state(), NOW, DEFAULTS).action, ACTIONS.MAIN);
+  assert.equal(chooseSlowCandidate(snap, state(), NOW, DEFAULTS), null);
 });
 
-test("jogo TBA reduz o intervalo de reconciliação estrutural", () => {
+test("jogo TBA/adiado vira calendar_watch sem disparar MAIN por idade", () => {
   const f = baseFiles();
   f.calendar.jogos.push({ event_id: "late", rodada: 21, mandante: "E", visitante: "F", data_iso: null, estado: "pre", concluido: false, adiado: true, data_definir: true });
-  f.calendar.gerado_em = "2026-09-03T04:00:00-03:00";
-  f.results.atualizado_em = "2026-09-03T04:00:00-03:00";
-  f.generalAudit.gerado_em = "2026-09-03T04:00:00-03:00";
   const snap = buildRepositorySnapshot(f, NOW);
   assert.equal(snap.pendingCalendar, 1);
-  assert.equal(chooseSlowCandidate(snap, state(), NOW, DEFAULTS).action, ACTIONS.MAIN);
+  assert.equal(chooseSlowCandidate(snap, state(), NOW, DEFAULTS), null);
+  assert.equal(orchestratorPhase(snap, NOW, DEFAULTS), "calendar_watch");
 });
 
 test("jogo recente não é tratado como AO VIVO pelo orquestrador", () => {
@@ -429,6 +435,7 @@ test("integração: safety trigger dispara workflow robusto mesmo quando ESPN de
     "dados-br/auditoria-transmissoes-tv.json": files.tvAudit,
     "dados-br/auditoria-blocos-apostas.json": files.blocksAudit,
     "dados-br/auditoria-geral.json": files.generalAudit,
+    "dados-br/status-atualizacao.json": files.sourceStatus,
   };
   const storageMap = new Map();
   const ctx = { storage: { async get(k) { return storageMap.get(k); }, async put(k,v) { storageMap.set(k, structuredClone(v)); } } };
@@ -462,7 +469,7 @@ test("integração: safety trigger dispara workflow robusto mesmo quando ESPN de
     assert.equal(body.action, ACTIONS.FINAL);
     assert.equal(body.result, "dispatched");
     assert.equal(dispatches.length, 1);
-    assert.deepEqual(dispatches[0].inputs, { coleta_completa: "true", forcar_af: "false", event_ids: "g1" });
+    assert.deepEqual(dispatches[0].inputs, { coleta_completa: "false", forcar_af: "false", event_ids: "g1" });
     const persisted = storageMap.get("state");
     assert.ok(persisted.finalSafetyLastAttempt.g1);
     assert.equal(persisted.lastFastProbeDiagnostics.unresolved.includes("g1"), true);
@@ -470,6 +477,71 @@ test("integração: safety trigger dispara workflow robusto mesmo quando ESPN de
     globalThis.fetch = originalFetch;
     Date.now = originalNow;
   }
+});
+
+test("agenda signature muda somente quando agenda muda", () => {
+  const f = baseFiles();
+  const a = buildRepositorySnapshot(f, NOW);
+  const sig1 = a.agendaSignature;
+  f.calendar.jogos[0].data_iso = "2026-09-05T16:30";
+  const b = buildRepositorySnapshot(f, NOW);
+  assert.notEqual(sig1, b.agendaSignature);
+  assert.equal(sig1, agendaSignature(a.games));
+});
+
+test("planner fica em SLEEP longe de jogo e acorda em T-6h", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-05T16:00";
+  f.calendar.jogos[1].data_iso = "2026-09-06T16:00";
+  const now = parseDate("2026-09-04T00:00:00-03:00");
+  const snap = buildRepositorySnapshot(f, now);
+  const plan = computeWakePlan(snap, now, DEFAULTS);
+  assert.equal(plan.phase, "sleep");
+  assert.equal(plan.nextWakeAtMs, parseDate("2026-09-04T12:00:00-03:00"));
+});
+
+test("planner entra em PRE_GAME nas seis horas anteriores", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-03T21:00";
+  const snap = buildRepositorySnapshot(f, NOW);
+  assert.equal(orchestratorPhase(snap, NOW, DEFAULTS), "pre_game");
+  assert.equal(agendaScoutIntervalMs(snap, NOW, DEFAULTS), 30 * 60_000);
+});
+
+test("fonte preservada entra em source_degraded e não dispara MAIN por idade", () => {
+  const f = baseFiles();
+  f.sourceStatus = { status: "preservado", sincronizado: false, fingerprint: "erro-x" };
+  f.calendar.jogos = [];
+  const snap = buildRepositorySnapshot(f, NOW);
+  assert.equal(orchestratorPhase(snap, NOW, DEFAULTS), "source_degraded");
+  assert.equal(chooseSlowCandidate(snap, state(), NOW, DEFAULTS), null);
+});
+
+test("agenda scout detecta reagendamento sem GitHub Action prévia", async () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-03T21:00";
+  const snap = buildRepositorySnapshot(f, NOW);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    if (url.pathname.endsWith("/summary")) {
+      return new Response(JSON.stringify({
+        header: { competitions: [{ date: "2026-09-04T01:30:00Z", status: { type: { state: "pre", completed: false } } }] }
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    throw new Error(`fetch não previsto: ${url}`);
+  };
+  try {
+    const out = await probeAgenda(snap, NOW, DEFAULTS);
+    assert.equal(out.reachable, true);
+    assert.equal(out.changes.length >= 1, true);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("mesmo sinal MAIN entra em backoff persistente", () => {
+  const selected = { action: ACTIONS.MAIN, mainSignalSignature: "agenda:abc", signalBackoffMinutes: 120 };
+  const st = { mainSignalLast: { signature: "agenda:abc", at: new Date(NOW - 30 * 60_000).toISOString() } };
+  assert.equal(mainSignalBlocked(st, selected, NOW, DEFAULTS)?.blocked, true);
 });
 
 test("matriz de ações não possui ação de AO VIVO nem módulos descontinuados", () => {
@@ -492,9 +564,10 @@ test("próximo slow check é antecipado pela fronteira de bloco", () => {
   assert.equal(new Date(next).toISOString(), new Date(parseDate("2026-09-03T17:35:00-03:00")).toISOString());
 });
 
-test("orquestrador sempre chama atualização completa nos fluxos pesados", () => {
-  assert.deepEqual(WORKFLOW_BY_ACTION[ACTIONS.MAIN].inputs, { coleta_completa: "true", forcar_af: "false" });
-  assert.deepEqual(WORKFLOW_BY_ACTION[ACTIONS.MAIN_AF].inputs, { coleta_completa: "true", forcar_af: "true" });
+test("orquestrador usa coleta incremental nos fluxos automáticos", () => {
+  assert.deepEqual(WORKFLOW_BY_ACTION[ACTIONS.FINAL].inputs, { coleta_completa: "false", forcar_af: "false" });
+  assert.deepEqual(WORKFLOW_BY_ACTION[ACTIONS.MAIN].inputs, { coleta_completa: "false", forcar_af: "false" });
+  assert.deepEqual(WORKFLOW_BY_ACTION[ACTIONS.MAIN_AF].inputs, { coleta_completa: "false", forcar_af: "true" });
 });
 
 test("ações automáticas possíveis são somente as seis aprovadas", () => {
@@ -541,6 +614,7 @@ test("integração: ACTIVE despacha Atualizar Brasileirão no mesmo tick e envia
     "dados-br/auditoria-transmissoes-tv.json": files.tvAudit,
     "dados-br/auditoria-blocos-apostas.json": files.blocksAudit,
     "dados-br/auditoria-geral.json": files.generalAudit,
+    "dados-br/status-atualizacao.json": files.sourceStatus,
   };
 
   const storageMap = new Map();
@@ -595,12 +669,87 @@ test("integração: ACTIVE despacha Atualizar Brasileirão no mesmo tick e envia
     assert.equal(firstBody.result, "dispatched");
     assert.equal(dispatches.length, 1);
     assert.match(dispatches[0].url, /atualizar-brasileirao\.yml\/dispatches$/);
-    assert.deepEqual(dispatches[0].body, { ref: "main", inputs: { coleta_completa: "true", forcar_af: "false", event_ids: "g1" } });
+    assert.deepEqual(dispatches[0].body, { ref: "main", inputs: { coleta_completa: "false", forcar_af: "false", event_ids: "g1" } });
     const persisted = storageMap.get("state");
     assert.ok(persisted.pendingFinals.g1); // dispatch != publicação
     const lastDecision = persisted.recentDecisions.at(-1);
     assert.equal(lastDecision.workflow.httpStatus, 200);
     assert.equal(lastDecision.workflow.workflowRunId, 34054483168);
+  } finally {
+    globalThis.fetch = originalFetch;
+    Date.now = originalNow;
+  }
+});
+
+test("integração 2.0: fonte preservada dispara UMA recuperação e bloqueia tempestade de MAIN", async () => {
+  const files = baseFiles();
+  files.calendar.jogos[0].data_iso = "2026-09-03T21:00"; // 3h30 para o jogo
+  files.calendar.jogos[1].data_iso = "2026-09-06T16:00";
+  files.sourceStatus = {
+    status: "preservado",
+    sincronizado: false,
+    fingerprint: "mesmo-erro-espn",
+    ultima_tentativa: "2026-09-03T17:20:00-03:00",
+    ultimo_sucesso: "2026-09-02T10:00:00-03:00",
+  };
+  const repoFiles = {
+    "dados-br/calendario-completo.json": files.calendar,
+    "resultados.json": files.results,
+    "dados-br/apuracao.json": files.apuracao,
+    "dados-br/ranking-apostas.json": files.ranking,
+    "dados-br/apostas-config.json": files.apostasConfig,
+    "dados-br/auditoria-probabilidades.json": files.afAudit,
+    "dados-br/probabilidades-bolao.json": files.afBolao,
+    "dados-br/transmissoes-tv.json": files.tv,
+    "dados-br/auditoria-transmissoes-tv.json": files.tvAudit,
+    "dados-br/auditoria-blocos-apostas.json": files.blocksAudit,
+    "dados-br/auditoria-geral.json": files.generalAudit,
+    "dados-br/status-atualizacao.json": files.sourceStatus,
+  };
+  const storageMap = new Map();
+  const ctx = { storage: { async get(k) { return storageMap.get(k); }, async put(k, v) { storageMap.set(k, structuredClone(v)); } } };
+  const env = { ORCHESTRATOR_MODE: "active", GITHUB_REPOSITORY: "LAERCIOREHEM/BRASILEIRAO2026ALMOCO", GITHUB_BRANCH: "main", GITHUB_TOKEN: "token" };
+  const dispatches = [];
+  const originalFetch = globalThis.fetch;
+  const originalNow = Date.now;
+  let clock = NOW;
+  Date.now = () => clock;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    if (url.hostname === "api.github.com" && url.pathname.includes("/contents/")) {
+      const path = decodeURIComponent(url.pathname.split("/contents/")[1]);
+      const payload = repoFiles[path];
+      assert.ok(payload, `arquivo mock ausente: ${path}`);
+      return new Response(JSON.stringify({ type: "file", content: Buffer.from(JSON.stringify(payload), "utf8").toString("base64") }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.hostname === "site.api.espn.com" && url.pathname.endsWith("/summary")) {
+      return new Response(JSON.stringify({ header: { competitions: [{ date: "2026-09-04T00:00:00Z", status: { type: { state: "pre", completed: false } } }] } }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.hostname === "site.api.espn.com" && url.pathname.endsWith("/scoreboard")) {
+      return new Response(JSON.stringify({ events: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.hostname === "api.github.com" && url.pathname.endsWith("/actions/runs")) {
+      return new Response(JSON.stringify({ workflow_runs: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.hostname === "api.github.com" && url.pathname.includes("/actions/workflows/") && url.pathname.endsWith("/dispatches")) {
+      dispatches.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ workflow_run_id: 1, html_url: "https://example.test/run/1" }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    throw new Error(`fetch mock não previsto: ${url}`);
+  };
+  try {
+    const durable = new BrAlmocoOrchestratorStateV1(ctx, env);
+    const first = await (await durable.tick()).json();
+    assert.equal(first.action, ACTIONS.MAIN);
+    assert.equal(first.result, "dispatched");
+    assert.equal(dispatches.length, 1);
+    assert.equal(dispatches[0].inputs.coleta_completa, "false");
+
+    clock += 5 * 60_000;
+    const second = await (await durable.tick()).json();
+    assert.equal(second.action, ACTIONS.NONE);
+    assert.match(second.reason, /mesmo sinal MAIN/);
+    assert.equal(dispatches.length, 1, "não pode criar segundo workflow para o mesmo erro");
   } finally {
     globalThis.fetch = originalFetch;
     Date.now = originalNow;

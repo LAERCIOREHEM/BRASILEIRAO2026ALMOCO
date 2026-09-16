@@ -1,5 +1,5 @@
 /*
- * Brasileirão 2026 Almoço — Orchestrator 1.1.6
+ * Brasileirão 2026 Almoço — Orchestrator 2.0.0 · Agenda/Event Driven
  *
  * Escopo deliberadamente EXCLUÍDO:
  * - AO VIVO / placar em browser
@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "1.1.6";
+export const VERSION = "2.0.0";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -27,9 +27,9 @@ export const ACTIONS = Object.freeze({
 });
 
 export const WORKFLOW_BY_ACTION = Object.freeze({
-  [ACTIONS.FINAL]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "true", forcar_af: "false" } },
-  [ACTIONS.MAIN]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "true", forcar_af: "false" } },
-  [ACTIONS.MAIN_AF]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "true", forcar_af: "true" } },
+  [ACTIONS.FINAL]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "false", forcar_af: "false" } },
+  [ACTIONS.MAIN]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "false", forcar_af: "false" } },
+  [ACTIONS.MAIN_AF]: { file: "atualizar-brasileirao.yml", inputs: { coleta_completa: "false", forcar_af: "true" } },
   [ACTIONS.APURAR]: { file: "apurar-brasileirao.yml", inputs: {} },
   [ACTIONS.BLOCKS]: { file: "sincronizar-blocos-apostas.yml", inputs: {} },
   [ACTIONS.TV]: { file: "buscar-transmissoes-aovivo-brasileirao.yml", inputs: { modo: "tv" } },
@@ -66,11 +66,28 @@ const REPO_FILES = Object.freeze({
   tvAudit: "dados-br/auditoria-transmissoes-tv.json",
   blocksAudit: "dados-br/auditoria-blocos-apostas.json",
   generalAudit: "dados-br/auditoria-geral.json",
+  sourceStatus: "dados-br/status-atualizacao.json",
 });
 
 export const DEFAULTS = Object.freeze({
-  slowIntervalMinutes: 30,
-  slowRetryErrorMinutes: 5,
+  // O cron Cloudflare continua a cada minuto, mas o repositório/GitHub só são
+  // consultados quando existe uma janela esportiva ou operacional real.
+  slowIntervalMinutes: 360,
+  slowRetryErrorMinutes: 15,
+  sleepRepoRefreshHours: 12,
+  preGameWakeHours: 6,
+  preGameScoutIntervalMinutes: 30,
+  nearGameWindowMinutes: 60,
+  nearGameScoutIntervalMinutes: 5,
+  agendaScoutFarIntervalHours: 12,
+  agendaScoutHorizonDays: 14,
+  agendaScoutMaxGames: 20,
+  pendingCalendarScoutHours: 6,
+  sourceRecoveryProbeMinutes: 60,
+  sourceRecoveryNearMinutes: 5,
+  scheduleChangeToleranceMinutes: 5,
+  mainSignalBackoffMinutes: 360,
+  criticalSignalBackoffMinutes: 360,
   fastProbeStartMinutes: 88,
   fastProbeEndMinutes: 300,
   fastProbeIntervalSeconds: 60,
@@ -81,7 +98,7 @@ export const DEFAULTS = Object.freeze({
   finalSafetyStartMinutes: 110,
   finalSafetyRetryMinutes: 5,
   fastCooldownMinutes: 3,
-  mainCooldownMinutes: 8,
+  mainCooldownMinutes: 30,
   apuracaoCooldownMinutes: 10,
   blocksCooldownMinutes: 10,
   afCooldownMinutes: 20,
@@ -90,13 +107,7 @@ export const DEFAULTS = Object.freeze({
   tv14dRetryHours: 24,
   tv35dRetryHours: 48,
   tvFullCoverageRecheckHours: 72,
-  maintenanceMaxHours: 24,
-  maintenancePendingCalendarHours: 12,
-  maintenanceNearGameHours: 12,
-  maintenanceNearGameWindowHours: 36,
-  maintenanceVeryNearHours: 6,
-  maintenanceVeryNearWindowHours: 8,
-  staleCacheMaxHoursForFinal: 6,
+  staleCacheMaxHoursForFinal: 168,
   blockBoundaryBeforeMinutes: 5,
   blockBoundaryAfterMinutes: 20,
   blockSafetyNearDays: 7,
@@ -106,7 +117,7 @@ export const DEFAULTS = Object.freeze({
   blocksFailureBackoffHours: 6,
   duplicateRunGuardMinutes: 15,
   githubRunsLimit: 50,
-  recentDecisionsLimit: 20,
+  recentDecisionsLimit: 30,
 });
 
 function n(env, key, fallback) {
@@ -118,6 +129,20 @@ export function runtimeConfig(env = {}) {
   return {
     slowIntervalMinutes: n(env, "SLOW_INTERVAL_MINUTES", DEFAULTS.slowIntervalMinutes),
     slowRetryErrorMinutes: n(env, "SLOW_RETRY_ERROR_MINUTES", DEFAULTS.slowRetryErrorMinutes),
+    sleepRepoRefreshHours: n(env, "SLEEP_REPO_REFRESH_HOURS", DEFAULTS.sleepRepoRefreshHours),
+    preGameWakeHours: n(env, "PRE_GAME_WAKE_HOURS", DEFAULTS.preGameWakeHours),
+    preGameScoutIntervalMinutes: n(env, "PRE_GAME_SCOUT_INTERVAL_MINUTES", DEFAULTS.preGameScoutIntervalMinutes),
+    nearGameWindowMinutes: n(env, "NEAR_GAME_WINDOW_MINUTES", DEFAULTS.nearGameWindowMinutes),
+    nearGameScoutIntervalMinutes: n(env, "NEAR_GAME_SCOUT_INTERVAL_MINUTES", DEFAULTS.nearGameScoutIntervalMinutes),
+    agendaScoutFarIntervalHours: n(env, "AGENDA_SCOUT_FAR_INTERVAL_HOURS", DEFAULTS.agendaScoutFarIntervalHours),
+    agendaScoutHorizonDays: n(env, "AGENDA_SCOUT_HORIZON_DAYS", DEFAULTS.agendaScoutHorizonDays),
+    agendaScoutMaxGames: n(env, "AGENDA_SCOUT_MAX_GAMES", DEFAULTS.agendaScoutMaxGames),
+    pendingCalendarScoutHours: n(env, "PENDING_CALENDAR_SCOUT_HOURS", DEFAULTS.pendingCalendarScoutHours),
+    sourceRecoveryProbeMinutes: n(env, "SOURCE_RECOVERY_PROBE_MINUTES", DEFAULTS.sourceRecoveryProbeMinutes),
+    sourceRecoveryNearMinutes: n(env, "SOURCE_RECOVERY_NEAR_MINUTES", DEFAULTS.sourceRecoveryNearMinutes),
+    scheduleChangeToleranceMinutes: n(env, "SCHEDULE_CHANGE_TOLERANCE_MINUTES", DEFAULTS.scheduleChangeToleranceMinutes),
+    mainSignalBackoffMinutes: n(env, "MAIN_SIGNAL_BACKOFF_MINUTES", DEFAULTS.mainSignalBackoffMinutes),
+    criticalSignalBackoffMinutes: n(env, "CRITICAL_SIGNAL_BACKOFF_MINUTES", DEFAULTS.criticalSignalBackoffMinutes),
     fastProbeStartMinutes: n(env, "FAST_PROBE_START_MINUTES", DEFAULTS.fastProbeStartMinutes),
     fastProbeEndMinutes: n(env, "FAST_PROBE_END_MINUTES", DEFAULTS.fastProbeEndMinutes),
     fastProbeIntervalSeconds: n(env, "FAST_PROBE_INTERVAL_SECONDS", DEFAULTS.fastProbeIntervalSeconds),
@@ -137,12 +162,6 @@ export function runtimeConfig(env = {}) {
     tv14dRetryHours: n(env, "TV_14D_RETRY_HOURS", DEFAULTS.tv14dRetryHours),
     tv35dRetryHours: n(env, "TV_35D_RETRY_HOURS", DEFAULTS.tv35dRetryHours),
     tvFullCoverageRecheckHours: n(env, "TV_FULL_COVERAGE_RECHECK_HOURS", DEFAULTS.tvFullCoverageRecheckHours),
-    maintenanceMaxHours: n(env, "MAINTENANCE_MAX_HOURS", DEFAULTS.maintenanceMaxHours),
-    maintenancePendingCalendarHours: n(env, "MAINTENANCE_PENDING_CALENDAR_HOURS", DEFAULTS.maintenancePendingCalendarHours),
-    maintenanceNearGameHours: n(env, "MAINTENANCE_NEAR_GAME_HOURS", DEFAULTS.maintenanceNearGameHours),
-    maintenanceNearGameWindowHours: n(env, "MAINTENANCE_NEAR_GAME_WINDOW_HOURS", DEFAULTS.maintenanceNearGameWindowHours),
-    maintenanceVeryNearHours: n(env, "MAINTENANCE_VERY_NEAR_HOURS", DEFAULTS.maintenanceVeryNearHours),
-    maintenanceVeryNearWindowHours: n(env, "MAINTENANCE_VERY_NEAR_WINDOW_HOURS", DEFAULTS.maintenanceVeryNearWindowHours),
     staleCacheMaxHoursForFinal: n(env, "STALE_CACHE_MAX_HOURS_FOR_FINAL", DEFAULTS.staleCacheMaxHoursForFinal),
     blockBoundaryBeforeMinutes: n(env, "BLOCK_BOUNDARY_BEFORE_MINUTES", DEFAULTS.blockBoundaryBeforeMinutes),
     blockBoundaryAfterMinutes: n(env, "BLOCK_BOUNDARY_AFTER_MINUTES", DEFAULTS.blockBoundaryAfterMinutes),
@@ -217,6 +236,40 @@ function formatGame(game) {
   return `${game.home || "?"} x ${game.away || "?"}`;
 }
 
+function stableHash(text) {
+  let hash = 0x811c9dc5;
+  for (const ch of String(text || "")) {
+    hash ^= ch.codePointAt(0);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+
+function gameScheduleKey(game) {
+  return [
+    game?.id || "",
+    Number.isFinite(game?.kickoffMs) ? iso(game.kickoffMs) : "TBA",
+    game?.postponed === true ? "P" : "-",
+    game?.tba === true ? "T" : "-",
+    game?.concluded === true ? "F" : "-",
+  ].join("|");
+}
+
+export function agendaSignature(games) {
+  const rows = (games || [])
+    .filter((g) => g?.id && g?.concluded !== true)
+    .map(gameScheduleKey)
+    .sort();
+  return stableHash(rows.join("\n"));
+}
+
+function sourceIsHealthy(source) {
+  if (!source) return true;
+  if (source.synchronized === true) return true;
+  const status = String(source.status || "").toLowerCase();
+  return ["ok", "sucesso", "success", "sincronizado"].includes(status);
+}
+
 function resultIdSet(snapshot) {
   return new Set(snapshot?.resultIds || []);
 }
@@ -233,6 +286,7 @@ export function buildRepositorySnapshot(files, nowMs) {
   const tvAudit = files.tvAudit || {};
   const blocksAudit = files.blocksAudit || {};
   const generalAudit = files.generalAudit || {};
+  const sourceStatus = files.sourceStatus || {};
 
   const games = [];
   for (const row of calendar.jogos || []) {
@@ -283,7 +337,12 @@ export function buildRepositorySnapshot(files, nowMs) {
 
   const future = games.filter((g) => !g.concluded && Number.isFinite(g.kickoffMs) && g.kickoffMs >= nowMs);
   const nextGame = future[0] || null;
-  const pendingCalendar = games.filter((g) => !g.concluded && (g.tba || g.postponed)).length;
+  const pendingScheduleGames = games.filter((g) => {
+    if (g.concluded) return false;
+    if (g.tba || g.postponed) return true;
+    return Number.isFinite(g.kickoffMs) && g.kickoffMs < nowMs - 30 * 60_000;
+  });
+  const pendingCalendar = pendingScheduleGames.length;
 
   const tvMap = tv.jogos && typeof tv.jogos === "object" ? tv.jogos : {};
   const horizon35 = nowMs + 35 * 86_400_000;
@@ -319,6 +378,19 @@ export function buildRepositorySnapshot(files, nowMs) {
     nextGameAtMs: nextGame?.kickoffMs ?? null,
     nextGameLabel: nextGame ? formatGame(nextGame) : "",
     pendingCalendar,
+    pendingScheduleGames,
+    agendaSignature: agendaSignature(games),
+    source: {
+      status: String(sourceStatus.status || "unknown"),
+      synchronized: sourceStatus.sincronizado === true,
+      healthy: sourceIsHealthy({ status: sourceStatus.status, synchronized: sourceStatus.sincronizado === true }),
+      fingerprint: String(sourceStatus.fingerprint || ""),
+      lastAttempt: sourceStatus.ultima_tentativa || null,
+      lastAttemptMs: parseDate(sourceStatus.ultima_tentativa),
+      lastSuccess: sourceStatus.ultimo_sucesso || sourceStatus.ultimo_snapshot_valido || null,
+      lastSuccessMs: parseDate(sourceStatus.ultimo_sucesso || sourceStatus.ultimo_snapshot_valido),
+      message: String(sourceStatus.mensagem_admin || ""),
+    },
     core: {
       calendarAt: calendar.gerado_em || null,
       resultsAt: results.atualizado_em || null,
@@ -430,31 +502,19 @@ export function chooseSlowCandidate(snapshot, state, nowMs, cfg = DEFAULTS) {
     }
   }
 
-  // 3) Atualização principal por estado real dos artefatos, nunca apenas porque virou o dia.
-  const coreAge = Number(snapshot.core?.oldestAgeHours);
-  const nextGameMs = snapshot.nextGameAtMs;
-  const untilGameHours = Number.isFinite(nextGameMs) ? (nextGameMs - nowMs) / 3_600_000 : Number.POSITIVE_INFINITY;
-  let maintenanceLimit = cfg.maintenanceMaxHours;
-  let maintenanceReason = `Snapshot principal envelheceu (${coreAge.toFixed(1)}h > ${maintenanceLimit}h).`;
-
-  if ((snapshot.pendingCalendar || 0) > 0) {
-    maintenanceLimit = Math.min(maintenanceLimit, cfg.maintenancePendingCalendarHours);
-    maintenanceReason = `Há ${snapshot.pendingCalendar} jogo(s) adiado(s)/TBA pendente(s); reconciliar ESPN/CBF após ${maintenanceLimit}h sem atualização.`;
-  }
-  if (untilGameHours >= 0 && untilGameHours <= cfg.maintenanceNearGameWindowHours) {
-    maintenanceLimit = Math.min(maintenanceLimit, cfg.maintenanceNearGameHours);
-    maintenanceReason = `Próximo jogo em ${untilGameHours.toFixed(1)}h e snapshot principal tem ${coreAge.toFixed(1)}h; reconciliar calendário/resultados.`;
-  }
-  if (untilGameHours >= 0 && untilGameHours <= cfg.maintenanceVeryNearWindowHours) {
-    maintenanceLimit = Math.min(maintenanceLimit, cfg.maintenanceVeryNearHours);
-    maintenanceReason = `Próximo jogo está muito próximo (${untilGameHours.toFixed(1)}h) e o snapshot tem ${coreAge.toFixed(1)}h.`;
-  }
+  // 3) MAIN NÃO é mais disparado por idade do snapshot. O Worker 2.0 é
+  // orientado por EVENTO: FINAL, mudança objetiva de agenda, recuperação da
+  // fonte ou inconsistência crítica. Um snapshot velho, sozinho, nunca justifica
+  // gastar um GitHub Action.
   if ((snapshot.core?.generalCriticals || 0) > 0 || snapshot.core?.generalStatus === "critical") {
-    maintenanceLimit = 0;
-    maintenanceReason = "Auditoria geral detectou inconsistência crítica; regenerar snapshot principal.";
-  }
-  if (coreAge > maintenanceLimit && isCooldownElapsed(state, ACTIONS.MAIN, nowMs, cfg)) {
-    return candidate(ACTIONS.MAIN, maintenanceReason);
+    if (snapshot.source?.healthy !== false && isCooldownElapsed(state, ACTIONS.MAIN, nowMs, cfg)) {
+      const signature = `critical:${snapshot.agendaSignature}:${snapshot.core?.generalCriticals || 0}:${snapshot.resultCount}`;
+      return candidate(
+        ACTIONS.MAIN,
+        "Auditoria geral detectou inconsistência crítica com fonte disponível; regenerar snapshot principal uma vez por sinal.",
+        { mainSignalSignature: signature, signalBackoffMinutes: cfg.criticalSignalBackoffMinutes },
+      );
+    }
   }
 
   // 4) TV orientada por cobertura, não por cron diário.
@@ -491,13 +551,85 @@ export function chooseSlowCandidate(snapshot, state, nowMs, cfg = DEFAULTS) {
   return null;
 }
 
+export function orchestratorPhase(snapshot, nowMs, cfg = DEFAULTS) {
+  const nextGameMs = snapshot?.nextGameAtMs;
+  const deltaMin = Number.isFinite(nextGameMs) ? (nextGameMs - nowMs) / 60_000 : Number.POSITIVE_INFINITY;
+  const finalGames = relevantFinalProbeGames(snapshot, nowMs, cfg);
+  if (finalGames.length) return "final_watch";
+  if (Number.isFinite(deltaMin) && deltaMin <= 0 && deltaMin >= -cfg.fastProbeStartMinutes) return "game_window";
+  if (Number.isFinite(deltaMin) && deltaMin > 0 && deltaMin <= cfg.nearGameWindowMinutes) return "near_game";
+  if (Number.isFinite(deltaMin) && deltaMin > 0 && deltaMin <= cfg.preGameWakeHours * 60) return "pre_game";
+  if (snapshot?.source?.healthy === false) return "source_degraded";
+  if ((snapshot?.pendingCalendar || 0) > 0) return "calendar_watch";
+  return "sleep";
+}
+
+export function computeWakePlan(snapshot, nowMs, cfg = DEFAULTS) {
+  const phase = orchestratorPhase(snapshot, nowMs, cfg);
+  const nextGameMs = snapshot?.nextGameAtMs;
+  const candidates = [];
+
+  const add = (ms, reason) => {
+    if (Number.isFinite(ms) && ms > nowMs) candidates.push({ atMs: ms, reason });
+  };
+
+  if (phase === "final_watch") {
+    add(nowMs + cfg.fastProbeIntervalSeconds * 1000, "sondar FINAL");
+  } else if (phase === "game_window" || phase === "near_game") {
+    add(nowMs + cfg.nearGameScoutIntervalMinutes * 60_000, "janela de jogo/agenda próxima");
+  } else if (phase === "pre_game") {
+    add(nowMs + cfg.preGameScoutIntervalMinutes * 60_000, "pré-jogo: confirmar agenda sem GitHub Action");
+  } else if (phase === "source_degraded") {
+    add(nowMs + cfg.sourceRecoveryProbeMinutes * 60_000, "fonte preservada: testar recuperação de forma barata");
+  } else if (phase === "calendar_watch") {
+    add(nowMs + cfg.pendingCalendarScoutHours * 3_600_000, "jogos adiados/TBA: revisar agenda externamente");
+  } else {
+    add(nowMs + cfg.sleepRepoRefreshHours * 3_600_000, "SLEEP: revisão de segurança do estado");
+  }
+
+  if (snapshot?.source?.healthy === false) {
+    const untilMin = Number.isFinite(nextGameMs) ? (nextGameMs - nowMs) / 60_000 : Number.POSITIVE_INFINITY;
+    const recoveryMin = untilMin <= cfg.preGameWakeHours * 60 ? cfg.sourceRecoveryNearMinutes : cfg.sourceRecoveryProbeMinutes;
+    add(nowMs + recoveryMin * 60_000, "probe barato de recuperação da fonte");
+  }
+
+  if (Number.isFinite(nextGameMs)) {
+    add(nextGameMs - cfg.preGameWakeHours * 3_600_000, `acordar T-${cfg.preGameWakeHours}h para ${snapshot.nextGameLabel || "próximo jogo"}`);
+    add(nextGameMs - cfg.nearGameWindowMinutes * 60_000, `entrar em janela próxima de ${snapshot.nextGameLabel || "próximo jogo"}`);
+    add(nextGameMs + cfg.fastProbeStartMinutes * 60_000, `iniciar vigilância de FINAL de ${snapshot.nextGameLabel || "próximo jogo"}`);
+  }
+
+  const blockEvent = snapshot?.blocks?.nextEventAtMs;
+  if (Number.isFinite(blockEvent)) {
+    add(blockEvent - cfg.blockBoundaryBeforeMinutes * 60_000, "fronteira de bloco de apostas");
+  }
+
+  candidates.sort((a, b) => a.atMs - b.atMs);
+  const first = candidates[0] || { atMs: nowMs + cfg.sleepRepoRefreshHours * 3_600_000, reason: "SLEEP" };
+  return { phase, nextWakeAtMs: Math.max(nowMs + 60_000, first.atMs), nextWakeReason: first.reason };
+}
+
 export function computeNextSlowAt(snapshot, nowMs, cfg = DEFAULTS) {
-  let next = nowMs + cfg.slowIntervalMinutes * 60_000;
-  const event = snapshot?.blocks?.nextEventAtMs;
-  if (Number.isFinite(event) && event > nowMs) {
-    const before = event - cfg.blockBoundaryBeforeMinutes * 60_000;
+  const phase = orchestratorPhase(snapshot, nowMs, cfg);
+  let next = nowMs + cfg.sleepRepoRefreshHours * 3_600_000;
+  if (phase === "final_watch") next = nowMs + cfg.finalRecoveryIntervalMinutes * 60_000;
+  else if (phase === "near_game" || phase === "game_window") next = nowMs + 15 * 60_000;
+  else if (phase === "pre_game") next = nowMs + cfg.preGameScoutIntervalMinutes * 60_000;
+  else if (phase === "source_degraded") next = nowMs + cfg.sourceRecoveryProbeMinutes * 60_000;
+  else if (phase === "calendar_watch") next = nowMs + cfg.pendingCalendarScoutHours * 3_600_000;
+
+  const nextGameMs = snapshot?.nextGameAtMs;
+  if (Number.isFinite(nextGameMs)) {
+    const wakePre = nextGameMs - cfg.preGameWakeHours * 3_600_000;
+    if (wakePre > nowMs) next = Math.min(next, wakePre);
+    const wakeNear = nextGameMs - cfg.nearGameWindowMinutes * 60_000;
+    if (wakeNear > nowMs) next = Math.min(next, wakeNear);
+  }
+  const blockEvent = snapshot?.blocks?.nextEventAtMs;
+  if (Number.isFinite(blockEvent) && blockEvent > nowMs) {
+    const before = blockEvent - cfg.blockBoundaryBeforeMinutes * 60_000;
     if (before > nowMs) next = Math.min(next, before);
-    else next = Math.min(next, event);
+    else next = Math.min(next, blockEvent);
   }
   return Math.max(nowMs + 60_000, next);
 }
@@ -585,16 +717,22 @@ export function chooseSafetyFinalCandidate(snapshot, state, nowMs, cfg = DEFAULT
 
 function defaultState() {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     engine: ENGINE,
     version: VERSION,
     lastTickAt: null,
     lastSlowAt: null,
     nextSlowAt: null,
+    phase: "boot",
+    nextWakeAt: null,
+    nextWakeReason: "carregar estado inicial",
     lastFastProbeAt: null,
     lastFastProbeDiagnostics: null,
     fastProbeWarnings: [],
+    lastAgendaScoutAt: null,
+    lastAgendaScoutDiagnostics: null,
     lastDispatchAt: {},
+    mainSignalLast: null,
     snapshot: null,
     pendingFinals: {},
     candidate: null,
@@ -631,7 +769,7 @@ function githubHeaders(env) {
     "accept": "application/vnd.github+json",
     "authorization": `Bearer ${token}`,
     "x-github-api-version": "2026-03-10",
-    "user-agent": "Brasileirao-Almoco-Orchestrator/1.1.6",
+    "user-agent": "Brasileirao-Almoco-Orchestrator/2.0.0",
   };
 }
 
@@ -684,7 +822,7 @@ async function loadRepositoryFiles(env) {
     if (result.status === "fulfilled") files[result.value[0]] = result.value[1];
     else errors.push(`${path}: ${result.reason?.message || result.reason}`);
   });
-  const critical = ["calendar", "results", "apuracao", "ranking", "apostasConfig", "afAudit", "afBolao", "tv", "blocksAudit", "generalAudit"];
+  const critical = ["calendar", "results", "apuracao", "ranking", "apostasConfig", "afAudit", "afBolao", "tv", "blocksAudit", "generalAudit", "sourceStatus"];
   const missingCritical = critical.filter((key) => !files[key]);
   if (missingCritical.length) {
     throw new Error(`Fontes críticas indisponíveis: ${missingCritical.join(", ")} :: ${errors.join(" | ")}`);
@@ -733,7 +871,7 @@ function espnNoCacheOptions() {
       "accept": "application/json,text/plain,*/*",
       "cache-control": "no-cache",
       "pragma": "no-cache",
-      "user-agent": "Mozilla/5.0 (compatible; BrasileiroAlmoco-Orchestrator/1.1.6)",
+      "user-agent": "Mozilla/5.0 (compatible; BrasileiroAlmoco-Orchestrator/2.0.0)",
     },
   };
 }
@@ -810,6 +948,149 @@ export async function probeEspn(games, nowMs = Date.now()) {
       unresolved,
       notes,
     },
+  };
+}
+
+
+export function espnKickoffFromPayload(data) {
+  const comp = data?.header?.competitions?.[0] || data?.competitions?.[0] || null;
+  const candidates = [comp?.date, comp?.startDate, data?.date, data?.header?.date].filter(Boolean);
+  for (const value of candidates) {
+    const ms = Date.parse(String(value));
+    if (Number.isFinite(ms)) return ms;
+  }
+  return null;
+}
+
+export function agendaScoutGames(snapshot, nowMs, cfg = DEFAULTS) {
+  const phase = orchestratorPhase(snapshot, nowMs, cfg);
+  const all = snapshot?.games || [];
+  const chosen = [];
+  const seen = new Set();
+  const add = (game) => {
+    if (!game?.id || game.concluded || seen.has(game.id)) return;
+    seen.add(game.id);
+    chosen.push(game);
+  };
+
+  // Em janela esportiva, olhar somente o que pode mudar agora.
+  if (["pre_game", "near_game", "game_window", "final_watch"].includes(phase)) {
+    const nextMs = snapshot?.nextGameAtMs;
+    for (const game of all) {
+      if (!Number.isFinite(game.kickoffMs)) continue;
+      if (Number.isFinite(nextMs) && Math.abs(game.kickoffMs - nextMs) <= 6 * 3_600_000) add(game);
+    }
+  } else {
+    // Fora de jogo: auditoria barata de agenda, nunca GitHub Action por idade.
+    for (const game of snapshot?.pendingScheduleGames || []) add(game);
+    const horizon = nowMs + cfg.agendaScoutHorizonDays * 86_400_000;
+    for (const game of all) {
+      if (chosen.length >= cfg.agendaScoutMaxGames) break;
+      if (!Number.isFinite(game.kickoffMs) || game.kickoffMs < nowMs || game.kickoffMs > horizon) continue;
+      add(game);
+    }
+  }
+  return chosen.slice(0, Math.max(1, cfg.agendaScoutMaxGames));
+}
+
+export function agendaScoutIntervalMs(snapshot, nowMs, cfg = DEFAULTS) {
+  const phase = orchestratorPhase(snapshot, nowMs, cfg);
+  const nextGameMs = snapshot?.nextGameAtMs;
+  const untilMin = Number.isFinite(nextGameMs) ? (nextGameMs - nowMs) / 60_000 : Number.POSITIVE_INFINITY;
+  if (snapshot?.source?.healthy === false) {
+    return (untilMin <= cfg.preGameWakeHours * 60 ? cfg.sourceRecoveryNearMinutes : cfg.sourceRecoveryProbeMinutes) * 60_000;
+  }
+  if (phase === "near_game" || phase === "game_window" || phase === "final_watch") {
+    return cfg.nearGameScoutIntervalMinutes * 60_000;
+  }
+  if (phase === "pre_game") return cfg.preGameScoutIntervalMinutes * 60_000;
+  if (phase === "calendar_watch") return cfg.pendingCalendarScoutHours * 3_600_000;
+  return cfg.agendaScoutFarIntervalHours * 3_600_000;
+}
+
+export async function probeAgenda(snapshot, nowMs = Date.now(), cfg = DEFAULTS) {
+  const games = agendaScoutGames(snapshot, nowMs, cfg);
+  const changes = [];
+  const finals = [];
+  const notes = [];
+  let reachable = false;
+
+  await Promise.all(games.map(async (game) => {
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=${encodeURIComponent(game.id)}&agenda=${Math.floor(nowMs / 300_000)}`;
+    try {
+      const response = await fetchWithTimeout(url, espnNoCacheOptions());
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      reachable = true;
+      const data = await response.json();
+      const remoteState = espnStateFromPayload(data);
+      const remoteKickoffMs = espnKickoffFromPayload(data);
+      if (remoteState === "post" && !resultIdSet(snapshot).has(game.id)) finals.push(game.id);
+      if (Number.isFinite(remoteKickoffMs)) {
+        const diffMin = Number.isFinite(game.kickoffMs)
+          ? Math.abs(remoteKickoffMs - game.kickoffMs) / 60_000
+          : Number.POSITIVE_INFINITY;
+        const remoteFuture = remoteKickoffMs > nowMs - 6 * 3_600_000;
+        if (diffMin > cfg.scheduleChangeToleranceMinutes || ((game.tba || game.postponed) && remoteFuture)) {
+          changes.push({
+            id: game.id,
+            game: formatGame(game),
+            localKickoff: iso(game.kickoffMs),
+            remoteKickoff: iso(remoteKickoffMs),
+            diffMinutes: Number.isFinite(diffMin) ? Math.round(diffMin) : null,
+            localPostponed: game.postponed === true,
+            localTba: game.tba === true,
+          });
+        }
+      }
+    } catch (error) {
+      notes.push(`summary ${game.id}: ${error?.name || "Error"}: ${error?.message || error}`);
+    }
+  }));
+
+  // Sem jogos conhecidos para sondar, ou em fonte degradada, um scoreboard diário
+  // serve apenas como teste barato de reachability. Não dispara MAIN por si só
+  // quando a fonte já está saudável.
+  if (!games.length || snapshot?.source?.healthy === false) {
+    const day = dateKeyBrt(nowMs);
+    const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=${day}&limit=100&agenda=${Math.floor(nowMs / 300_000)}`;
+    try {
+      const response = await fetchWithTimeout(url, espnNoCacheOptions());
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      reachable = true;
+      await response.json();
+    } catch (error) {
+      notes.push(`scoreboard ${day}: ${error?.name || "Error"}: ${error?.message || error}`);
+    }
+  }
+
+  const signature = stableHash(JSON.stringify(changes.map((c) => [c.id, c.localKickoff, c.remoteKickoff]).sort()));
+  return {
+    reachable,
+    changes,
+    finals: uniqueStrings(finals),
+    signature,
+    diagnostics: {
+      at: iso(nowMs),
+      phase: orchestratorPhase(snapshot, nowMs, cfg),
+      probedIds: games.map((g) => g.id),
+      reachable,
+      changes,
+      finals: uniqueStrings(finals),
+      notes,
+    },
+  };
+}
+
+export function mainSignalBlocked(state, selected, nowMs, cfg = DEFAULTS) {
+  if (selected?.action !== ACTIONS.MAIN || !selected?.mainSignalSignature) return null;
+  const last = state?.mainSignalLast;
+  if (!last || String(last.signature || "") !== String(selected.mainSignalSignature)) return null;
+  const atMs = parseDate(last.at);
+  const backoffMin = Number(selected.signalBackoffMinutes || cfg.mainSignalBackoffMinutes);
+  if (!Number.isFinite(atMs) || nowMs - atMs >= backoffMin * 60_000) return null;
+  return {
+    blocked: true,
+    reason: `mesmo sinal MAIN já despachado há ${((nowMs - atMs) / 60_000).toFixed(1)} min; backoff=${backoffMin}min`,
   };
 }
 
@@ -944,11 +1225,20 @@ export class BrAlmocoOrchestratorStateV1 {
         cloudflareFetchCachePolicy: "request_no_store_without_cf_cacheTtl",
         summaryFallbackByEventId: true,
         passesEventIdsToMainWorkflow: true,
+        mainWorkflowIncremental: true,
         probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
         finalDebounceSeconds: runtimeConfig(this.env).finalDebounceSeconds,
         finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
         safetyTriggerMinutes: runtimeConfig(this.env).finalSafetyStartMinutes,
         safetyRetryMinutes: runtimeConfig(this.env).finalSafetyRetryMinutes,
+      },
+      orchestration: {
+        strategy: "agenda_event_driven_v2",
+        githubHeavyWorkOnlyOnEvidence: true,
+        ageOnlyMainDispatchDisabled: true,
+        agendaScoutWithoutGithubAction: true,
+        sourceRecoveryProbeWithoutGithubAction: true,
+        preGameWakeHours: runtimeConfig(this.env).preGameWakeHours,
       },
       lastTickAt: state.lastTickAt,
     });
@@ -965,7 +1255,11 @@ export class BrAlmocoOrchestratorStateV1 {
       lastTickAt: state.lastTickAt,
       lastSlowAt: state.lastSlowAt,
       nextSlowAt: state.nextSlowAt,
+      phase: state.phase || "unknown",
+      nextWakeAt: state.nextWakeAt || null,
+      nextWakeReason: state.nextWakeReason || null,
       lastFastProbeAt: state.lastFastProbeAt,
+      lastAgendaScoutAt: state.lastAgendaScoutAt || null,
       relevantSportsGames: state.relevantSportsGames || 0,
       slowEvaluated: state.slowEvaluated === true,
       candidate: state.candidate,
@@ -978,6 +1272,7 @@ export class BrAlmocoOrchestratorStateV1 {
         cloudflareFetchCachePolicy: "request_no_store_without_cf_cacheTtl",
         summaryFallbackByEventId: true,
         passesEventIdsToMainWorkflow: true,
+        mainWorkflowIncremental: true,
         probeIntervalSeconds: runtimeConfig(this.env).fastProbeIntervalSeconds,
         finalDebounceSeconds: runtimeConfig(this.env).finalDebounceSeconds,
         finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
@@ -988,7 +1283,14 @@ export class BrAlmocoOrchestratorStateV1 {
         nextGameAt: snap.nextGameAt,
         nextGame: snap.nextGameLabel,
         pendingCalendar: snap.pendingCalendar,
+        agendaSignature: snap.agendaSignature,
+        source: snap.source,
         coreOldestAgeHours: Number.isFinite(snap.core?.oldestAgeHours) ? Number(snap.core.oldestAgeHours.toFixed(2)) : null,
+        agendaScout: {
+          lastAt: state.lastAgendaScoutAt || null,
+          diagnostics: state.lastAgendaScoutDiagnostics || null,
+          mainSignalLast: state.mainSignalLast || null,
+        },
         blocks: {
           status: snap.blocks?.status,
           nextEventAt: snap.blocks?.nextEventAt,
@@ -1051,6 +1353,49 @@ export class BrAlmocoOrchestratorStateV1 {
       }
     }
 
+    // Agenda/Event Driven 2.0: mesmo com cron de 1 minuto, este plano deixa o
+    // Worker em SLEEP até existir uma razão esportiva/operacional concreta.
+    const wakePlan = computeWakePlan(state.snapshot, nowMs, cfg);
+    state.phase = wakePlan.phase;
+    state.nextWakeAt = iso(wakePlan.nextWakeAtMs);
+    state.nextWakeReason = wakePlan.nextWakeReason;
+
+    let agendaSelected = null;
+    const lastAgendaScout = parseDate(state.lastAgendaScoutAt);
+    const scoutInterval = agendaScoutIntervalMs(state.snapshot, nowMs, cfg);
+    const scoutDue = state.phase !== "final_watch"
+      && (!Number.isFinite(lastAgendaScout) || nowMs - lastAgendaScout >= scoutInterval);
+
+    if (scoutDue) {
+      const scout = await probeAgenda(state.snapshot, nowMs, cfg);
+      state.lastAgendaScoutAt = iso(nowMs);
+      state.lastAgendaScoutDiagnostics = scout.diagnostics;
+      if (scout.finals.length) {
+        const syntheticStates = Object.fromEntries(scout.finals.map((id) => [id, { state: "post", source: "agenda_scout" }]));
+        state.pendingFinals = collectNewFinals(state.snapshot, syntheticStates, state.pendingFinals, nowMs);
+      }
+      if (scout.changes.length) {
+        const labels = scout.changes.slice(0, 4).map((c) => `${c.game}: ${c.localKickoff || "TBA"} -> ${c.remoteKickoff}`).join("; ");
+        agendaSelected = candidate(
+          ACTIONS.MAIN,
+          `Mudança objetiva de agenda detectada pela ESPN sem rodar GitHub: ${labels}.`,
+          {
+            mainSignalSignature: `agenda:${state.snapshot.agendaSignature}:${scout.signature}`,
+            signalBackoffMinutes: state.phase === "near_game" || state.phase === "pre_game" ? 30 : cfg.mainSignalBackoffMinutes,
+          },
+        );
+      } else if (state.snapshot?.source?.healthy === false && scout.reachable) {
+        agendaSelected = candidate(
+          ACTIONS.MAIN,
+          "A última coleta foi preservada, mas a ESPN voltou a responder ao probe barato do Cloudflare; executar uma única recuperação incremental.",
+          {
+            mainSignalSignature: `source-recovery:${state.snapshot.source.fingerprint || state.snapshot.source.status}:${state.snapshot.resultCount}`,
+            signalBackoffMinutes: cfg.mainSignalBackoffMinutes,
+          },
+        );
+      }
+    }
+
     // FAST PATH: apenas detectar FINAL. Não há AO VIVO, gols, placar ou eventos no escopo.
     // FINAL já conhecido no calendário mas ainda ausente em resultados também entra
     // na fila de convergência, sem depender de uma nova resposta da ESPN.
@@ -1078,6 +1423,9 @@ export class BrAlmocoOrchestratorStateV1 {
     const hasPendingFinalDebounce = Object.keys(state.pendingFinals || {}).length > 0;
     // 1.1.0: recovery de FINAL NÃO bloqueia mais o slow path. Só preservamos a
     // prioridade por poucos segundos enquanto um FINAL confirmado está no debounce.
+    if (!selected && !hasPendingFinalDebounce && agendaSelected) {
+      selected = agendaSelected;
+    }
     if (!selected && !hasPendingFinalDebounce) {
       selected = chooseSlowCandidate(state.snapshot, state, nowMs, cfg);
     }
@@ -1085,6 +1433,8 @@ export class BrAlmocoOrchestratorStateV1 {
       state.resultReason = "FINAL confirmado em debounce curto; demais rotinas voltam a ser elegíveis imediatamente depois";
     } else if (!selected && probeGames.length > 0) {
       state.resultReason = `monitorando encerramento; scoreboard primário + summary fallback; safety trigger em T+${cfg.finalSafetyStartMinutes}min`;
+    } else if (!selected) {
+      state.resultReason = `${String(state.phase || "sleep").toUpperCase()}: nenhuma mudança capaz de justificar GitHub Action; próximo wake: ${state.nextWakeAt || "n/a"} (${state.nextWakeReason || "sem motivo"})`;
     }
     state.candidate = selected;
 
@@ -1121,6 +1471,15 @@ export class BrAlmocoOrchestratorStateV1 {
         await this.writeState(state);
         return jsonResponse({ ok: false, action: ACTIONS.NONE, reason: state.resultReason });
       }
+    }
+
+    const signalGuard = mainSignalBlocked(state, selected, nowMs, cfg);
+    if (signalGuard?.blocked) {
+      state.result = "none";
+      state.resultReason = signalGuard.reason;
+      recordDecision(state, nowMs, { action: ACTIONS.NONE, reason: signalGuard.reason, result: "signal_backoff" }, cfg);
+      await this.writeState(state);
+      return jsonResponse({ ok: true, action: ACTIONS.NONE, reason: state.resultReason });
     }
 
     const isFinalConvergence = selected.action === ACTIONS.FINAL && Array.isArray(selected.eventIds) && selected.eventIds.length > 0;
@@ -1161,13 +1520,21 @@ export class BrAlmocoOrchestratorStateV1 {
         state.resultReason = guard.reason;
         recordDecision(state, nowMs, { action: ACTIONS.NONE, reason: guard.reason, result: "circuit_breaker" }, cfg);
         // Não martela o GitHub a cada minuto quando a condição de origem persiste.
-        state.nextSlowAt = iso(nowMs + Math.max(5, cfg.slowIntervalMinutes) * 60_000);
+        state.nextSlowAt = iso(computeNextSlowAt(state.snapshot, nowMs, cfg));
         await this.writeState(state);
         return jsonResponse({ ok: true, action: ACTIONS.NONE, reason: state.resultReason });
       }
 
       const workflow = await dispatchWorkflow(this.env, selected.action, selected);
       state.lastDispatchAt = { ...(state.lastDispatchAt || {}), [selected.action]: iso(nowMs) };
+      if (selected.action === ACTIONS.MAIN && selected.mainSignalSignature) {
+        state.mainSignalLast = {
+          signature: String(selected.mainSignalSignature),
+          at: iso(nowMs),
+          reason: selected.reason,
+          retryAfter: iso(nowMs + Number(selected.signalBackoffMinutes || cfg.mainSignalBackoffMinutes) * 60_000),
+        };
+      }
       if (selected.action === ACTIONS.FINAL && selected.safetyTrigger === true) {
         const map = { ...(state.finalSafetyLastAttempt || {}) };
         for (const id of uniqueStrings(selected.eventIds || [])) map[id] = iso(nowMs);
@@ -1187,7 +1554,7 @@ export class BrAlmocoOrchestratorStateV1 {
       // 1.1.0: dispatch não significa publicação. pendingFinals permanece até
       // resultados.json realmente conter o event_id; então a revalidação o remove.
       // Após qualquer writer, refresca o repositório cedo para observar o novo estado.
-      state.nextSlowAt = iso(nowMs + 2 * 60_000);
+      state.nextSlowAt = iso(nowMs + (selected.action === ACTIONS.FINAL ? 2 : 5) * 60_000);
       await this.writeState(state);
       return jsonResponse({ ok: true, action: selected.action, result: "dispatched", workflow, reason: selected.reason });
     } catch (error) {

@@ -1,45 +1,94 @@
-# Orchestrator BR Almoço 1.1.6 — correção do fetch ESPN na Cloudflare
+# Orchestrator BR Almoço 2.0.0 — Agenda/Event Driven
 
-A versão 1.1.6 mantém um único workflow esportivo robusto: `Atualizar Brasileirao (ESPN)`.
+O Cloudflare continua com Cron a cada minuto, mas o **GitHub não é mais um cron**.
+O Worker decide por evidência esportiva e mantém o sistema em `SLEEP` quando nada
+pode ter mudado.
 
-## Correção principal
+## Objetivo da 2.0
 
-1. **Scoreboard ESPN como fonte primária**, usando a mesma estratégia browser-like comprovada no orquestrador do Fórmula do Gol: `Mozilla/5.0`, `Cache-Control: no-cache`, cache Cloudflare desativado e timeout de 8 s.
-2. Consulta as partições de data **BRT e UTC** para evitar perda de jogos noturnos.
-3. **Summary por `event_id` vira fallback/segunda opinião**, não mais a única fonte primária.
-4. **Safety trigger temporal em T+110 min**: se o jogo ainda não consta em `resultados.json`, o Worker chama o `Atualizar Brasileirao (ESPN)` robusto mesmo que scoreboard e summary do Cloudflare falhem.
-5. O safety trigger respeita **retry mínimo de 5 min**, writer gate, circuit breaker e revalidação de `resultados.json`, evitando tempestade de Actions.
-6. `/status` expõe diagnóstico do último probe (`scoreboardHits`, `summaryHits`, `unresolved`, warnings), facilitando auditoria futura.
+Eliminar a tempestade de `Atualizar Brasileirao (ESPN)` causada por idade de
+snapshot, fonte preservada ou jogos adiados/TBA. Idade, sozinha, nunca mais gera
+workflow pesado.
 
-## Fluxo
+## Estados operacionais
+
+- `sleep`: nenhum evento esportivo próximo; GitHub pesado fica zerado.
+- `calendar_watch`: há adiado/TBA; Cloudflare audita ESPN de forma barata.
+- `source_degraded`: último snapshot foi preservado; Cloudflare testa recuperação
+  sem gastar Action.
+- `pre_game`: T-6h até T-60min; agenda é confirmada em intervalos moderados.
+- `near_game`: última hora; probes baratos ficam mais frequentes.
+- `game_window`: jogo começou, mas ainda não chegou à janela provável de FINAL.
+- `final_watch`: T+88min em diante; FINAL é acompanhado agressivamente.
+
+## Quando o GitHub pode acordar
+
+`Atualizar Brasileirao (ESPN)` só é elegível quando existir pelo menos um sinal
+objetivo:
+
+1. FINAL confirmado e ainda ausente em `resultados.json`;
+2. safety trigger temporal de FINAL;
+3. mudança real de data/horário detectada no `event_id` ESPN;
+4. fonte anteriormente preservada voltou a responder ao probe Cloudflare;
+5. auditoria geral crítica com fonte disponível;
+6. AF realmente divergente dos resultados.
+
+O snapshot estar velho **não é sinal**.
+
+## Agenda inteligente
+
+Fora de jogo, o Worker consulta `summary?event=<id>` apenas em janelas de agenda.
+Ele compara o kickoff remoto com `calendario-completo.json`. Jogos adiados/TBA e
+partidas dos próximos 14 dias são auditados sem disparar GitHub. Só uma mudança
+objetiva cria um sinal `MAIN`.
+
+A CBF continua integrada no coletor Python oficial. Quando um `MAIN` realmente é
+necessário, `atualizar_espn.py` faz a reconciliação ESPN → CBF já existente.
+
+## Anti-loop por assinatura
+
+Mudança de agenda e recuperação de fonte ganham uma assinatura persistente. O
+mesmo sinal não pode gerar workflows em sequência. Recuperação de fonte usa
+backoff de 6 horas; um FINAL novo continua tendo prioridade e pode disparar
+imediatamente.
+
+## Coleta automática incremental
+
+FINAL, MAIN e MAIN_AF agora chamam:
 
 ```text
-Cloudflare Cron 1 min
-  ↓
-T+88: scoreboard ESPN (browser-like)
-  ↓
-se não resolver → summary por event_id
-  ↓
-FINAL detectado → Atualizar Brasileirao imediatamente
-
-OU, independentemente das fontes Cloudflare:
-
-T+110 e ainda ausente de resultados.json
-  ↓
-safety trigger
-  ↓
-Atualizar Brasileirao (coleta_completa=true + event_ids)
-  ↓
-coletor robusto GitHub/curl_cffi decide o estado real
+coleta_completa=false
 ```
 
-Excluídos do escopo: AO VIVO, públicos, melhores momentos, elencos e fair play.
+A varredura completa continua disponível para manutenção/manual, mas deixou de
+ser custo obrigatório de cada evento.
 
+## ESPN adaptativa
 
-## Correção 1.1.6
+O coletor inicia o scoreboard em blocos de 14 dias. Se a ESPN responder erro a
+um range, divide automaticamente a faixa até consulta diária:
 
-A 1.1.5 combinava `cache: "no-store"` com `cf.cacheTtl = 0`.
-O runtime Cloudflare rejeitava a subrequest antes de acessar a ESPN.
+```text
+14 dias → 7 → 3/4 → 1 dia
+```
 
-A 1.1.6 mantém `cache: "no-store"`, headers `no-cache` e a query
-`orch=<minuto>` para cache-busting, removendo somente `cf.cacheTtl`.
+Isso cobre a mudança observada em 16/09/2026, quando uma faixa extensa passou a
+retornar HTTP 400. Se até a consulta diária falhar, o mecanismo transacional já
+existente preserva o último snapshot íntegro.
+
+## FINAL
+
+A lógica rápida permanece independente do slow path:
+
+```text
+T+88 → scoreboard ESPN por dia
+      → summary por event_id como fallback
+      → FINAL → Atualizar Brasileirão incremental
+
+T+110 sem convergência
+      → safety trigger
+      → Atualizar Brasileirão incremental + event_ids
+```
+
+AO VIVO, públicos, melhores momentos, elencos e fair play continuam fora do
+escopo do orquestrador.

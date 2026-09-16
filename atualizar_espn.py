@@ -67,6 +67,7 @@ URL_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/sco
 ESPN_JANELA_PASSADO_DIAS = max(14, int(os.environ.get("ESPN_JANELA_PASSADO_DIAS", "45")))
 ESPN_JANELA_FUTURO_DIAS = max(30, int(os.environ.get("ESPN_JANELA_FUTURO_DIAS", "75")))
 ESPN_BLOCO_COMPLETO_DIAS = max(28, min(120, int(os.environ.get("ESPN_BLOCO_COMPLETO_DIAS", "112"))))
+ESPN_BLOCO_SEGURO_DIAS = max(1, min(31, int(os.environ.get("ESPN_BLOCO_SEGURO_DIAS", "14"))))
 ESPN_VARREDURA_COMPLETA_INTERVALO_DIAS = max(0, int(os.environ.get("ESPN_VARREDURA_COMPLETA_INTERVALO_DIAS", "7")))
 ESPN_HORA_VARREDURA_COMPLETA_BRT = max(0, min(23, int(os.environ.get("ESPN_HORA_VARREDURA_COMPLETA_BRT", "3"))))
 URL_RESUMO_EVENTO = "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary"
@@ -492,6 +493,53 @@ def decidir_modo_scoreboard(
     return "incremental", "janela móvel operacional"
 
 
+def _scoreboard_dates_param(inicio: datetime, fim: datetime) -> str:
+    if inicio.date() == fim.date():
+        return inicio.strftime("%Y%m%d")
+    return datas_url(inicio, fim)
+
+
+def _buscar_scoreboard_faixa_adaptativa(
+    inicio: datetime,
+    fim: datetime,
+    estatisticas: dict[str, int],
+) -> list[dict[str, Any]]:
+    """Busca scoreboard e subdivide a faixa automaticamente se a ESPN rejeitar o range.
+
+    Em setembro/2026 a ESPN passou a responder HTTP 400 para ranges extensos.
+    A consulta cai de 14 -> 7 -> 3/4 -> 1 dia sem perder o snapshot anterior.
+    """
+    periodo = _scoreboard_dates_param(inicio, fim)
+    url = f"{URL_SCOREBOARD}?dates={periodo}&limit=200"
+    print(f"Fonte: {url}")
+    estatisticas["chamadas"] = estatisticas.get("chamadas", 0) + 1
+    try:
+        data = fetch_json(url, timeout=30, tentativas=1)
+    except Exception as exc:  # noqa: BLE001
+        dias = (fim.date() - inicio.date()).days + 1
+        if dias <= 1:
+            raise
+        estatisticas["subdivisoes"] = estatisticas.get("subdivisoes", 0) + 1
+        esquerda = max(1, dias // 2)
+        fim_esquerda = inicio + timedelta(days=esquerda - 1)
+        inicio_direita = fim_esquerda + timedelta(days=1)
+        print(
+            "::warning::Scoreboard rejeitou faixa "
+            f"{periodo} ({type(exc).__name__}: {exc}); subdividindo em "
+            f"{_scoreboard_dates_param(inicio, fim_esquerda)} e "
+            f"{_scoreboard_dates_param(inicio_direita, fim)}."
+        )
+        return (
+            _buscar_scoreboard_faixa_adaptativa(inicio, fim_esquerda, estatisticas)
+            + _buscar_scoreboard_faixa_adaptativa(inicio_direita, fim, estatisticas)
+        )
+
+    eventos = data.get("events") or []
+    if not isinstance(eventos, list):
+        raise RuntimeError(f"scoreboard inválido em {periodo}: campo events não é lista")
+    return [ev for ev in eventos if isinstance(ev, dict)]
+
+
 def _buscar_eventos_periodo(
     inicio: datetime,
     fim: datetime,
@@ -500,26 +548,26 @@ def _buscar_eventos_periodo(
 ) -> list[dict[str, Any]]:
     eventos_por_id: dict[str, dict[str, Any]] = {}
     cursor = inicio
-    chamadas = 0
+    estatisticas = {"chamadas": 0, "subdivisoes": 0}
+    bloco_efetivo = max(1, min(int(bloco_dias), ESPN_BLOCO_SEGURO_DIAS))
+    print(
+        "Scoreboard: "
+        f"bloco solicitado={max(1, int(bloco_dias))}d; "
+        f"bloco inicial efetivo={bloco_efetivo}d; fallback adaptativo até 1 dia."
+    )
     while cursor <= fim:
-        proximo = min(cursor + timedelta(days=max(1, bloco_dias) - 1), fim)
-        url = f"{URL_SCOREBOARD}?dates={datas_url(cursor, proximo)}&limit=200"
-        print(f"Fonte: {url}")
-        # Uma tentativa por URL. A repetição sincronizada externa já possui
-        # backoff longo e evita tempestade de chamadas quando o IP recebe 403.
-        data = fetch_json(url, timeout=30, tentativas=1)
-        chamadas += 1
-        eventos = data.get("events") or []
-        if not isinstance(eventos, list):
-            raise RuntimeError(f"scoreboard inválido em {datas_url(cursor, proximo)}: campo events não é lista")
+        proximo = min(cursor + timedelta(days=bloco_efetivo - 1), fim)
+        eventos = _buscar_scoreboard_faixa_adaptativa(cursor, proximo, estatisticas)
         for ev in eventos:
-            if not isinstance(ev, dict):
-                continue
             eid = str(ev.get("id") or "")
             if eid:
                 eventos_por_id[eid] = ev
         cursor = proximo + timedelta(days=1)
-    print(f"Chamadas ao scoreboard: {chamadas}; eventos brutos recebidos: {len(eventos_por_id)}")
+    print(
+        "Chamadas ao scoreboard: "
+        f"{estatisticas['chamadas']}; subdivisões adaptativas: {estatisticas['subdivisoes']}; "
+        f"eventos brutos recebidos: {len(eventos_por_id)}"
+    )
     if not eventos_por_id:
         raise RuntimeError("A ESPN não retornou eventos para a janela consultada; mantendo JSONs anteriores.")
     return list(eventos_por_id.values())
@@ -3112,9 +3160,34 @@ def selftest_execucao_6() -> None:
         recebidos = _buscar_eventos_periodo(
             inicio_inc, fim_inc, bloco_dias=(fim_inc - inicio_inc).days + 1
         )
-        assert len(chamadas_teste) == 1
-        assert "_=" not in chamadas_teste[0]
+        dias_teste = (fim_inc.date() - inicio_inc.date()).days + 1
+        esperado_chamadas = (dias_teste + ESPN_BLOCO_SEGURO_DIAS - 1) // ESPN_BLOCO_SEGURO_DIAS
+        assert len(chamadas_teste) == esperado_chamadas
+        assert all("_=" not in url for url in chamadas_teste)
+        assert all((url.split("dates=", 1)[1].split("&", 1)[0].count("-") <= 1) for url in chamadas_teste)
         assert {item["id"] for item in recebidos} == {"inc-1", "inc-2"}
+    finally:
+        globals()["fetch_json"] = fetch_original
+
+    # Regressão 16/09/2026: se a ESPN rejeitar qualquer RANGE com HTTP 400,
+    # a coleta precisa subdividir até dates=YYYYMMDD, sem abortar a janela toda.
+    fetch_original = globals()["fetch_json"]
+    chamadas_split: list[str] = []
+    try:
+        def _fetch_split(url: str, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            chamadas_split.append(url)
+            periodo = url.split("dates=", 1)[1].split("&", 1)[0]
+            if "-" in periodo:
+                raise RuntimeError("HTTP Error 400: range rejeitado")
+            return {"events": [{"id": f"day-{periodo}"}]}
+        globals()["fetch_json"] = _fetch_split
+        inicio_split = datetime(2026, 9, 1, tzinfo=timezone.utc)
+        fim_split = datetime(2026, 9, 3, tzinfo=timezone.utc)
+        recebidos_split = _buscar_eventos_periodo(inicio_split, fim_split, bloco_dias=121)
+        assert {item["id"] for item in recebidos_split} == {
+            "day-20260901", "day-20260902", "day-20260903"
+        }
+        assert any("dates=20260901&" in url for url in chamadas_split)
     finally:
         globals()["fetch_json"] = fetch_original
 
