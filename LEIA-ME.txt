@@ -1,19 +1,19 @@
-HOTFIX AF PRÉ-JOGO V2 — 11/09/2026
+BRASILEIRÃO 2026 ALMOÇO — HOTFIX ESPN 16/09/2026
 
-A V1 falhou no push porque tentou alterar/excluir arquivos em .github/workflows.
-O token GitHub App do Actions não tem permissão para criar/alterar workflow.
+Suba os 2 arquivos temporários mantendo as pastas:
+  .github/workflows/HOTFIX_ESPN_SCOREBOARD_ADAPTATIVO_20260916.yml
+  scripts/aplicar_hotfix_espn_adaptativo_20260916.py
 
-A V2:
-- NÃO altera atualizar-brasileirao.yml;
-- NÃO tenta apagar o próprio workflow;
-- corrige apenas scripts/gerar_probabilidades_jogos.py;
-- reconcilia probabilidades-jogos.json e auditoria;
-- faz push somente de arquivos fora de .github/workflows;
-- dispara Atualizar Brasileirao (ESPN) completo no final.
+Depois:
+Actions → HOTFIX · ESPN scoreboard adaptativo → Run workflow
 
-Aplicação:
-1. Substitua no GitHub estes dois arquivos pelos da V2:
-   .github/workflows/HOTFIX_AF_PREJOGO_20260911.yml
-   scripts/aplicar_hotfix_af_prejogo_20260911.py
-2. Actions → HOTFIX · AF pré-jogo após resultado V2 → Run workflow.
-3. Se ficar verde, APAGUE MANUALMENTE do repositório os dois arquivos temporários acima.
+A correção:
+- limita a primeira consulta do scoreboard a 14 dias;
+- subdivide automaticamente qualquer faixa que falhar, até 1 dia;
+- mantém a preservação transacional do snapshot;
+- faz o Cloudflare usar coleta_completa=false nos fluxos automáticos;
+- mantém varredura completa periódica sob controle do próprio coletor;
+- redeploya o Cloudflare em ACTIVE;
+- dispara Atualizar Brasileirao (ESPN) imediatamente em modo incremental.
+
+Após tudo verde, os 2 arquivos temporários podem ser apagados manualmente.
