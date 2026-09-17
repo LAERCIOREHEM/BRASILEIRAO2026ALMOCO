@@ -1857,13 +1857,73 @@
     if (!ap || !apuracaoRodadaConfiavel(ap) || !Array.isArray(ap.jogos)) return mapa;
     ap.jogos.forEach(j => {
       if (!resultadoFinalizado(j.resultado || {}, j.event_id)) return;
+      const resultado = j.resultado || {};
+      const eventId = String(resultado.event_id || j.event_id || "");
+      const confronto = chaveConfrontoRodada({
+        rodada,
+        mandante: resultado.mandante || j.mandante,
+        visitante: resultado.visitante || j.visitante
+      });
       (j.palpites || []).forEach(p => {
-        const eventId = j.resultado?.event_id || j.event_id || "";
-        if (p.participante_id) mapa.set(`id:${p.participante_id}::${eventId}`, p);
-        mapa.set(`nome:${normalizarTexto(p.membro || "")}::${eventId}`, p);
+        const pid = String(p.participante_id || "");
+        const nome = normalizarTexto(p.membro || "");
+        if (pid && eventId) mapa.set(`id:${pid}::event:${eventId}`, p);
+        if (pid && confronto) mapa.set(`id:${pid}::confronto:${confronto}`, p);
+        if (nome && eventId) mapa.set(`nome:${nome}::event:${eventId}`, p);
+        if (nome && confronto) mapa.set(`nome:${nome}::confronto:${confronto}`, p);
+
+        // Compatibilidade com versões anteriores do front-end.
+        if (pid && eventId) mapa.set(`id:${pid}::${eventId}`, p);
+        if (nome && eventId) mapa.set(`nome:${nome}::${eventId}`, p);
       });
     });
     return mapa;
+  }
+
+  function detalhePontosPalpite(p, rodada, pontosMap = null) {
+    const mapa = pontosMap || mapaPontosRodada(rodada);
+    const pid = String(p?.participante_id || "");
+    const nome = normalizarTexto(p?.membro || "");
+    const eventId = String(p?.event_id || "");
+    const confronto = chaveConfrontoRodada({ ...(p || {}), rodada: Number(p?.rodada || rodada || 0) });
+    const chaves = [];
+    if (pid && eventId) chaves.push(`id:${pid}::event:${eventId}`, `id:${pid}::${eventId}`);
+    if (pid && confronto) chaves.push(`id:${pid}::confronto:${confronto}`);
+    if (nome && eventId) chaves.push(`nome:${nome}::event:${eventId}`, `nome:${nome}::${eventId}`);
+    if (nome && confronto) chaves.push(`nome:${nome}::confronto:${confronto}`);
+    for (const chave of chaves) {
+      const encontrado = mapa.get(chave);
+      if (encontrado) return encontrado;
+    }
+    return {};
+  }
+
+  function mapaResultadosRodada(rodada) {
+    const ap = apuracaoRodada(rodada);
+    const mapa = new Map();
+    if (!ap || !apuracaoRodadaConfiavel(ap) || !Array.isArray(ap.jogos)) return mapa;
+    (ap.jogos || []).forEach(j => {
+      const resultado = j.resultado || {};
+      if (!resultadoFinalizado(resultado, j.event_id)) return;
+      const eventId = String(resultado.event_id || j.event_id || "");
+      const confronto = chaveConfrontoRodada({
+        rodada,
+        mandante: resultado.mandante || j.mandante,
+        visitante: resultado.visitante || j.visitante
+      });
+      if (eventId) mapa.set(`event:${eventId}`, resultado);
+      if (confronto) mapa.set(`confronto:${confronto}`, resultado);
+    });
+    return mapa;
+  }
+
+  function resultadoParaPalpite(p, rodada, resultadosMap = null) {
+    const mapa = resultadosMap || mapaResultadosRodada(rodada);
+    const eventId = String(p?.event_id || "");
+    const confronto = chaveConfrontoRodada({ ...(p || {}), rodada: Number(p?.rodada || rodada || 0) });
+    return (eventId && mapa.get(`event:${eventId}`))
+      || (confronto && mapa.get(`confronto:${confronto}`))
+      || null;
   }
 
   function apuracaoBlocoPorInicio(inicio) {
@@ -1947,29 +2007,22 @@
       return true;
     });
     const pontosMap = mapaPontosRodada(rodada);
-    const ap = apuracaoRodada(rodada);
-    const resultados = new Map();
-    (ap?.jogos || []).forEach(j => {
-      const r = j.resultado || {};
-      resultados.set(String(r.event_id || j.event_id || ""), r);
-    });
+    const resultados = mapaResultadosRodada(rodada);
 
     const exibidos = opcoes.somenteApurados
-      ? minha.filter(p => resultados.has(String(p.event_id || "")))
+      ? minha.filter(p => Boolean(resultadoParaPalpite(p, rodada, resultados)))
       : minha;
     if (!exibidos.length) return '<p class="muted-note" style="margin:8px 0">Nenhum palpite apurado nesta visão.</p>';
 
     exibidos.sort((a, b) => {
-      const ra = resultados.get(String(a.event_id || ""));
-      const rb = resultados.get(String(b.event_id || ""));
+      const ra = resultadoParaPalpite(a, rodada, resultados);
+      const rb = resultadoParaPalpite(b, rodada, resultados);
       return String(ra?.data_iso || "").localeCompare(String(rb?.data_iso || ""));
     });
 
     return `<div class="palpite-expand-grid">${exibidos.map(p => {
-      const det = (p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`))
-        || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`)
-        || {};
-      const real = resultados.get(String(p.event_id || ""));
+      const det = detalhePontosPalpite(p, rodada, pontosMap);
+      const real = resultadoParaPalpite(p, rodada, resultados);
       const cls = det.pontos != null ? pontosClasse(det.pontos) : "";
       return `<div class="palpite-card ${cls}"><div class="pex-jogo">${escapeHtml(p.mandante || real?.mandante || "Mandante")} <em>×</em> ${escapeHtml(p.visitante || real?.visitante || "Visitante")}</div><div class="pex-resultado-real ${cls}"><span class="pex-score">${real ? `${real.placar_mandante} × ${real.placar_visitante}` : "—"}</span>${det.pontos != null ? `<span class="pex-veredito ${cls}">${escapeHtml(tipoLabel(det.tipo))} · ${det.pontos} pts</span>` : ""}</div><div class="pex-palpite-row"><span class="pex-pal-label">Palpite:</span><span class="pex-pal-score">${p.placar_mandante} × ${p.placar_visitante}</span></div></div>`;
     }).join("")}</div>`;
@@ -2162,7 +2215,7 @@
     if (!state.publicos.length) { root.innerHTML = `<section class="panel"><div class="panel-inner empty">Nenhum palpite público encontrado para a rodada ${state.rodada}.</div></section>`; return; }
     const apConfiavel = ap && !ap.sigilosa && apuracaoRodadaConfiavel(ap);
     const jogosApurados = apConfiavel ? Number(ap.jogos_apurados || 0) : 0;
-    root.innerHTML = `<section class="panel"><div class="panel-inner"><div class="kicker">Palpites públicos</div><h2>Rodada ${state.rodada} · ${escapeHtml(nomeLigaAtual())}</h2><p>Lista aberta após a publicação da rodada.</p>${jogosApurados > 0 ? `<div class="status ok">Apuração publicada · ${jogosApurados} jogos encerrados e apurados.</div>` : `<div class="status warn">Palpites publicados; a pontuação aparecerá após o encerramento dos jogos.</div>`}<div class="export-row"><button class="btn secondary" type="button" id="export-publicos">⬇️ Exportar palpites CSV</button></div><div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Participante</th><th>Jogo</th><th>Palpite</th><th>Pontos</th><th>Tipo</th><th>Hash</th></tr></thead><tbody>${state.publicos.map(p => { const det=(p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`)) || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`) || {}; return `<tr><td>${escapeHtml(p.membro)}</td><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td class="num ${pontosClasse(det.pontos)}">${det.pontos ?? "—"}</td><td>${escapeHtml(tipoLabel(det.tipo))}</td><td class="hash">${escapeHtml(p.hash_fechamento || "—")}</td></tr>`; }).join("")}</tbody></table></div></div></section>`;
+    root.innerHTML = `<section class="panel"><div class="panel-inner"><div class="kicker">Palpites públicos</div><h2>Rodada ${state.rodada} · ${escapeHtml(nomeLigaAtual())}</h2><p>Lista aberta após a publicação da rodada.</p>${jogosApurados > 0 ? `<div class="status ok">Apuração publicada · ${jogosApurados} jogos encerrados e apurados.</div>` : `<div class="status warn">Palpites publicados; a pontuação aparecerá após o encerramento dos jogos.</div>`}<div class="export-row"><button class="btn secondary" type="button" id="export-publicos">⬇️ Exportar palpites CSV</button></div><div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Participante</th><th>Jogo</th><th>Palpite</th><th>Pontos</th><th>Tipo</th><th>Hash</th></tr></thead><tbody>${state.publicos.map(p => { const det=detalhePontosPalpite(p, state.rodada, pontosMap); return `<tr><td>${escapeHtml(p.membro)}</td><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td class="num ${pontosClasse(det.pontos)}">${det.pontos ?? "—"}</td><td>${escapeHtml(tipoLabel(det.tipo))}</td><td class="hash">${escapeHtml(p.hash_fechamento || "—")}</td></tr>`; }).join("")}</tbody></table></div></div></section>`;
     $("#export-publicos")?.addEventListener("click", exportarPublicosCsv);
   }
 
@@ -2172,7 +2225,7 @@
     const filtros = ["bloco", ...Array.from({length:3},(_,i)=>String(Number(bloco.rodada_inicio)+i))];
     const lista = state.publicoFiltro === "bloco" ? state.publicos : state.publicos.filter(p => Number(p.rodada) === Number(state.publicoFiltro));
     const rodadasPublicadas = Array.from(new Set(state.publicos.map(p => Number(p.rodada)))).sort((a,b)=>a-b);
-    root.innerHTML = `<section class="panel"><div class="panel-inner"><div class="kicker">Palpites públicos</div><h2>${escapeHtml(bloco.nome)} · ${escapeHtml(nomeLigaAtual())}</h2><p>Você pode consultar o bloco completo ou isolar uma das rodadas já publicadas. Rodadas ainda sigilosas não são retornadas pelo banco.</p><div class="block-round-filter public-filter" role="tablist">${filtros.map(f => `<button type="button" data-publico-filtro="${f}" class="${state.publicoFiltro===f ? "active" : ""}" role="tab" aria-selected="${state.publicoFiltro===f}">${f === "bloco" ? "Bloco completo" : `Rodada ${f}`}</button>`).join("")}</div>${rodadasPublicadas.length ? `<div class="status ok">Rodadas públicas neste bloco: ${rodadasPublicadas.join(", ")}.</div>` : `<div class="status warn">Os palpites continuam sigilosos. Nenhuma rodada do bloco foi publicada.</div>`}<div class="export-row"><button class="btn secondary" type="button" id="export-publicos" ${lista.length ? "" : "disabled"}>⬇️ Exportar visão atual CSV</button></div>${lista.length ? `<div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Rodada</th><th>Participante</th><th>Jogo</th><th>Palpite</th><th>Pontos</th><th>Tipo</th><th>Hash do bloco</th></tr></thead><tbody>${lista.map(p => { const pontosMap=mapaPontosRodada(p.rodada); const det=(p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`)) || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`) || {}; return `<tr><td>R${p.rodada}</td><td>${escapeHtml(p.membro)}</td><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td class="num ${pontosClasse(det.pontos)}">${det.pontos ?? "—"}</td><td>${escapeHtml(tipoLabel(det.tipo))}</td><td class="hash">${escapeHtml(p.hash_bloco || "—")}</td></tr>`; }).join("")}</tbody></table></div>` : `<div class="empty">Nenhum palpite disponível nesta visão.</div>`}</div></section>`;
+    root.innerHTML = `<section class="panel"><div class="panel-inner"><div class="kicker">Palpites públicos</div><h2>${escapeHtml(bloco.nome)} · ${escapeHtml(nomeLigaAtual())}</h2><p>Você pode consultar o bloco completo ou isolar uma das rodadas já publicadas. Rodadas ainda sigilosas não são retornadas pelo banco.</p><div class="block-round-filter public-filter" role="tablist">${filtros.map(f => `<button type="button" data-publico-filtro="${f}" class="${state.publicoFiltro===f ? "active" : ""}" role="tab" aria-selected="${state.publicoFiltro===f}">${f === "bloco" ? "Bloco completo" : `Rodada ${f}`}</button>`).join("")}</div>${rodadasPublicadas.length ? `<div class="status ok">Rodadas públicas neste bloco: ${rodadasPublicadas.join(", ")}.</div>` : `<div class="status warn">Os palpites continuam sigilosos. Nenhuma rodada do bloco foi publicada.</div>`}<div class="export-row"><button class="btn secondary" type="button" id="export-publicos" ${lista.length ? "" : "disabled"}>⬇️ Exportar visão atual CSV</button></div>${lista.length ? `<div class="table-wrap" style="margin-top:12px"><table class="data-table"><thead><tr><th>Rodada</th><th>Participante</th><th>Jogo</th><th>Palpite</th><th>Pontos</th><th>Tipo</th><th>Hash do bloco</th></tr></thead><tbody>${lista.map(p => { const pontosMap=mapaPontosRodada(p.rodada); const det=detalhePontosPalpite(p, p.rodada, pontosMap); return `<tr><td>R${p.rodada}</td><td>${escapeHtml(p.membro)}</td><td>${escapeHtml(p.mandante)} x ${escapeHtml(p.visitante)}</td><td class="num">${p.placar_mandante} x ${p.placar_visitante}</td><td class="num ${pontosClasse(det.pontos)}">${det.pontos ?? "—"}</td><td>${escapeHtml(tipoLabel(det.tipo))}</td><td class="hash">${escapeHtml(p.hash_bloco || "—")}</td></tr>`; }).join("")}</tbody></table></div>` : `<div class="empty">Nenhum palpite disponível nesta visão.</div>`}</div></section>`;
     $$('[data-publico-filtro]').forEach(btn => btn.addEventListener("click", () => { state.publicoFiltro=btn.dataset.publicoFiltro; renderPublicoBloco(); }));
     $("#export-publicos")?.addEventListener("click", exportarPublicosCsv);
   }
@@ -2310,7 +2363,7 @@
     lista.forEach(p => {
       const rodada = Number(p.rodada || state.rodada);
       const pontosMap = mapaPontosRodada(rodada);
-      const det = (p.participante_id && pontosMap.get(`id:${p.participante_id}::${p.event_id || ""}`)) || pontosMap.get(`nome:${normalizarTexto(p.membro || "")}::${p.event_id || ""}`) || {};
+      const det = detalhePontosPalpite(p, rodada, pontosMap);
       linhas.push([nomeLigaAtual(), contextoLabel(), rodada, p.membro, `${p.mandante} x ${p.visitante}`, `${p.placar_mandante} x ${p.placar_visitante}`, det.pontos ?? "", tipoLabel(det.tipo), p.hash_bloco || p.hash_fechamento || "", p.atualizado_em || ""]);
     });
     const sufixo = contextoEhBloco() ? `${blocoDaRodada(state.rodada).rodada_inicio}-${blocoDaRodada(state.rodada).rodada_fim}-${state.publicoFiltro}` : `rodada-${state.rodada}`;
