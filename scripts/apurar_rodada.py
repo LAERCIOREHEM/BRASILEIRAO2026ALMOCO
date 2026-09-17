@@ -12,7 +12,9 @@ Execução 4.1:
   - mantém jogos adiados/sem resultado como pendentes;
   - sincroniza a finalização automática no Supabase por RPC restrita ao
     service_role;
-  - gera JSONs públicos sem quebrar consumidores antigos.
+  - gera JSONs públicos sem quebrar consumidores antigos;
+  - blocos 21–38 usam elegibilidade congelada por participante/bloco,
+    impedindo que incompletos ou envios fora da janela entrem no ranking.
 """
 from __future__ import annotations
 
@@ -454,6 +456,52 @@ def palpite_valido_no_prazo(
     return avaliar_palpite_no_prazo(palpite, indice_auditoria)[0]
 
 
+def _bool_db(valor: Any) -> bool:
+    if isinstance(valor, bool):
+        return valor
+    return str(valor or "").strip().lower() in {"1", "true", "t", "yes", "sim"}
+
+
+def indice_elegibilidade_blocos(
+    comprovantes_blocos: Iterable[dict[str, Any]],
+) -> dict[tuple[str, str], dict[str, Any]]:
+    """Indexa a decisão administrativa/congelada de elegibilidade do bloco.
+
+    A partir da correção de 17/09/2026, a validade de um participante em blocos
+    21–38 deixa de ser inferida de timestamps mutáveis de cada palpite. A
+    autoridade passa a ser `br_comprovantes_blocos.elegivel`, congelada no
+    fechamento/100% do preenchimento e com exceções administrativas explícitas.
+    """
+    indice: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in comprovantes_blocos:
+        bloco_id = str(row.get("bloco_id") or "").strip()
+        participante_id = str(row.get("participante_id") or "").strip()
+        if bloco_id and participante_id:
+            indice[(bloco_id, participante_id)] = dict(row)
+    return indice
+
+
+def elegibilidade_no_bloco(
+    config: dict[str, Any] | None,
+    participante_id: str,
+    indice: dict[tuple[str, str], dict[str, Any]],
+) -> tuple[bool | None, dict[str, Any] | None]:
+    """Retorna (None, None) para rodada sem bloco; senão a decisão congelada."""
+    bloco_id = str((config or {}).get("bloco_id") or "").strip()
+    if not bloco_id:
+        return None, None
+    row = indice.get((bloco_id, str(participante_id or "").strip()))
+    if not row:
+        # Em bloco, ausência de comprovante de elegibilidade é inelegibilidade.
+        # Isso fecha a brecha que permitia palpites parciais/órfãos aparecerem
+        # em ranking ou apuração. Rodada 20 continua fora desta regra porque
+        # não possui bloco_id.
+        return False, None
+    if "elegivel" not in row or row.get("elegivel") is None:
+        return False, row
+    return _bool_db(row.get("elegivel")), row
+
+
 def cabecalhos_supabase() -> dict[str, str]:
     if not SUPABASE_URL or not SUPABASE_KEY:
         raise RuntimeError(
@@ -518,6 +566,21 @@ def buscar_supabase() -> dict[str, list[dict[str, Any]]]:
             "order": "rodada.asc,atualizado_em.desc",
         },
     )
+    try:
+        dados["comprovantes_blocos"] = rest_get(
+            "br_comprovantes_blocos",
+            {
+                "temporada": f"eq.{TEMPORADA}",
+                "select": "*",
+                "order": "atualizado_em.asc",
+            },
+        )
+    except Exception as exc:  # noqa: BLE001
+        # Compatibilidade de implantação: o SQL de elegibilidade deve ser
+        # aplicado antes da primeira apuração definitiva. Sem a tabela/RPC,
+        # mantemos o processo legível, mas nenhum bloco novo será inventado.
+        print(f"Aviso: comprovantes de bloco indisponíveis: {exc}")
+        dados["comprovantes_blocos"] = []
     dados["auditoria"] = rest_get(
         "br_palpites_auditoria",
         {
@@ -914,6 +977,7 @@ def apurar_rodada(
     comprovantes: list[dict[str, Any]],
     auditoria: list[dict[str, Any]],
     indice_edicoes: dict[tuple[int, str, str], list[datetime]],
+    indice_elegibilidade: dict[tuple[str, str], dict[str, Any]],
     jogos_rodada: dict[str, dict[str, Any]],
     resultados: dict[str, dict[str, Any]],
     ligas_map: dict[str, dict[str, Any]],
@@ -925,7 +989,9 @@ def apurar_rodada(
     detalhes_jogos: dict[str, dict[str, Any]] = {}
     acumulado: dict[str, dict[str, Any]] = {}
     descartados = 0
+    descartados_inelegiveis = 0
     timestamps_recuperados = 0
+    bloco_id = str((config or {}).get("bloco_id") or "").strip()
 
     if publicada:
         for palpite in palpites_rodada:
@@ -938,12 +1004,30 @@ def apurar_rodada(
             resultado = resultados.get(uid) or resultados.get(eid) or resultados.get(chave_confronto(palpite))
             if not resultado:
                 continue
-            valido_prazo, origem_timestamp = avaliar_palpite_no_prazo(palpite, indice_edicoes)
-            if not valido_prazo:
-                descartados += 1
+
+            elegivel_bloco, comprovante_bloco = elegibilidade_no_bloco(
+                config, participante_id, indice_elegibilidade
+            )
+            if elegivel_bloco is False:
+                # Blocos 21–38 têm uma decisão única por participante/bloco.
+                # Parcial (<30/30), conclusão após a janela ou ausência de
+                # comprovante elegível não pontuam nem entram no ranking.
+                descartados_inelegiveis += 1
                 continue
-            if origem_timestamp.startswith("recuperado-"):
-                timestamps_recuperados += 1
+            if elegivel_bloco is True:
+                # A decisão congelada do bloco é a autoridade. Isso impede que
+                # backfills técnicos de event_id/jogo_uid/deadline meses depois
+                # invalidem um participante que concluiu dentro da janela.
+                valido_prazo, origem_timestamp = True, "elegibilidade-bloco"
+            else:
+                # Rodada 20 e legado fora de bloco continuam com a validação
+                # auditável por palpite.
+                valido_prazo, origem_timestamp = avaliar_palpite_no_prazo(palpite, indice_edicoes)
+                if not valido_prazo:
+                    descartados += 1
+                    continue
+                if origem_timestamp.startswith("recuperado-"):
+                    timestamps_recuperados += 1
             detalhe = calcular(palpite, resultado)
             rid = str(resultado.get("event_id") or eid)
             ids_finais.add(rid)
@@ -1005,14 +1089,27 @@ def apurar_rodada(
         "sigilosa": not publicada,
         "estado_apuracao": estado_apuracao(publicada, jogos_apurados, 10, concluida),
         "concluida": concluida,
-        "participantes": len(
-            {p.get("participante_id") or p.get("membro") for p in palpites_rodada}
+        "participantes": (
+            len({
+                str(p.get("participante_id") or p.get("membro") or "")
+                for p in palpites_rodada
+                if str(p.get("participante_id") or p.get("membro") or "")
+                and (
+                    not bloco_id
+                    or elegibilidade_no_bloco(
+                        config,
+                        str(p.get("participante_id") or p.get("membro") or ""),
+                        indice_elegibilidade,
+                    )[0] is not False
+                )
+            })
         ),
         "total_jogos": 10,
         "jogos_carregados": jogos_carregados,
         "jogos_apurados": jogos_apurados,
         "jogos_pendentes": max(0, 10 - jogos_apurados),
         "palpites_descartados_fora_do_prazo": descartados,
+        "palpites_descartados_inelegiveis_bloco": descartados_inelegiveis,
         "palpites_timestamp_recuperados": timestamps_recuperados,
         "lideres_parciais": vencedores_ranking(ranking),
         "vencedores": vencedores_ranking(ranking) if concluida else [],
@@ -1202,6 +1299,7 @@ def apurar(dados: dict[str, list[dict[str, Any]]], jogos: list[dict[str, Any]], 
     comprovantes = dados["comprovantes"]
     auditoria = dados["auditoria"]
     indice_edicoes = indice_auditoria_edicoes(auditoria)
+    indice_elegibilidade = indice_elegibilidade_blocos(dados.get("comprovantes_blocos", []))
     ligas_map, membros_por_liga = gerar_indices_ligas(
         dados.get("ligas", []), dados.get("liga_participantes", [])
     )
@@ -1223,6 +1321,7 @@ def apurar(dados: dict[str, list[dict[str, Any]]], jogos: list[dict[str, Any]], 
             comprovantes,
             auditoria,
             indice_edicoes,
+            indice_elegibilidade,
             mapa_jogos.get(rodada, {}),
             resultados,
             ligas_map,
@@ -1241,6 +1340,10 @@ def apurar(dados: dict[str, list[dict[str, Any]]], jogos: list[dict[str, Any]], 
         "atualizado_em": iso_agora(),
         "fonte": "Supabase br_palpites + resultados finais auditados dos JSONs locais",
         "politica_sigilo": "Rodadas e blocos não publicados não expõem palpites nem rankings no JSON público.",
+        "politica_elegibilidade_blocos": (
+            "Blocos 21–38: ranking aceita somente participante com comprovante de bloco elegível; "
+            "incompletos/fora da janela ficam fora. Exceções históricas são explícitas no Supabase."
+        ),
         "regra_pontuacao": {
             "placar_exato": 5,
             "saldo_exato": 3,
@@ -1522,6 +1625,23 @@ def executar_self_tests() -> None:
         "criado_em": "2026-07-28T15:01:00-03:00",
     }]
     assert not palpite_valido_no_prazo(palpite_legado, indice_auditoria_edicoes(auditoria_tardia))
+
+    # Elegibilidade de bloco é decisão congelada e prevalece sobre timestamps
+    # técnicos posteriores. Incompleto não entra, salvo exceção administrativa
+    # explicitamente marcada no banco como elegível.
+    idx_eleg = indice_elegibilidade_blocos([
+        {"bloco_id": "b1", "participante_id": "ok", "elegivel": True, "total_palpites": 30},
+        {"bloco_id": "b1", "participante_id": "fora", "elegivel": False, "total_palpites": 25},
+        {
+            "bloco_id": "b1", "participante_id": "excecao", "elegivel": True,
+            "total_palpites": 25, "excecao_administrativa": True,
+        },
+    ])
+    assert elegibilidade_no_bloco({"bloco_id": "b1"}, "ok", idx_eleg)[0] is True
+    assert elegibilidade_no_bloco({"bloco_id": "b1"}, "fora", idx_eleg)[0] is False
+    assert elegibilidade_no_bloco({"bloco_id": "b1"}, "excecao", idx_eleg)[0] is True
+    assert elegibilidade_no_bloco({"bloco_id": None}, "ok", idx_eleg)[0] is None
+    assert elegibilidade_no_bloco({"bloco_id": "b1"}, "ausente", idx_eleg)[0] is False
 
     futuro_publicacao = (agora_brt() + timedelta(hours=2)).isoformat()
     assert config_publica(

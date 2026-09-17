@@ -1,0 +1,48 @@
+VALIDAÇÃO — BLOCO 21–23 — 17/09/2026
+
+REGRA HISTÓRICA
+- Fechamento válido: 29/07/2026 21:30 UTC = 18:30 BRT.
+- Carlinhos concluiu os 30 palpites em 29/07 às 13:20:27 UTC (10:20:27 BRT).
+- Armínio já tinha 30/30 em 29/07 às 20:37:54 UTC (17:37:54 BRT) e sua última edição registrada foi 20:50:36 UTC (17:50:36 BRT).
+- Ambos, portanto, estão DENTRO da janela.
+- MEC permanece por decisão administrativa EXCLUSIVA do bloco 21–23 com 25/30. Nenhum palpite novo é criado.
+
+RANKING PARCIAL ESPERADO COM 27/30 JOGOS APURADOS
+1. Carlinhos — 43 pts — 5 cravadas, 2 saldos, 6 resultados, 14 erros — 27 palpites válidos
+2. Mec       — 38 pts — 3 cravadas, 3 saldos, 7 resultados, 12 erros — 25 palpites válidos
+3. Arminio   — 29 pts — 2 cravadas, 3 saldos, 5 resultados, 17 erros — 27 palpites válidos
+4. Alex      — 28 pts — 2 cravadas, 2 saldos, 6 resultados, 17 erros — 27 palpites válidos
+5. Jardim    — 28 pts — 1 cravada, 3 saldos, 7 resultados, 16 erros — 27 palpites válidos
+6. Serginho  — 24 pts — 1 cravada, 1 saldo, 8 resultados, 17 erros — 27 palpites válidos
+7. Laércio   — 18 pts — 0 cravadas, 0 saldos, 9 resultados, 18 erros — 27 palpites válidos
+8. Bob       — 16 pts — 0 cravadas, 2 saldos, 5 resultados, 20 erros — 27 palpites válidos
+
+CARLINHOS — 43 PONTOS
+R21 (7 resultados): 14 pts
+- Internacional 1×1 Flamengo: palpite 1×1 = 5 (cravou)
+- Mirassol 2×1 Remo: palpite 2×1 = 5 (cravou)
+- Fluminense 0×0 Bahia: palpite 1×1 = 2 (resultado)
+- Vitória 0×4 Palmeiras: palpite 1×2 = 2 (resultado)
+- Botafogo 3×2 Grêmio: palpite 1×1 = 0
+- Corinthians 0×0 Athletico-PR: palpite 3×1 = 0
+- Coritiba 0×1 Cruzeiro: palpite 1×0 = 0
+R22: 19 pts
+R23: 10 pts
+
+ARMÍNIO — 29 PONTOS
+R21 (7 resultados): 10 pts
+- Botafogo 3×2 Grêmio: palpite 1×0 = 3 (saldo)
+- Mirassol 2×1 Remo: palpite 2×1 = 5 (cravou)
+- Vitória 0×4 Palmeiras: palpite 0×2 = 2 (resultado)
+- demais quatro finalizados da R21 = 0
+R22: 17 pts
+R23: 2 pts
+
+TRAVAS NOVAS
+- `fecha_em_congelado` é congelado no primeiro palpite do bloco.
+- Reagendamento posterior não altera a elegibilidade histórica.
+- `br_comprovantes_blocos.elegivel=true` é obrigatório para ranking e palpites públicos nos blocos.
+- Regra normal: 30/30 dentro da janela => elegível.
+- Incompleto => inelegível e não aparece no ranking/público.
+- Exceção incompleta exige `excecao_administrativa=true` explicitamente.
+- MEC é a única exceção histórica criada neste hotfix, restrita ao bloco 21–23.

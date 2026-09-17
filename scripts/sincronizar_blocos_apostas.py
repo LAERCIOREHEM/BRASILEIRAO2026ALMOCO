@@ -4,7 +4,9 @@
 
 A matriz canônica decide a composição dos blocos; o relógio de apostas é
 independente da apuração. O script não move jogos entre rodadas, não pontua
-palpites e não reabre bloco fechado.
+palpites e não reabre bloco fechado. Depois do primeiro palpite, o prazo da
+janela fica congelado: mudanças posteriores do calendário não podem alterar
+retroativamente a elegibilidade de quem apostou.
 
 Fluxo:
 1. lê os 30 confrontos canônicos de cada bloco;
@@ -178,9 +180,12 @@ def reconcile_window(
     if bet_count <= 0:
         new_first, new_open, new_close = first, open_calc, close_calc
     else:
-        new_first = min(old_first, first) if old_first else first
+        # A partir do primeiro palpite a janela vira um fato histórico. CBF/ESPN
+        # podem reagendar partidas, mas isso não muda retroativamente o prazo
+        # que estava valendo quando o participante enviou sua aposta.
+        new_first = old_first or first
         new_open = old_open or open_calc
-        new_close = min(old_close, close_calc) if old_close else close_calc
+        new_close = old_close or close_calc
     old_status = str(existing.get("status") or "futura").lower()
     status = old_status if old_status in {"fechada", "bloqueada"} else status_by_clock(now, new_open, new_close)
     return {
@@ -423,7 +428,7 @@ def build_audit(
             "composicao": "30 jogos pela rodada canônica; jogo adiado nunca muda de bloco.",
             "abertura": "7 dias antes do primeiro kickoff confiável entre os 30 jogos.",
             "fechamento": "60 minutos antes do primeiro kickoff confiável entre os 30 jogos.",
-            "apos_primeiro_palpite": "deadline pode encurtar por antecipação; nunca é estendido automaticamente.",
+            "apos_primeiro_palpite": "deadline congelado; reagendamentos posteriores não alteram a elegibilidade histórica.",
             "reabertura": "proibida automaticamente.",
             "independencia": "bloco seguinte pode abrir com bloco anterior ainda em apuração.",
             "email_conclusao": "uma única vez quando o bloco chega a 30/30; vencedor e pontos vêm exclusivamente da apuração determinística.",
@@ -579,7 +584,7 @@ def self_test() -> int:
     target["data_definir"] = True
     p3 = build_proposals({"jogos": rows2}, config)[0]
     assert parse_dt(p3["primeiro_jogo_em"]) == datetime(2026, 8, 22, 16, 0, tzinfo=TZ)
-    # Depois de existir palpite, adiamento não estende o prazo; antecipação encurta.
+    # Depois de existir palpite, o deadline histórico fica congelado.
     existing = {
         "primeiro_jogo_em": "2026-08-22T16:00:00-03:00",
         "abre_em": "2026-08-15T16:00:00-03:00",
@@ -591,7 +596,7 @@ def self_test() -> int:
     assert merged["fecha_em"].startswith("2026-08-22T15:00:00")
     earlier = {**p, "primeiro_jogo_em": "2026-08-21T16:00:00-03:00", "abre_recomendado_em": "2026-08-14T16:00:00-03:00", "fecha_recomendado_em": "2026-08-21T15:00:00-03:00"}
     merged2 = reconcile_window(existing, earlier, 1, datetime(2026, 8, 18, 12, 0, tzinfo=TZ))
-    assert merged2["fecha_em"].startswith("2026-08-21T15:00:00")
+    assert merged2["fecha_em"].startswith("2026-08-22T15:00:00")
     closed = reconcile_window({**existing, "status": "fechada"}, delayed, 1, datetime(2026, 8, 18, 12, 0, tzinfo=TZ))
     assert closed["status"] == "fechada"
     # O cenário real da próxima janela: kickoff 22/08 16h -> em 15/08 17:06 já aberta.
@@ -612,7 +617,7 @@ def self_test() -> int:
         [{"bloco_id":"x","rodada_inicio":21,"email_conclusao_pendente":True,"conclusao_email_enviado_em":None}],
     )
     assert merged_states[0]["email_conclusao_pendente"] is True
-    print("SELFTEST OK: 30 jogos/bloco, janela automática, não-reabertura e e-mail final 30/30 validados.")
+    print("SELFTEST OK: 30 jogos/bloco, deadline congelado após primeiro palpite, não-reabertura e e-mail final validados.")
     return 0
 
 

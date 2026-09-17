@@ -1,0 +1,48 @@
+BRASILEIRÃO 2026 ALMOÇO — CORREÇÃO DEFINITIVA DE ELEGIBILIDADE / RANKING
+Data: 17/09/2026
+
+OBJETIVO
+- manter MEC/Marcos Eduardo no bloco 21–23 com os 25 palpites efetivamente registrados;
+- recolocar Carlinhos e Armínio no ranking do bloco 21–23, pois seus registros históricos são anteriores ao fechamento válido;
+- impedir que participante incompleto ou fora da janela entre no ranking daqui para frente;
+- impedir que reagendamento posterior da CBF/ESPN altere retroativamente o prazo histórico.
+
+FECHAMENTO HISTÓRICO DO BLOCO 21–23
+29/07/2026 21:30 UTC = 18:30 BRT.
+
+REGRA PERMANENTE
+- bloco com 30 jogos;
+- 30/30 dentro da janela congelada => elegível;
+- incompleto => inelegível;
+- envio após o fechamento => inelegível;
+- ausência de comprovante elegível => fora do ranking;
+- exceção incompleta só existe com excecao_administrativa=true;
+- MEC é a única exceção histórica criada neste hotfix, apenas no bloco 21–23;
+- atualizações técnicas posteriores não alteram elegibilidade;
+- deadline congela a partir do primeiro palpite do bloco.
+
+ORDEM DE APLICAÇÃO
+1. SUPABASE SQL EDITOR:
+   executar integralmente:
+   supabase/HOTFIX_20260917_elegibilidade_blocos.sql
+
+2. GITHUB:
+   subir por cima do repositório os arquivos deste ZIP, preservando as pastas.
+
+3. GITHUB ACTIONS:
+   executar "Atualizar Brasileirao (ESPN)" uma única vez.
+   Use coleta_completa=false e forcar_af=false.
+
+RESULTADO ESPERADO NO BLOCO 21–23 COM 27/30 JOGOS APURADOS
+1. Carlinhos — 43 pts — 5 cravadas, 2 saldos, 6 resultados, 14 erros
+2. Mec       — 38 pts — 3 cravadas, 3 saldos, 7 resultados, 12 erros
+3. Arminio   — 29 pts — 2 cravadas, 3 saldos, 5 resultados, 17 erros
+4. Alex      — 28 pts
+5. Jardim    — 28 pts
+6. Serginho  — 24 pts
+7. Laércio   — 18 pts
+8. Bob       — 16 pts
+
+IMPORTANTE
+O hotfix NÃO cria nenhum palpite novo para MEC.
+Os 5 jogos ausentes permanecem sem palpite/pontuação.
