@@ -650,12 +650,23 @@ begin
         v_abre_novo := v_abre_calculado;
         v_fecha_novo := v_fecha_calculado;
       else
-        -- Depois do primeiro palpite, a janela é um fato histórico. O calendário
-        -- pode mudar, mas não altera retroativamente o prazo que foi apresentado
-        -- aos participantes. A primeira gravação congela `fecha_em`.
-        v_primeiro_novo := coalesce(v_bloco.primeiro_jogo_em, v_primeiro);
-        v_abre_novo := coalesce(v_bloco.abre_em, v_abre_calculado);
-        v_fecha_novo := coalesce(v_bloco.fecha_em_congelado, v_bloco.fecha_em, v_fecha_calculado);
+        -- Depois do primeiro palpite, o prazo HISTÓRICO de elegibilidade vive
+        -- em fecha_em_congelado. Já fecha_em continua sendo o deadline
+        -- OPERACIONAL e precisa respeitar br_blocos_apostas_datas_chk.
+        -- Reagendamento nunca pode reabrir/estender a janela: apenas preservar
+        -- ou antecipar primeiro jogo, abertura e fechamento operacionais.
+        v_primeiro_novo := case
+          when v_bloco.primeiro_jogo_em is null then v_primeiro
+          else least(v_bloco.primeiro_jogo_em, v_primeiro)
+        end;
+        v_abre_novo := case
+          when v_bloco.abre_em is null then v_abre_calculado
+          else least(v_bloco.abre_em, v_abre_calculado)
+        end;
+        v_fecha_novo := case
+          when v_bloco.fecha_em is null then v_fecha_calculado
+          else least(v_bloco.fecha_em, v_fecha_calculado)
+        end;
       end if;
 
       if v_bloco.status in ('fechada','bloqueada') then
@@ -750,7 +761,7 @@ begin
                 else 'sincronizacao_automatica_exec21' end,
            coalesce((v_antes->>'versao')::bigint, v_bloco.versao), v_bloco.versao,
            v_antes, to_jsonb(v_bloco),
-           'Sincronização automática pela matriz canônica; após o primeiro palpite o prazo histórico fica congelado.');
+           'Sincronização automática pela matriz canônica; fecha_em é operacional e fecha_em_congelado preserva a elegibilidade histórica.');
       end if;
     else
       update public.br_blocos_apostas b

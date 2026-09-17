@@ -2,12 +2,13 @@
 -- HOTFIX 2026-09-17 — elegibilidade imutável por bloco
 --
 -- Regras:
---   1) o fechamento que vale para elegibilidade congela no primeiro palpite;
+--   1) o fechamento HISTÓRICO que vale para elegibilidade congela no primeiro palpite;
 --   2) 30/30 dentro da janela => elegível;
 --   3) incompleto => não aparece em ranking/palpites públicos;
 --   4) exceção histórica só existe quando explicitamente marcada no banco;
 --   5) MEC fica elegível no bloco 21–23 com os 25 palpites já registrados;
---   6) prazo histórico do bloco 21–23 = 29/07/2026 21:30 UTC (18:30 BRT);
+--   6) prazo histórico do bloco 21–23 = 29/07/2026 21:30 UTC (18:30 BRT),
+--      separado do fecha_em operacional exigido pelo calendário atual;
 --   7) Carlinhos e Armínio permanecem elegíveis: auditoria comprova conclusão/
 --      edição em 29/07, antes do fechamento histórico.
 --
@@ -59,24 +60,26 @@ end $$;
 -- 2. Corrige o fato histórico do bloco 21–23
 -- --------------------------------------------------------------------------
 
--- O deadline que estava gravado nos próprios palpites de julho era 21:30 UTC.
+-- O deadline HISTÓRICO que estava gravado nos próprios palpites de julho era
+-- 21:30 UTC. Ele NÃO pode ser escrito em br_blocos_apostas.fecha_em porque
+-- fecha_em é operacional e possui a constraint fecha_em < primeiro_jogo_em.
+-- No estado atual do calendário o primeiro_jogo_em do 21–23 é 18:00 UTC e o
+-- fecha_em operacional é 17:00 UTC; ambos permanecem intactos.
 update public.br_blocos_apostas
-set fecha_em = timestamptz '2026-07-29 21:30:00+00',
-    fecha_em_congelado = timestamptz '2026-07-29 21:30:00+00',
+set fecha_em_congelado = timestamptz '2026-07-29 21:30:00+00',
     fechamento_congelado_em = coalesce(fechamento_congelado_em, timestamptz '2026-07-29 13:15:35+00')
 where temporada = 2026
   and rodada_inicio = 21
   and rodada_fim = 23;
 
-update public.br_config_rodadas c
-set fecha_em = timestamptz '2026-07-29 21:30:00+00'
-where c.temporada = 2026
-  and c.rodada between 21 and 23;
-
+-- Nos palpites realmente criados antes do fechamento histórico, preserva o
+-- deadline que valia quando foram aceitos. Registros criados depois do prazo
+-- não são "regularizados" por este hotfix.
 update public.br_palpites p
 set fecha_em = timestamptz '2026-07-29 21:30:00+00'
 where p.temporada = 2026
   and p.rodada between 21 and 23
+  and p.criado_em < timestamptz '2026-07-29 21:30:00+00'
   and p.fecha_em is distinct from timestamptz '2026-07-29 21:30:00+00';
 
 -- Para demais blocos que já receberam qualquer palpite, congela o deadline
@@ -204,9 +207,13 @@ language plpgsql
 set search_path = public
 as $$
 begin
+  -- Congela somente o fato histórico. O fecha_em operacional precisa continuar
+  -- livre para obedecer ao calendário e à constraint fecha_em < primeiro_jogo_em.
   if old.fecha_em_congelado is not null then
     new.fecha_em_congelado := old.fecha_em_congelado;
-    new.fecha_em := old.fecha_em_congelado;
+  end if;
+  if old.fechamento_congelado_em is not null then
+    new.fechamento_congelado_em := old.fechamento_congelado_em;
   end if;
   return new;
 end;
@@ -215,12 +222,246 @@ $$;
 drop trigger if exists br_blocos_preservar_fechamento_congelado_v1
   on public.br_blocos_apostas;
 create trigger br_blocos_preservar_fechamento_congelado_v1
-before update of fecha_em, fecha_em_congelado
+before update of fecha_em_congelado, fechamento_congelado_em
 on public.br_blocos_apostas
 for each row execute function public.br_preservar_fechamento_congelado_v1();
 
 -- --------------------------------------------------------------------------
--- 5. Salvamento v1: progressivo durante a janela; elegibilidade só em 30/30
+-- 5. Sincronização do pipeline: separa prazo operacional de prazo histórico
+-- --------------------------------------------------------------------------
+
+create or replace function public.br_pipeline_sincronizar_blocos_v1(
+  p_temporada int,
+  p_agora timestamptz,
+  p_abertura_antecedencia_dias int,
+  p_fechamento_antecedencia_minutos int,
+  p_blocos jsonb,
+  p_origem text default 'pipeline-exec21'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_item jsonb;
+  v_bloco public.br_blocos_apostas%rowtype;
+  v_antes jsonb;
+  v_inicio int;
+  v_fim int;
+  v_total_canonicos int;
+  v_primeiro timestamptz;
+  v_abre_calculado timestamptz;
+  v_fecha_calculado timestamptz;
+  v_abre_novo timestamptz;
+  v_fecha_novo timestamptz;
+  v_primeiro_novo timestamptz;
+  v_status_novo text;
+  v_palpites bigint;
+  v_abriu_agora boolean;
+  v_alterou boolean;
+  v_result jsonb := '[]'::jsonb;
+  v_status_config text;
+  v_agora timestamptz := coalesce(p_agora, now());
+begin
+  if p_temporada is null or p_temporada < 2020 then raise exception 'Temporada inválida.'; end if;
+  if p_abertura_antecedencia_dias < 1 or p_abertura_antecedencia_dias > 30 then raise exception 'Antecedência de abertura inválida.'; end if;
+  if p_fechamento_antecedencia_minutos < 1 or p_fechamento_antecedencia_minutos > 1440 then raise exception 'Antecedência de fechamento inválida.'; end if;
+  if jsonb_typeof(p_blocos) <> 'array' then raise exception 'Payload de blocos inválido.'; end if;
+
+  for v_item in select * from jsonb_array_elements(p_blocos)
+  loop
+    v_inicio := coalesce((v_item->>'rodada_inicio')::int, 0);
+    v_fim := coalesce((v_item->>'rodada_fim')::int, 0);
+    v_total_canonicos := coalesce((v_item->>'total_canonicos')::int, 0);
+    v_primeiro := nullif(v_item->>'primeiro_jogo_em','')::timestamptz;
+
+    if v_fim <> v_inicio + 2 or v_inicio not in (21,24,27,30,33,36) then
+      raise exception 'Intervalo de bloco inválido: %–%.', v_inicio, v_fim;
+    end if;
+
+    select b.* into v_bloco
+    from public.br_blocos_apostas b
+    where b.temporada = p_temporada
+      and b.rodada_inicio = v_inicio
+      and b.rodada_fim = v_fim
+    for update;
+    if v_bloco.id is null then raise exception 'Bloco %–% inexistente.', v_inicio, v_fim; end if;
+
+    select count(*)::bigint into v_palpites
+    from public.br_palpites p
+    where p.temporada = p_temporada
+      and p.rodada between v_inicio and v_fim;
+
+    v_antes := to_jsonb(v_bloco);
+    v_abriu_agora := false;
+    v_alterou := false;
+
+    -- Sem os 30 confrontos canônicos ou sem nenhum kickoff confiável, nunca
+    -- inventa janela. Configuração anterior válida é preservada.
+    if v_total_canonicos = 30 and v_primeiro is not null then
+      v_abre_calculado := v_primeiro - make_interval(days => p_abertura_antecedencia_dias);
+      v_fecha_calculado := v_primeiro - make_interval(mins => p_fechamento_antecedencia_minutos);
+
+      if v_palpites = 0 then
+        -- Antes do primeiro palpite a janela acompanha livremente o calendário.
+        v_primeiro_novo := v_primeiro;
+        v_abre_novo := v_abre_calculado;
+        v_fecha_novo := v_fecha_calculado;
+      else
+        -- Depois do primeiro palpite, o prazo HISTÓRICO de elegibilidade vive
+        -- em fecha_em_congelado. Já fecha_em continua sendo o deadline
+        -- OPERACIONAL e precisa respeitar br_blocos_apostas_datas_chk.
+        -- Reagendamento nunca pode reabrir/estender a janela: apenas preservar
+        -- ou antecipar primeiro jogo, abertura e fechamento operacionais.
+        v_primeiro_novo := case
+          when v_bloco.primeiro_jogo_em is null then v_primeiro
+          else least(v_bloco.primeiro_jogo_em, v_primeiro)
+        end;
+        v_abre_novo := case
+          when v_bloco.abre_em is null then v_abre_calculado
+          else least(v_bloco.abre_em, v_abre_calculado)
+        end;
+        v_fecha_novo := case
+          when v_bloco.fecha_em is null then v_fecha_calculado
+          else least(v_bloco.fecha_em, v_fecha_calculado)
+        end;
+      end if;
+
+      if v_bloco.status in ('fechada','bloqueada') then
+        v_status_novo := v_bloco.status; -- reabertura automática proibida
+      elsif v_agora < v_abre_novo then
+        v_status_novo := 'programada';
+      elsif v_agora < v_fecha_novo then
+        v_status_novo := 'aberta';
+      else
+        v_status_novo := 'fechada';
+      end if;
+
+      v_abriu_agora := v_status_novo = 'aberta' and v_bloco.status <> 'aberta';
+
+      update public.br_blocos_apostas b
+      set primeiro_jogo_em = v_primeiro_novo,
+          abre_em = v_abre_novo,
+          fecha_em = v_fecha_novo,
+          status = v_status_novo,
+          sincronizado_em = v_agora,
+          sincronizacao_origem = nullif(trim(coalesce(p_origem,'')), ''),
+          politica_automatica_versao = 1,
+          versao = case when
+            b.primeiro_jogo_em is distinct from v_primeiro_novo
+            or b.abre_em is distinct from v_abre_novo
+            or b.fecha_em is distinct from v_fecha_novo
+            or b.status is distinct from v_status_novo
+            then b.versao + 1 else b.versao end,
+          atualizado_em = case when
+            b.primeiro_jogo_em is distinct from v_primeiro_novo
+            or b.abre_em is distinct from v_abre_novo
+            or b.fecha_em is distinct from v_fecha_novo
+            or b.status is distinct from v_status_novo
+            then now() else b.atualizado_em end
+      where b.id = v_bloco.id
+      returning b.* into v_bloco;
+
+      -- `sincronizado_em` muda em toda execução e não deve gerar auditoria/versão falsa.
+      v_alterou := v_bloco.versao <> coalesce((v_antes->>'versao')::bigint, v_bloco.versao);
+
+      -- Metadados do jogo podem ser reconciliados, mas o deadline histórico
+      -- gravado em palpites já aceitos não é reescrito por reagendamento.
+      update public.br_palpites p
+      set fecha_em = coalesce(p.fecha_em, v_bloco.fecha_em_congelado, v_bloco.fecha_em)
+      where p.temporada = p_temporada
+        and p.rodada between v_inicio and v_fim
+        and p.fecha_em is null
+        and coalesce(v_bloco.fecha_em_congelado, v_bloco.fecha_em) is not null;
+
+      -- Materializa as três rodadas. Publicação continua automática no fecha_em.
+      v_status_config := case v_bloco.status
+        when 'programada' then 'programada'
+        when 'aberta' then 'aberta'
+        when 'fechada' then 'fechada'
+        when 'bloqueada' then 'bloqueada'
+        else 'futura'
+      end;
+
+      insert into public.br_config_rodadas
+        (temporada, rodada, abre_em, fecha_em, publica_em, status, observacao, bloco_id, atualizado_em)
+      select
+        p_temporada, gs.rodada, v_bloco.abre_em, v_bloco.fecha_em, v_bloco.fecha_em,
+        v_status_config,
+        concat('Janela automática do ', v_bloco.nome, ' · Execução 21'),
+        v_bloco.id, now()
+      from generate_series(v_inicio, v_fim) as gs(rodada)
+      on conflict (temporada, rodada)
+      do update set
+        abre_em = case
+          when public.br_config_rodadas.status in ('publicada','apurada') then public.br_config_rodadas.abre_em
+          else excluded.abre_em end,
+        fecha_em = case
+          when public.br_config_rodadas.status in ('publicada','apurada') then public.br_config_rodadas.fecha_em
+          else excluded.fecha_em end,
+        publica_em = case
+          when public.br_config_rodadas.status in ('publicada','apurada') then public.br_config_rodadas.publica_em
+          else excluded.publica_em end,
+        status = case
+          when public.br_config_rodadas.status in ('publicada','apurada') then public.br_config_rodadas.status
+          else excluded.status end,
+        bloco_id = excluded.bloco_id,
+        atualizado_em = now();
+
+      if v_alterou then
+        insert into public.br_blocos_apostas_auditoria
+          (bloco_id, temporada, rodada_inicio, rodada_fim, admin_id, acao,
+           versao_anterior, versao_nova, antes, depois, justificativa)
+        values
+          (v_bloco.id, p_temporada, v_inicio, v_fim, null,
+           case when v_abriu_agora then 'abertura_automatica_exec21'
+                when v_bloco.status = 'fechada' then 'fechamento_automatico_exec21'
+                else 'sincronizacao_automatica_exec21' end,
+           coalesce((v_antes->>'versao')::bigint, v_bloco.versao), v_bloco.versao,
+           v_antes, to_jsonb(v_bloco),
+           'Sincronização automática pela matriz canônica; fecha_em é operacional e fecha_em_congelado preserva a elegibilidade histórica.');
+      end if;
+    else
+      update public.br_blocos_apostas b
+      set sincronizado_em = v_agora,
+          sincronizacao_origem = nullif(trim(coalesce(p_origem,'')), '')
+      where b.id = v_bloco.id
+      returning b.* into v_bloco;
+    end if;
+
+    v_result := v_result || jsonb_build_array(jsonb_build_object(
+      'bloco_id', v_bloco.id,
+      'rodada_inicio', v_inicio,
+      'rodada_fim', v_fim,
+      'nome', v_bloco.nome,
+      'total_canonicos', v_total_canonicos,
+      'primeiro_jogo_em', v_bloco.primeiro_jogo_em,
+      'abre_em', v_bloco.abre_em,
+      'fecha_em', v_bloco.fecha_em,
+      'status', v_bloco.status,
+      'total_palpites', v_palpites,
+      'jogos_apurados', coalesce(v_bloco.jogos_apurados,0),
+      'apuracao_concluida', coalesce(v_bloco.apuracao_concluida,false),
+      'abriu_agora', v_abriu_agora,
+      'email_abertura_pendente', v_bloco.status = 'aberta' and v_bloco.abertura_email_enviado_em is null,
+      'abertura_email_enviado_em', v_bloco.abertura_email_enviado_em,
+      'abertura_email_ultima_tentativa_em', v_bloco.abertura_email_ultima_tentativa_em,
+      'alterou', v_alterou
+    ));
+  end loop;
+
+  return jsonb_build_object('temporada', p_temporada, 'agora', v_agora, 'blocos', v_result);
+end;
+$$;
+
+revoke all on function public.br_pipeline_sincronizar_blocos_v1(int,timestamptz,int,int,jsonb,text) from public;
+revoke all on function public.br_pipeline_sincronizar_blocos_v1(int,timestamptz,int,int,jsonb,text) from anon;
+revoke all on function public.br_pipeline_sincronizar_blocos_v1(int,timestamptz,int,int,jsonb,text) from authenticated;
+grant execute on function public.br_pipeline_sincronizar_blocos_v1(int,timestamptz,int,int,jsonb,text) to service_role;
+
+-- --------------------------------------------------------------------------
+-- 6. Salvamento v1: progressivo durante a janela; elegibilidade só em 30/30
 -- --------------------------------------------------------------------------
 
 create or replace function public.br_salvar_palpites_bloco_v1(
@@ -258,7 +499,8 @@ declare
   v_hash text;
   v_total int;
   v_antigo jsonb;
-  v_deadline timestamptz;
+  v_deadline timestamptz; -- deadline operacional para aceitar nova gravação
+  v_deadline_historico timestamptz; -- fato congelado para elegibilidade/auditoria
   v_agora timestamptz := now();
 begin
   if not public.br_validar_sessao(p_participante_id, p_token, false) then
@@ -286,7 +528,14 @@ begin
     where id = v_bloco.id
     returning * into v_bloco;
   end if;
-  v_deadline := coalesce(v_bloco.fecha_em_congelado, v_bloco.fecha_em);
+  v_deadline_historico := coalesce(v_bloco.fecha_em_congelado, v_bloco.fecha_em);
+  -- Nunca aceita nova gravação depois do deadline operacional atual, mesmo que
+  -- o histórico congelado seja posterior por causa de um reagendamento antigo.
+  v_deadline := case
+    when v_bloco.fecha_em is not null and v_deadline_historico is not null
+      then least(v_bloco.fecha_em, v_deadline_historico)
+    else coalesce(v_bloco.fecha_em, v_deadline_historico)
+  end;
 
   if v_bloco.abre_em is null or v_deadline is null then
     raise exception 'O bloco ainda não possui janela configurada.';
@@ -456,7 +705,7 @@ begin
      case when v_total = 30 then '30/30 concluídos dentro da janela congelada'
           else format('incompleto: %s/30', v_total) end,
      case when v_total = 30 then v_agora else null end,
-     v_deadline, false, v_agora)
+     v_deadline_historico, false, v_agora)
   on conflict on constraint br_comprovantes_blocos_unico
   do update set
     total_palpites = excluded.total_palpites,
@@ -491,7 +740,7 @@ revoke all on function public.br_salvar_palpites_bloco_v1(uuid,text,int,uuid,jso
 grant execute on function public.br_salvar_palpites_bloco_v1(uuid,text,int,uuid,jsonb) to anon;
 
 -- --------------------------------------------------------------------------
--- 6. Palpites públicos: só participantes elegíveis (inclui exceção MEC)
+-- 7. Palpites públicos: só participantes elegíveis (inclui exceção MEC)
 -- --------------------------------------------------------------------------
 
 create or replace function public.br_listar_palpites_publicos_bloco_v1(
@@ -563,9 +812,17 @@ commit;
 -- Validação pós-migração (somente leitura)
 -- --------------------------------------------------------------------------
 -- Esperado no bloco 21–23:
+--   br_blocos_apostas.fecha_em             = deadline OPERACIONAL válido
+--   br_blocos_apostas.fecha_em_congelado   = 2026-07-29 21:30:00+00
+--   fecha_em < primeiro_jogo_em             = true (constraint preservada)
 --   Carlinhos: elegivel=true, 30/30
 --   Armínio:   elegivel=true, 30/30
 --   MEC:       elegivel=true, 25/30, excecao_administrativa=true
+--
+-- select rodada_inicio, rodada_fim, primeiro_jogo_em, fecha_em,
+--        fecha_em_congelado, (fecha_em < primeiro_jogo_em) as datas_validas
+-- from public.br_blocos_apostas
+-- where temporada = 2026 and rodada_inicio = 21 and rodada_fim = 23;
 --
 -- select bp.nome, cb.total_palpites, cb.total_jogos, cb.elegivel,
 --        cb.excecao_administrativa, cb.concluido_em, cb.ultima_edicao_usuario_em,
