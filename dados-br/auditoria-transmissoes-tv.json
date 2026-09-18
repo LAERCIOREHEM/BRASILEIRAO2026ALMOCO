@@ -1,11 +1,11 @@
 {
   "descricao": "Auditoria da consolidação de transmissões do Brasileirão.",
   "resumo": {
-    "jogos_na_janela": 31,
-    "jogos_com_transmissao": 27,
+    "jogos_na_janela": 41,
+    "jogos_com_transmissao": 36,
     "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 10,
+    "registros_preservados": 1,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,72 +15,22 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 17,
-      "duracao_ms": 6597
+      "jogos_com_canal": 35,
+      "duracao_ms": 19313
     },
     "ge_artigos": {
       "ok": true,
       "artigos_consultados": 1,
-      "jogos_com_canal": 1,
-      "duracao_ms": 16292
+      "jogos_com_canal": 2,
+      "duracao_ms": 17677
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260914-20261021&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260916-20261023&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
     }
   },
   "sem_transmissao": [],
   "preservados": [
-    {
-      "event_id": "401841176",
-      "jogo": "Botafogo x Grêmio",
-      "canais": [
-        "Premiere"
-      ]
-    },
-    {
-      "event_id": "401841245",
-      "jogo": "Mirassol x Botafogo",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841247",
-      "jogo": "Vasco da Gama x Coritiba",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841242",
-      "jogo": "Vitória x Cruzeiro",
-      "canais": [
-        "Premiere",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841255",
-      "jogo": "Internacional x Corinthians",
-      "canais": [
-        "Globo",
-        "GE TV",
-        "Premiere",
-        "Disney+ / ESPN",
-        "Prime Video",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841257",
-      "jogo": "Botafogo x Vasco da Gama",
-      "canais": [
-        "Premiere",
-        "Prime Video",
-        "SporTV"
-      ]
-    },
     {
       "event_id": "401841249",
       "jogo": "Cruzeiro x São Paulo",
@@ -91,41 +41,14 @@
         "Prime Video",
         "SporTV"
       ]
-    },
-    {
-      "event_id": "401841251",
-      "jogo": "Santos x Flamengo",
-      "canais": [
-        "Premiere",
-        "Prime Video",
-        "SporTV",
-        "Globo",
-        "GE TV",
-        "Disney+ / ESPN"
-      ]
-    },
-    {
-      "event_id": "401841258",
-      "jogo": "Atlético-MG x Santos",
-      "canais": [
-        "Disney+ / ESPN"
-      ]
-    },
-    {
-      "event_id": "401841261",
-      "jogo": "Palmeiras x Corinthians",
-      "canais": [
-        "Globo",
-        "GE TV"
-      ]
     }
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260914-20261021&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260916-20261023&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
   ],
   "artigos_ge_descobertos": [
     "https://ge.globo.com/futebol/times/palmeiras/noticia/2026/09/16/ldu-x-palmeiras-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
   ],
-  "atualizado_em": "2026-09-16T10:19:57-03:00"
+  "atualizado_em": "2026-09-18T10:21:01-03:00"
 }
