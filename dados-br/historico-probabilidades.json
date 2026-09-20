@@ -13,19 +13,19 @@
     ]
   },
   "estado_publicado": {
-    "gerado_em": "2026-09-19T20:27:14-03:00",
-    "hash_entrada": "377afff62302e45c3316a480f97ac8d25d3632847905732e53f33ff95699e398",
-    "hash_estado_esportivo": "79b13af425531b118b9b6c710acea050e5e04278704f991a5810824f3be8dd57",
+    "gerado_em": "2026-09-19T22:27:13-03:00",
+    "hash_entrada": "04ce75f202576b81d047031f04b0b8cfd0386eddb2fdac3b0589d109c78c22f0",
+    "hash_estado_esportivo": "041ec53775a671798cf163e57956a54453ad8cb4b477d172677098e834239708",
     "versao_modelo": "AF-Previsão 1.3",
     "simulacoes": 2000000
   },
-  "total_snapshots": 63,
+  "total_snapshots": 64,
   "integridade": {
     "algoritmo": "SHA-256",
     "regra": "cada hash inclui todo o snapshot e o hash do elo anterior",
-    "quantidade_snapshots": 63,
+    "quantidade_snapshots": 64,
     "hash_inicial": "b37f95c298e78928a7bb1f2c116b48a3935f869b6070f67e4e3c1f0c3cdeaca2",
-    "hash_final": "93b23a7f879f9b78230b82d1dacb440c3a97ce763bbcc91eba2438f503ebf252",
+    "hash_final": "e03a85ac5fbc5abed9c5de483c6b0e230ddb2cc19afe29481568c8c41a799ece",
     "encadeamento_valido": true
   },
   "snapshots": [
@@ -285064,6 +285064,4600 @@
       ],
       "hash_anterior": "2c3a8fb51e4c8686006f516b81255446646a38b76e9fa851d1a8c7eebb3ffb12",
       "hash_snapshot": "93b23a7f879f9b78230b82d1dacb440c3a97ce763bbcc91eba2438f503ebf252"
+    },
+    {
+      "gerado_em": "2026-09-19T22:27:13-03:00",
+      "rodada_referencia": 28,
+      "hash_entrada": "04ce75f202576b81d047031f04b0b8cfd0386eddb2fdac3b0589d109c78c22f0",
+      "hash_estado_esportivo": "041ec53775a671798cf163e57956a54453ad8cb4b477d172677098e834239708",
+      "motivo_registro": "novo_resultado_concluido",
+      "versao_modelo": "AF-Previsão 1.3",
+      "metodologia": "AF-Previsão Integrada com tendência controlada",
+      "simulacoes": 2000000,
+      "clubes": [
+        {
+          "clube": "Flamengo",
+          "posicao_atual": 1,
+          "pontos_atuais": 57,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841237",
+          "hash_estado_clube": "1be3bc943b9866d25bce00e52833ddc719ea3549e2fe3081c8cd079bff42e6b1",
+          "posicao_projetada": 1,
+          "posicao_media_estimada": 1.3637,
+          "posicao_mediana": 1,
+          "faixa_posicao_80": {
+            "melhor": 1,
+            "pior": 2,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            64.1458,
+            35.37585,
+            0.441,
+            0.03345,
+            0.00365,
+            0.00025,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pontos_projetados": 79,
+          "pontos_media_estimada": 79.117,
+          "pontos_percentis": {
+            "p10": 74,
+            "p50": null,
+            "p90": 84
+          },
+          "campeao_pct": 64.1458,
+          "libertadores_pct": 99.9999,
+          "sul_americana_pct": 0.0001,
+          "libertadores_base_pct": 99.99975,
+          "sul_americana_base_pct": 0.00025,
+          "rebaixamento_pct": 0.0,
+          "exibicao": {
+            "campeao": "64,1%",
+            "g4": ">99,9%",
+            "g6": "100,0%",
+            "libertadores_base": ">99,9%",
+            "sul_americana_base": "<0,1%",
+            "rebaixamento": "<0,1%",
+            "libertadores": ">99,9%",
+            "sul_americana": "<0,1%"
+          },
+          "ocorrencias": {
+            "campeao": 1282916,
+            "g4": 1999922,
+            "g6": 2000000,
+            "libertadores_base": 1999995,
+            "sul_americana_base": 5,
+            "rebaixamento": 0,
+            "libertadores": 1999998,
+            "sul_americana": 2
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 1999998,
+                "simulacoes": 2000000,
+                "percentual_estimado": 99.9999,
+                "exibicao": ">99,9%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1999995,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 99.99975,
+                  "exibicao": ">99,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 1,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 5e-05,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 2,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0001,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 99.9999
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 2,
+                "simulacoes": 2000000,
+                "percentual_estimado": 0.0001,
+                "exibicao": "<0,1%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 2,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0001,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "<0,1%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": 0.00015
+                }
+              },
+              "soma_vias_pct": 0.0001
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -0.244,
+            "ajuste_defesa_pct": 2.4649,
+            "ajuste_forca_pct": 1.1014,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 79.117
+        },
+        {
+          "clube": "Palmeiras",
+          "posicao_atual": 2,
+          "pontos_atuais": 56,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841234",
+          "hash_estado_clube": "e8c1faed49f9155d2da61241473f85400a5ae4fc4a7ded0f0479936d5f8504e1",
+          "posicao_projetada": 2,
+          "posicao_media_estimada": 1.6576,
+          "posicao_mediana": 2,
+          "faixa_posicao_80": {
+            "melhor": 1,
+            "pior": 2,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            35.7856,
+            62.81685,
+            1.26555,
+            0.11485,
+            0.01555,
+            0.00155,
+            5e-05,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pontos_projetados": 77,
+          "pontos_media_estimada": 77.386,
+          "pontos_percentis": {
+            "p10": 72,
+            "p50": null,
+            "p90": 82
+          },
+          "campeao_pct": 35.7856,
+          "libertadores_pct": 99.9998,
+          "sul_americana_pct": 0.0002,
+          "libertadores_base_pct": 99.9984,
+          "sul_americana_base_pct": 0.0016,
+          "rebaixamento_pct": 0.0,
+          "exibicao": {
+            "campeao": "35,8%",
+            "g4": ">99,9%",
+            "g6": ">99,9%",
+            "libertadores_base": ">99,9%",
+            "sul_americana_base": "<0,1%",
+            "rebaixamento": "<0,1%",
+            "libertadores": ">99,9%",
+            "sul_americana": "<0,1%"
+          },
+          "ocorrencias": {
+            "campeao": 715712,
+            "g4": 1999657,
+            "g6": 1999999,
+            "libertadores_base": 1999968,
+            "sul_americana_base": 32,
+            "rebaixamento": 0,
+            "libertadores": 1999996,
+            "sul_americana": 4
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 1999996,
+                "simulacoes": 2000000,
+                "percentual_estimado": 99.9998,
+                "exibicao": ">99,9%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1999968,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 99.9984,
+                  "exibicao": ">99,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 16,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0008,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 1,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 5e-05,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 11,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.00055,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 12,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0006,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 2,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0001,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 2,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0001,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 99.9998
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 4,
+                "simulacoes": 2000000,
+                "percentual_estimado": 0.0002,
+                "exibicao": "<0,1%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 4,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0002,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "<0,1%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": 0.00015
+                }
+              },
+              "soma_vias_pct": 0.0002
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -0.6912,
+            "ajuste_defesa_pct": 2.3401,
+            "ajuste_forca_pct": 0.8131,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 77.386
+        },
+        {
+          "clube": "Athletico-PR",
+          "posicao_atual": 3,
+          "pontos_atuais": 46,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841232",
+          "hash_estado_clube": "8bfd97415e1b06d61c6b57fd1c4295b1d1ffa94807a5e7e4f2f4b849a153050e",
+          "posicao_projetada": 4,
+          "posicao_media_estimada": 4.1942,
+          "posicao_mediana": 4,
+          "faixa_posicao_80": {
+            "melhor": 3,
+            "pior": 6,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.04965,
+            1.06335,
+            40.8875,
+            25.12515,
+            16.0199,
+            9.22335,
+            4.4293,
+            1.9241,
+            0.78585,
+            0.32145,
+            0.1152,
+            0.03815,
+            0.0127,
+            0.00385,
+            0.00045,
+            5e-05,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pontos_projetados": 63,
+          "pontos_media_estimada": 62.734,
+          "pontos_percentis": {
+            "p10": 57,
+            "p50": null,
+            "p90": 68
+          },
+          "campeao_pct": 0.04965,
+          "libertadores_pct": 93.77035,
+          "sul_americana_pct": 6.21835,
+          "libertadores_base_pct": 83.14555,
+          "sul_americana_base_pct": 16.79925,
+          "rebaixamento_pct": 0.0,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "67,1%",
+            "g6": "92,4%",
+            "libertadores_base": "83,1%",
+            "sul_americana_base": "16,8%",
+            "rebaixamento": "<0,1%",
+            "libertadores": "93,8%",
+            "sul_americana": "6,2%"
+          },
+          "ocorrencias": {
+            "campeao": 993,
+            "g4": 1342513,
+            "g6": 1847378,
+            "libertadores_base": 1662911,
+            "sul_americana_base": 335985,
+            "rebaixamento": 0,
+            "libertadores": 1875407,
+            "sul_americana": 124367
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 1875407,
+                "simulacoes": 2000000,
+                "percentual_estimado": 93.77035,
+                "exibicao": "93,8%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1662911,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 83.14555,
+                  "exibicao": "83,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 66706,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 3.3353,
+                  "exibicao": "3,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 145790,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 7.2895,
+                  "exibicao": "7,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 27354,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.3677,
+                  "exibicao": "1,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 20232,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.0116,
+                  "exibicao": "1,0%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 19120,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.956,
+                  "exibicao": "1,0%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 93.77035
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 124367,
+                "simulacoes": 2000000,
+                "percentual_estimado": 6.21835,
+                "exibicao": "6,2%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 123700,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 6.185,
+                  "exibicao": "6,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 667,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.03335,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 6.21835
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": 1.8135,
+            "ajuste_defesa_pct": -1.053,
+            "ajuste_forca_pct": 0.37,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 62.734
+        },
+        {
+          "clube": "Fluminense",
+          "posicao_atual": 5,
+          "pontos_atuais": 45,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841231",
+          "hash_estado_clube": "6b19c10fc5db884514dd47d19b3750d1c46334ff9fb452320ed0bbf2dccfa0e2",
+          "posicao_projetada": 5,
+          "posicao_media_estimada": 4.8474,
+          "posicao_mediana": 5,
+          "faixa_posicao_80": {
+            "melhor": 3,
+            "pior": 7,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0093,
+            0.34085,
+            23.65365,
+            25.62795,
+            20.8452,
+            14.21225,
+            7.7932,
+            3.92785,
+            1.9542,
+            0.92155,
+            0.42275,
+            0.1829,
+            0.0722,
+            0.02715,
+            0.00725,
+            0.00155,
+            0.0002,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pontos_projetados": 61,
+          "pontos_media_estimada": 61.35,
+          "pontos_percentis": {
+            "p10": 56,
+            "p50": null,
+            "p90": 67
+          },
+          "campeao_pct": 0.0093,
+          "libertadores_pct": 87.10215,
+          "sul_americana_pct": 12.82535,
+          "libertadores_base_pct": 70.47695,
+          "sul_americana_base_pct": 29.2318,
+          "rebaixamento_pct": 0.0002,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "49,6%",
+            "g6": "84,7%",
+            "libertadores_base": "70,5%",
+            "sul_americana_base": "29,2%",
+            "rebaixamento": "<0,1%",
+            "libertadores": "87,1%",
+            "sul_americana": "12,8%"
+          },
+          "ocorrencias": {
+            "campeao": 186,
+            "g4": 992635,
+            "g6": 1693784,
+            "libertadores_base": 1409539,
+            "sul_americana_base": 584636,
+            "rebaixamento": 4,
+            "libertadores": 1742043,
+            "sul_americana": 256507
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 1742043,
+                "simulacoes": 2000000,
+                "percentual_estimado": 87.10215,
+                "exibicao": "87,1%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1409539,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 70.47695,
+                  "exibicao": "70,5%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 58601,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.93005,
+                  "exibicao": "2,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 12459,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.62295,
+                  "exibicao": "0,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 261444,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 13.0722,
+                  "exibicao": "13,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 22391,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.11955,
+                  "exibicao": "1,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 17415,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.87075,
+                  "exibicao": "0,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 18795,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.93975,
+                  "exibicao": "0,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 87.10215
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 256507,
+                "simulacoes": 2000000,
+                "percentual_estimado": 12.82535,
+                "exibicao": "12,8%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 252855,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 12.64275,
+                  "exibicao": "12,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 3652,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.1826,
+                  "exibicao": "0,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 12.82535
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": 0.2057,
+            "ajuste_defesa_pct": -0.1094,
+            "ajuste_forca_pct": 0.048,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 61.35
+        },
+        {
+          "clube": "Bahia",
+          "posicao_atual": 4,
+          "pontos_atuais": 46,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841230",
+          "hash_estado_clube": "ce8eefbc8b04a6756043e5efa23215babec1cf1d7f0d7f6146590301b1527c74",
+          "posicao_projetada": 5,
+          "posicao_media_estimada": 5.2505,
+          "posicao_mediana": 5,
+          "faixa_posicao_80": {
+            "melhor": 3,
+            "pior": 8,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.00785,
+            0.2663,
+            17.75475,
+            21.0584,
+            21.6734,
+            17.3471,
+            10.58385,
+            5.7445,
+            2.95945,
+            1.4623,
+            0.6755,
+            0.2995,
+            0.1186,
+            0.0378,
+            0.00905,
+            0.0016,
+            5e-05,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pontos_projetados": 60,
+          "pontos_media_estimada": 60.415,
+          "pontos_percentis": {
+            "p10": 55,
+            "p50": null,
+            "p90": 66
+          },
+          "campeao_pct": 0.00785,
+          "libertadores_pct": 80.10665,
+          "sul_americana_pct": 19.773,
+          "libertadores_base_pct": 60.7607,
+          "sul_americana_base_pct": 38.7727,
+          "rebaixamento_pct": 5e-05,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "39,1%",
+            "g6": "78,1%",
+            "libertadores_base": "60,8%",
+            "sul_americana_base": "38,8%",
+            "rebaixamento": "<0,1%",
+            "libertadores": "80,1%",
+            "sul_americana": "19,8%"
+          },
+          "ocorrencias": {
+            "campeao": 157,
+            "g4": 781746,
+            "g6": 1562156,
+            "libertadores_base": 1215214,
+            "sul_americana_base": 775454,
+            "rebaixamento": 1,
+            "libertadores": 1602133,
+            "sul_americana": 395460
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 1602133,
+                "simulacoes": 2000000,
+                "percentual_estimado": 80.10665,
+                "exibicao": "80,1%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1215214,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 60.7607,
+                  "exibicao": "60,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 386919,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 19.34595,
+                  "exibicao": "19,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 80.10665
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 395460,
+                "simulacoes": 2000000,
+                "percentual_estimado": 19.773,
+                "exibicao": "19,8%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 388535,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 19.42675,
+                  "exibicao": "19,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 6925,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.34625,
+                  "exibicao": "0,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 19.773
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": 1.0859,
+            "ajuste_defesa_pct": 0.5194,
+            "ajuste_forca_pct": 0.8022,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 60.415
+        },
+        {
+          "clube": "Cruzeiro",
+          "posicao_atual": 6,
+          "pontos_atuais": 42,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841233",
+          "hash_estado_clube": "3a11f7db714db610eeb4db55b98042cf5c595c0a5e57d38193f6145c626dab34",
+          "posicao_projetada": 6,
+          "posicao_media_estimada": 5.7855,
+          "posicao_mediana": 6,
+          "faixa_posicao_80": {
+            "melhor": 3,
+            "pior": 8,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.00175,
+            0.1263,
+            11.91125,
+            17.3236,
+            19.58835,
+            19.41215,
+            13.61835,
+            8.1928,
+            4.70305,
+            2.6082,
+            1.3521,
+            0.66925,
+            0.31025,
+            0.12375,
+            0.0441,
+            0.01245,
+            0.0021,
+            0.00015,
+            5e-05,
+            0.0
+          ],
+          "pontos_projetados": 59,
+          "pontos_media_estimada": 58.808,
+          "pontos_percentis": {
+            "p10": 53,
+            "p50": null,
+            "p90": 64
+          },
+          "campeao_pct": 0.00175,
+          "libertadores_pct": 75.626,
+          "sul_americana_pct": 24.0616,
+          "libertadores_base_pct": 48.95125,
+          "sul_americana_base_pct": 49.88665,
+          "rebaixamento_pct": 0.0023,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "29,4%",
+            "g6": "68,4%",
+            "libertadores_base": "49,0%",
+            "sul_americana_base": "49,9%",
+            "rebaixamento": "<0,1%",
+            "libertadores": "75,6%",
+            "sul_americana": "24,1%"
+          },
+          "ocorrencias": {
+            "campeao": 35,
+            "g4": 587258,
+            "g6": 1367268,
+            "libertadores_base": 979025,
+            "sul_americana_base": 997733,
+            "rebaixamento": 46,
+            "libertadores": 1512520,
+            "sul_americana": 481232
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 1512520,
+                "simulacoes": 2000000,
+                "percentual_estimado": 75.626,
+                "exibicao": "75,6%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 979025,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 48.95125,
+                  "exibicao": "49,0%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 152554,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 7.6277,
+                  "exibicao": "7,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 31345,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.56725,
+                  "exibicao": "1,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 349596,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 17.4798,
+                  "exibicao": "17,5%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 63977,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 3.19885,
+                  "exibicao": "3,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 43425,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.17125,
+                  "exibicao": "2,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 45152,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.2576,
+                  "exibicao": "2,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 75.626
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 481232,
+                "simulacoes": 2000000,
+                "percentual_estimado": 24.0616,
+                "exibicao": "24,1%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 468478,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 23.4239,
+                  "exibicao": "23,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 12754,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.6377,
+                  "exibicao": "0,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 24.0616
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": 0.9753,
+            "ajuste_defesa_pct": -0.3603,
+            "ajuste_forca_pct": 0.3053,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 58.808
+        },
+        {
+          "clube": "Atlético-MG",
+          "posicao_atual": 7,
+          "pontos_atuais": 40,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 28,
+          "ultimo_jogo_concluido_id": "401841239",
+          "hash_estado_clube": "57543eb3a02a3e5b922df867818c239f3dbc33dc833e68c27edf3c27f2de725a",
+          "posicao_projetada": 8,
+          "posicao_media_estimada": 7.6775,
+          "posicao_mediana": 7,
+          "faixa_posicao_80": {
+            "melhor": 5,
+            "pior": 11,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            5e-05,
+            0.00785,
+            2.67335,
+            5.8263,
+            9.9755,
+            14.94855,
+            18.51725,
+            15.29935,
+            11.44265,
+            8.0674,
+            5.4716,
+            3.49425,
+            2.13425,
+            1.21755,
+            0.6064,
+            0.245,
+            0.06535,
+            0.00735,
+            0.0,
+            0.0
+          ],
+          "pontos_projetados": 55,
+          "pontos_media_estimada": 55.119,
+          "pontos_percentis": {
+            "p10": 50,
+            "p50": null,
+            "p90": 60
+          },
+          "campeao_pct": 5e-05,
+          "libertadores_pct": 42.8389,
+          "sul_americana_pct": 54.12915,
+          "libertadores_base_pct": 18.48305,
+          "sul_americana_base_pct": 73.7468,
+          "rebaixamento_pct": 0.0727,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "8,5%",
+            "g6": "33,4%",
+            "libertadores_base": "18,5%",
+            "sul_americana_base": "73,7%",
+            "rebaixamento": "<0,1%",
+            "libertadores": "42,8%",
+            "sul_americana": "54,1%"
+          },
+          "ocorrencias": {
+            "campeao": 1,
+            "g4": 170151,
+            "g6": 668632,
+            "libertadores_base": 369661,
+            "sul_americana_base": 1474936,
+            "rebaixamento": 1454,
+            "libertadores": 856778,
+            "sul_americana": 1082583
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 856778,
+                "simulacoes": 2000000,
+                "percentual_estimado": 42.8389,
+                "exibicao": "42,8%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 369661,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 18.48305,
+                  "exibicao": "18,5%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 62772,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 3.1386,
+                  "exibicao": "3,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 45992,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.2996,
+                  "exibicao": "2,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 378353,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 18.91765,
+                  "exibicao": "18,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 24865,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.24325,
+                  "exibicao": "1,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 12575,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.62875,
+                  "exibicao": "0,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 25332,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.2666,
+                  "exibicao": "1,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 42.8389
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 1082583,
+                "simulacoes": 2000000,
+                "percentual_estimado": 54.12915,
+                "exibicao": "54,1%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 998200,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 49.91,
+                  "exibicao": "49,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 84383,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 4.21915,
+                  "exibicao": "4,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 54.12915
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -0.752,
+            "ajuste_defesa_pct": 0.783,
+            "ajuste_forca_pct": 0.0125,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 55.119
+        },
+        {
+          "clube": "Bragantino",
+          "posicao_atual": 10,
+          "pontos_atuais": 36,
+          "jogos_atuais": 26,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841229",
+          "hash_estado_clube": "e9b67e9fd1f6d4f2f826a4492393c99687bab8b14b5d4a7eb4e2504199a2ea31",
+          "posicao_projetada": 10,
+          "posicao_media_estimada": 9.6491,
+          "posicao_mediana": 9,
+          "faixa_posicao_80": {
+            "melhor": 6,
+            "pior": 14,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0015,
+            0.5214,
+            1.65845,
+            3.62865,
+            6.869,
+            11.0869,
+            13.76225,
+            13.99525,
+            12.63985,
+            10.5648,
+            8.3472,
+            6.3313,
+            4.5924,
+            3.0724,
+            1.8268,
+            0.84715,
+            0.24245,
+            0.0122,
+            5e-05
+          ],
+          "pontos_projetados": 52,
+          "pontos_media_estimada": 51.782,
+          "pontos_percentis": {
+            "p10": 46,
+            "p50": null,
+            "p90": 57
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 19.80915,
+          "sul_americana_pct": 67.3097,
+          "libertadores_base_pct": 5.81,
+          "sul_americana_base_pct": 68.91805,
+          "rebaixamento_pct": 1.10185,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "2,2%",
+            "g6": "12,7%",
+            "libertadores_base": "5,8%",
+            "sul_americana_base": "68,9%",
+            "rebaixamento": "1,1%",
+            "libertadores": "19,8%",
+            "sul_americana": "67,3%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 43627,
+            "g6": 253580,
+            "libertadores_base": 116200,
+            "sul_americana_base": 1378361,
+            "rebaixamento": 22037,
+            "libertadores": 396183,
+            "sul_americana": 1346194
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 396183,
+                "simulacoes": 2000000,
+                "percentual_estimado": 19.80915,
+                "exibicao": "19,8%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 116200,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 5.81,
+                  "exibicao": "5,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 75965,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 3.79825,
+                  "exibicao": "3,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 204018,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 10.2009,
+                  "exibicao": "10,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 19.80915
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 1346194,
+                "simulacoes": 2000000,
+                "percentual_estimado": 67.3097,
+                "exibicao": "67,3%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1118723,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 55.93615,
+                  "exibicao": "55,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 227471,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 11.37355,
+                  "exibicao": "11,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 67.3097
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -0.3777,
+            "ajuste_defesa_pct": 0.8398,
+            "ajuste_forca_pct": 0.2292,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 51.782
+        },
+        {
+          "clube": "Santos",
+          "posicao_atual": 8,
+          "pontos_atuais": 38,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 28,
+          "ultimo_jogo_concluido_id": "401841244",
+          "hash_estado_clube": "038be7c5ca90088e7b4e9291a9e37f3cabe069889c9da50fe20c35c00d5a48ed",
+          "posicao_projetada": 10,
+          "posicao_media_estimada": 10.0131,
+          "posicao_mediana": 10,
+          "faixa_posicao_80": {
+            "melhor": 6,
+            "pior": 14,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0008,
+            0.4074,
+            1.32525,
+            2.97185,
+            5.7306,
+            9.58075,
+            12.47195,
+            13.2535,
+            12.76465,
+            11.4758,
+            9.5835,
+            7.61695,
+            5.6092,
+            3.79495,
+            2.20545,
+            0.96075,
+            0.23935,
+            0.0073,
+            0.0
+          ],
+          "pontos_projetados": 52,
+          "pontos_media_estimada": 51.584,
+          "pontos_percentis": {
+            "p10": 46,
+            "p50": null,
+            "p90": 57
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 21.20595,
+          "sul_americana_pct": 63.9141,
+          "libertadores_base_pct": 4.7053,
+          "sul_americana_base_pct": 65.27725,
+          "rebaixamento_pct": 1.2074,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "1,7%",
+            "g6": "10,4%",
+            "libertadores_base": "4,7%",
+            "sul_americana_base": "65,3%",
+            "rebaixamento": "1,2%",
+            "libertadores": "21,2%",
+            "sul_americana": "63,9%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 34669,
+            "g6": 208718,
+            "libertadores_base": 94106,
+            "sul_americana_base": 1305545,
+            "rebaixamento": 24148,
+            "libertadores": 424119,
+            "sul_americana": 1278282
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 424119,
+                "simulacoes": 2000000,
+                "percentual_estimado": 21.20595,
+                "exibicao": "21,2%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 94106,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 4.7053,
+                  "exibicao": "4,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 124526,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 6.2263,
+                  "exibicao": "6,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 33734,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.6867,
+                  "exibicao": "1,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 171753,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 8.58765,
+                  "exibicao": "8,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 45638,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.2819,
+                  "exibicao": "2,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 38292,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.9146,
+                  "exibicao": "1,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 40596,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.0298,
+                  "exibicao": "2,0%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 21.20595
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 1278282,
+                "simulacoes": 2000000,
+                "percentual_estimado": 63.9141,
+                "exibicao": "63,9%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1025197,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 51.25985,
+                  "exibicao": "51,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 253085,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 12.65425,
+                  "exibicao": "12,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 63.9141
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": 1.2807,
+            "ajuste_defesa_pct": 1.0342,
+            "ajuste_forca_pct": 1.1574,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 51.584
+        },
+        {
+          "clube": "Botafogo",
+          "posicao_atual": 11,
+          "pontos_atuais": 35,
+          "jogos_atuais": 28,
+          "rodada_referencia_clube": 28,
+          "ultimo_jogo_concluido_id": "401841245",
+          "hash_estado_clube": "70d08c0ef0227fafeedfcfcddb24cf8d072749a18b7c760a35ea5ec2496e2f3d",
+          "posicao_projetada": 10,
+          "posicao_media_estimada": 10.2049,
+          "posicao_mediana": 10,
+          "faixa_posicao_80": {
+            "melhor": 7,
+            "pior": 14,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.1751,
+            0.79245,
+            2.26085,
+            5.03845,
+            9.21195,
+            12.57335,
+            13.7042,
+            13.1902,
+            11.67405,
+            9.72065,
+            7.69355,
+            5.814,
+            4.01825,
+            2.4917,
+            1.23175,
+            0.3829,
+            0.02655,
+            5e-05
+          ],
+          "pontos_projetados": 51,
+          "pontos_media_estimada": 51.185,
+          "pontos_percentis": {
+            "p10": 46,
+            "p50": null,
+            "p90": 56
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 17.33515,
+          "sul_americana_pct": 66.3101,
+          "libertadores_base_pct": 3.2284,
+          "sul_americana_base_pct": 65.3922,
+          "rebaixamento_pct": 1.64125,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "1,0%",
+            "g6": "8,3%",
+            "libertadores_base": "3,2%",
+            "sul_americana_base": "65,4%",
+            "rebaixamento": "1,6%",
+            "libertadores": "17,3%",
+            "sul_americana": "66,3%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 19351,
+            "g6": 165337,
+            "libertadores_base": 64568,
+            "sul_americana_base": 1307844,
+            "rebaixamento": 32825,
+            "libertadores": 346703,
+            "sul_americana": 1326202
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 346703,
+                "simulacoes": 2000000,
+                "percentual_estimado": 17.33515,
+                "exibicao": "17,3%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 64568,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 3.2284,
+                  "exibicao": "3,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 124593,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 6.22965,
+                  "exibicao": "6,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 157542,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 7.8771,
+                  "exibicao": "7,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 17.33515
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 1326202,
+                "simulacoes": 2000000,
+                "percentual_estimado": 66.3101,
+                "exibicao": "66,3%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1065995,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 53.29975,
+                  "exibicao": "53,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 260207,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 13.01035,
+                  "exibicao": "13,0%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 66.3101
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -2.9962,
+            "ajuste_defesa_pct": -0.381,
+            "ajuste_forca_pct": -1.6973,
+            "classificacao": "leve queda",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 51.185
+        },
+        {
+          "clube": "São Paulo",
+          "posicao_atual": 12,
+          "pontos_atuais": 33,
+          "jogos_atuais": 26,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841234",
+          "hash_estado_clube": "499258f3e50beed99d7e7a488466b228ff8ab2bd674bbfdb4bd736f53f2f21fb",
+          "posicao_projetada": 11,
+          "posicao_media_estimada": 10.8227,
+          "posicao_mediana": 11,
+          "faixa_posicao_80": {
+            "melhor": 7,
+            "pior": 15,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.00035,
+            0.2502,
+            0.7981,
+            1.89795,
+            3.9047,
+            6.9968,
+            10.1413,
+            11.89015,
+            12.3011,
+            11.7528,
+            10.49355,
+            8.9899,
+            7.3966,
+            5.75285,
+            4.076,
+            2.3703,
+            0.91085,
+            0.07625,
+            0.00025
+          ],
+          "pontos_projetados": 50,
+          "pontos_media_estimada": 50.001,
+          "pontos_percentis": {
+            "p10": 44,
+            "p50": null,
+            "p90": 56
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 12.94825,
+          "sul_americana_pct": 63.70525,
+          "libertadores_base_pct": 2.9466,
+          "sul_americana_base_pct": 56.98685,
+          "rebaixamento_pct": 3.35765,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "1,0%",
+            "g6": "6,9%",
+            "libertadores_base": "2,9%",
+            "sul_americana_base": "57,0%",
+            "rebaixamento": "3,4%",
+            "libertadores": "12,9%",
+            "sul_americana": "63,7%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 20973,
+            "g6": 137026,
+            "libertadores_base": 58932,
+            "sul_americana_base": 1139737,
+            "rebaixamento": 67153,
+            "libertadores": 258965,
+            "sul_americana": 1274105
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 258965,
+                "simulacoes": 2000000,
+                "percentual_estimado": 12.94825,
+                "exibicao": "12,9%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 58932,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.9466,
+                  "exibicao": "2,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 75780,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 3.789,
+                  "exibicao": "3,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 124253,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 6.21265,
+                  "exibicao": "6,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 12.94825
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 1274105,
+                "simulacoes": 2000000,
+                "percentual_estimado": 63.70525,
+                "exibicao": "63,7%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 970778,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 48.5389,
+                  "exibicao": "48,5%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 303327,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 15.16635,
+                  "exibicao": "15,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 63.70525
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -1.5149,
+            "ajuste_defesa_pct": 0.7373,
+            "ajuste_forca_pct": -0.3951,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 50.001
+        },
+        {
+          "clube": "Coritiba",
+          "posicao_atual": 9,
+          "pontos_atuais": 38,
+          "jogos_atuais": 28,
+          "rodada_referencia_clube": 28,
+          "ultimo_jogo_concluido_id": "401841247",
+          "hash_estado_clube": "e6c119387844013cae792972a4cbd9844b93606eba8b6f39b43410883e90a63a",
+          "posicao_projetada": 12,
+          "posicao_media_estimada": 12.1471,
+          "posicao_mediana": 12,
+          "faixa_posicao_80": {
+            "melhor": 8,
+            "pior": 16,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.03235,
+            0.15325,
+            0.49695,
+            1.32065,
+            2.97125,
+            5.3262,
+            7.82465,
+            10.20725,
+            12.0693,
+            13.17765,
+            13.09865,
+            11.79445,
+            9.6042,
+            6.77845,
+            3.7822,
+            1.3112,
+            0.0513,
+            5e-05
+          ],
+          "pontos_projetados": 49,
+          "pontos_media_estimada": 48.585,
+          "pontos_percentis": {
+            "p10": 44,
+            "p50": null,
+            "p90": 54
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 3.26345,
+          "sul_americana_pct": 58.61825,
+          "libertadores_base_pct": 0.68255,
+          "sul_americana_base_pct": 39.7193,
+          "rebaixamento_pct": 5.14475,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "0,2%",
+            "g6": "2,0%",
+            "libertadores_base": "0,7%",
+            "sul_americana_base": "39,7%",
+            "rebaixamento": "5,1%",
+            "libertadores": "3,3%",
+            "sul_americana": "58,6%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 3712,
+            "g6": 40064,
+            "libertadores_base": 13651,
+            "sul_americana_base": 794386,
+            "rebaixamento": 102895,
+            "libertadores": 65269,
+            "sul_americana": 1172365
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 65269,
+                "simulacoes": 2000000,
+                "percentual_estimado": 3.26345,
+                "exibicao": "3,3%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 13651,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.68255,
+                  "exibicao": "0,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 51618,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.5809,
+                  "exibicao": "2,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Copa do Brasil",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 3.26345
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 1172365,
+                "simulacoes": 2000000,
+                "percentual_estimado": 58.61825,
+                "exibicao": "58,6%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 742768,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 37.1384,
+                  "exibicao": "37,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 429597,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 21.47985,
+                  "exibicao": "21,5%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 58.61825
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -0.7297,
+            "ajuste_defesa_pct": -1.798,
+            "ajuste_forca_pct": -1.2653,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 48.585
+        },
+        {
+          "clube": "Corinthians",
+          "posicao_atual": 14,
+          "pontos_atuais": 32,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841237",
+          "hash_estado_clube": "f6c237815c570dc677ab046af89108458f39434382d6b049783b7e6d3b19ab22",
+          "posicao_projetada": 13,
+          "posicao_media_estimada": 13.3999,
+          "posicao_mediana": 14,
+          "faixa_posicao_80": {
+            "melhor": 9,
+            "pior": 17,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.0082,
+            0.0522,
+            0.1972,
+            0.6347,
+            1.6302,
+            3.17195,
+            4.9317,
+            6.834,
+            8.7215,
+            10.3904,
+            11.65275,
+            12.36725,
+            12.45695,
+            11.6134,
+            9.2352,
+            5.41715,
+            0.67915,
+            0.0061
+          ],
+          "pontos_projetados": 47,
+          "pontos_media_estimada": 46.52,
+          "pontos_percentis": {
+            "p10": 41,
+            "p50": null,
+            "p90": 52
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 4.74355,
+          "sul_americana_pct": 41.312,
+          "libertadores_base_pct": 0.2576,
+          "sul_americana_base_pct": 25.92405,
+          "rebaixamento_pct": 15.3376,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "<0,1%",
+            "g6": "0,9%",
+            "libertadores_base": "0,3%",
+            "sul_americana_base": "25,9%",
+            "rebaixamento": "15,3%",
+            "libertadores": "4,7%",
+            "sul_americana": "41,3%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 1208,
+            "g6": 17846,
+            "libertadores_base": 5152,
+            "sul_americana_base": 518481,
+            "rebaixamento": 306752,
+            "libertadores": 94871,
+            "sul_americana": 826240
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 94871,
+                "simulacoes": 2000000,
+                "percentual_estimado": 4.74355,
+                "exibicao": "4,7%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 5152,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.2576,
+                  "exibicao": "0,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 26848,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.3424,
+                  "exibicao": "1,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 36272,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.8136,
+                  "exibicao": "1,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 26599,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.32995,
+                  "exibicao": "1,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 9629,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.48145,
+                  "exibicao": "0,5%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 8160,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.408,
+                  "exibicao": "0,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 9059,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.45295,
+                  "exibicao": "0,5%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 4.74355
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 826240,
+                "simulacoes": 2000000,
+                "percentual_estimado": 41.312,
+                "exibicao": "41,3%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 475405,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 23.77025,
+                  "exibicao": "23,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 350835,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 17.54175,
+                  "exibicao": "17,5%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 41.312
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -1.0485,
+            "ajuste_defesa_pct": 0.0658,
+            "ajuste_forca_pct": -0.4929,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 46.52
+        },
+        {
+          "clube": "Vitória",
+          "posicao_atual": 13,
+          "pontos_atuais": 33,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841235",
+          "hash_estado_clube": "949f98bfca46b13ad406ba86c3799f355feacf256840222c2ea939ce9924fd42",
+          "posicao_projetada": 14,
+          "posicao_media_estimada": 13.5166,
+          "posicao_mediana": 14,
+          "faixa_posicao_80": {
+            "melhor": 10,
+            "pior": 17,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.01175,
+            0.0606,
+            0.2073,
+            0.6047,
+            1.4851,
+            2.93745,
+            4.622,
+            6.38145,
+            8.22165,
+            9.9511,
+            11.41145,
+            12.5906,
+            13.2255,
+            12.6548,
+            9.87185,
+            5.24225,
+            0.51325,
+            0.0072
+          ],
+          "pontos_projetados": 46,
+          "pontos_media_estimada": 46.338,
+          "pontos_percentis": {
+            "p10": 41,
+            "p50": null,
+            "p90": 52
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 1.85245,
+          "sul_americana_pct": 40.50555,
+          "libertadores_base_pct": 0.27965,
+          "sul_americana_base_pct": 24.25235,
+          "rebaixamento_pct": 15.63455,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "<0,1%",
+            "g6": "0,9%",
+            "libertadores_base": "0,3%",
+            "sul_americana_base": "24,3%",
+            "rebaixamento": "15,6%",
+            "libertadores": "1,9%",
+            "sul_americana": "40,5%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 1447,
+            "g6": 17687,
+            "libertadores_base": 5593,
+            "sul_americana_base": 485047,
+            "rebaixamento": 312691,
+            "libertadores": 37049,
+            "sul_americana": 810111
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 37049,
+                "simulacoes": 2000000,
+                "percentual_estimado": 1.85245,
+                "exibicao": "1,9%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 5593,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.27965,
+                  "exibicao": "0,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 6451,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.32255,
+                  "exibicao": "0,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 25005,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.25025,
+                  "exibicao": "1,3%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 1658,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0829,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 2469,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.12345,
+                  "exibicao": "0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 2324,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.1162,
+                  "exibicao": "0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 1.85245
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 810111,
+                "simulacoes": 2000000,
+                "percentual_estimado": 40.50555,
+                "exibicao": "40,5%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 458462,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 22.9231,
+                  "exibicao": "22,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 351649,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 17.58245,
+                  "exibicao": "17,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 40.50555
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -1.2348,
+            "ajuste_defesa_pct": 1.0361,
+            "ajuste_forca_pct": -0.1058,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 46.338
+        },
+        {
+          "clube": "Mirassol",
+          "posicao_atual": 15,
+          "pontos_atuais": 32,
+          "jogos_atuais": 28,
+          "rodada_referencia_clube": 28,
+          "ultimo_jogo_concluido_id": "401841245",
+          "hash_estado_clube": "b62adc7d55b05300f881aeff9946992e4509b92a61df04cfe0d39151745e1fcd",
+          "posicao_projetada": 14,
+          "posicao_media_estimada": 13.7941,
+          "posicao_mediana": 14,
+          "faixa_posicao_80": {
+            "melhor": 10,
+            "pior": 17,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.00375,
+            0.03215,
+            0.1325,
+            0.4337,
+            1.1102,
+            2.28555,
+            3.8438,
+            5.67775,
+            7.66985,
+            9.69245,
+            11.46135,
+            13.0108,
+            13.6584,
+            13.01905,
+            10.65115,
+            6.549,
+            0.75385,
+            0.0147
+          ],
+          "pontos_projetados": 46,
+          "pontos_media_estimada": 46.058,
+          "pontos_percentis": {
+            "p10": 41,
+            "p50": null,
+            "p90": 51
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 9.22835,
+          "sul_americana_pct": 34.59265,
+          "libertadores_base_pct": 0.1684,
+          "sul_americana_base_pct": 21.02085,
+          "rebaixamento_pct": 17.9687,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "<0,1%",
+            "g6": "0,6%",
+            "libertadores_base": "0,2%",
+            "sul_americana_base": "21,0%",
+            "rebaixamento": "18,0%",
+            "libertadores": "9,2%",
+            "sul_americana": "34,6%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 718,
+            "g6": 12042,
+            "libertadores_base": 3368,
+            "sul_americana_base": 420417,
+            "rebaixamento": 359374,
+            "libertadores": 184567,
+            "sul_americana": 691853
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 184567,
+                "simulacoes": 2000000,
+                "percentual_estimado": 9.22835,
+                "exibicao": "9,2%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 3368,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.1684,
+                  "exibicao": "0,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 115492,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 5.7746,
+                  "exibicao": "5,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 47754,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.3877,
+                  "exibicao": "2,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 17953,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.89765,
+                  "exibicao": "0,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 42849,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.14245,
+                  "exibicao": "2,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 33858,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.6929,
+                  "exibicao": "1,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 38785,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.93925,
+                  "exibicao": "1,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 9.22835
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 691853,
+                "simulacoes": 2000000,
+                "percentual_estimado": 34.59265,
+                "exibicao": "34,6%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 368214,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 18.4107,
+                  "exibicao": "18,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 323639,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 16.18195,
+                  "exibicao": "16,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 34.59265
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -0.2469,
+            "ajuste_defesa_pct": 0.719,
+            "ajuste_forca_pct": 0.2349,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 46.058
+        },
+        {
+          "clube": "Vasco da Gama",
+          "posicao_atual": 16,
+          "pontos_atuais": 31,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 28,
+          "ultimo_jogo_concluido_id": "401841247",
+          "hash_estado_clube": "41e2d80325351f494d6eb46728dbc53a458d8e9c485c3df032a2535be07cb18f",
+          "posicao_projetada": 14,
+          "posicao_media_estimada": 14.4304,
+          "posicao_mediana": 15,
+          "faixa_posicao_80": {
+            "melhor": 11,
+            "pior": 18,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.00255,
+            0.0158,
+            0.0714,
+            0.261,
+            0.7744,
+            1.63825,
+            2.7916,
+            4.2338,
+            5.8421,
+            7.71855,
+            9.7695,
+            11.84955,
+            13.95945,
+            15.4447,
+            14.32695,
+            9.54175,
+            1.71735,
+            0.0413
+          ],
+          "pontos_projetados": 45,
+          "pontos_media_estimada": 44.826,
+          "pontos_percentis": {
+            "p10": 40,
+            "p50": null,
+            "p90": 50
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 7.20335,
+          "sul_americana_pct": 27.66245,
+          "libertadores_base_pct": 0.08975,
+          "sul_americana_base_pct": 15.54115,
+          "rebaixamento_pct": 25.62735,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "<0,1%",
+            "g6": "0,4%",
+            "libertadores_base": "<0,1%",
+            "sul_americana_base": "15,5%",
+            "rebaixamento": "25,6%",
+            "libertadores": "7,2%",
+            "sul_americana": "27,7%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 367,
+            "g6": 7015,
+            "libertadores_base": 1795,
+            "sul_americana_base": 310823,
+            "rebaixamento": 512547,
+            "libertadores": 144067,
+            "sul_americana": 553249
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 144067,
+                "simulacoes": 2000000,
+                "percentual_estimado": 7.20335,
+                "exibicao": "7,2%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1795,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.08975,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 95863,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 4.79315,
+                  "exibicao": "4,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 34443,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.72215,
+                  "exibicao": "1,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 11966,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.5983,
+                  "exibicao": "0,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 32897,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.64485,
+                  "exibicao": "1,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 31436,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.5718,
+                  "exibicao": "1,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 31530,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.5765,
+                  "exibicao": "1,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 7.20335
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 553249,
+                "simulacoes": 2000000,
+                "percentual_estimado": 27.66245,
+                "exibicao": "27,7%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 278458,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 13.9229,
+                  "exibicao": "13,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 274791,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 13.73955,
+                  "exibicao": "13,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 27.66245
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -0.1325,
+            "ajuste_defesa_pct": 1.8264,
+            "ajuste_forca_pct": 0.8422,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 44.826
+        },
+        {
+          "clube": "Internacional",
+          "posicao_atual": 18,
+          "pontos_atuais": 28,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 27,
+          "ultimo_jogo_concluido_id": "401841228",
+          "hash_estado_clube": "fd02f4e84228326301f0ff8b9908735d2839124e69bdbdf2d475f5a23836c11d",
+          "posicao_projetada": 16,
+          "posicao_media_estimada": 16.1089,
+          "posicao_mediana": 17,
+          "faixa_posicao_80": {
+            "melhor": 13,
+            "pior": 18,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.00015,
+            0.0014,
+            0.00885,
+            0.0367,
+            0.1323,
+            0.37595,
+            0.774,
+            1.39,
+            2.25535,
+            3.46455,
+            5.08,
+            7.16895,
+            10.19365,
+            14.61255,
+            21.2633,
+            26.97395,
+            6.04655,
+            0.2218
+          ],
+          "pontos_projetados": 42,
+          "pontos_media_estimada": 42.178,
+          "pontos_percentis": {
+            "p10": 37,
+            "p50": null,
+            "p90": 48
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 17.25915,
+          "sul_americana_pct": 10.4215,
+          "libertadores_base_pct": 0.0104,
+          "sul_americana_base_pct": 4.9643,
+          "rebaixamento_pct": 54.5056,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "<0,1%",
+            "g6": "<0,1%",
+            "libertadores_base": "<0,1%",
+            "sul_americana_base": "5,0%",
+            "rebaixamento": "54,5%",
+            "libertadores": "17,3%",
+            "sul_americana": "10,4%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 31,
+            "g6": 942,
+            "libertadores_base": 208,
+            "sul_americana_base": 99286,
+            "rebaixamento": 1090112,
+            "libertadores": 345183,
+            "sul_americana": 208430
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 345183,
+                "simulacoes": 2000000,
+                "percentual_estimado": 17.25915,
+                "exibicao": "17,3%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 208,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0104,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 343024,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 17.1512,
+                  "exibicao": "17,2%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 1951,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.09755,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 135799,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 6.78995,
+                  "exibicao": "6,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 96975,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 4.84875,
+                  "exibicao": "4,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 110250,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 5.5125,
+                  "exibicao": "5,5%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 17.25915
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 208430,
+                "simulacoes": 2000000,
+                "percentual_estimado": 10.4215,
+                "exibicao": "10,4%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 80294,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 4.0147,
+                  "exibicao": "4,0%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 128136,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 6.4068,
+                  "exibicao": "6,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 10.4215
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -0.6408,
+            "ajuste_defesa_pct": -0.1992,
+            "ajuste_forca_pct": -0.4203,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 42.178
+        },
+        {
+          "clube": "Grêmio",
+          "posicao_atual": 17,
+          "pontos_atuais": 28,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 21,
+          "ultimo_jogo_concluido_id": "401841176",
+          "hash_estado_clube": "a3e5bc3208fee946d50265544e24dd79c745d01285b08ee331ab1a6fcb9a2f75",
+          "posicao_projetada": 16,
+          "posicao_media_estimada": 16.4293,
+          "posicao_mediana": 17,
+          "faixa_posicao_80": {
+            "melhor": 13,
+            "pior": 18,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.0001,
+            0.00065,
+            0.00495,
+            0.0206,
+            0.0781,
+            0.22695,
+            0.523,
+            0.99475,
+            1.7045,
+            2.7469,
+            4.16675,
+            6.2005,
+            9.0945,
+            13.7151,
+            21.58395,
+            29.89845,
+            8.6906,
+            0.34965
+          ],
+          "pontos_projetados": 41,
+          "pontos_media_estimada": 41.156,
+          "pontos_percentis": {
+            "p10": 36,
+            "p50": null,
+            "p90": 47
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 11.99915,
+          "sul_americana_pct": 8.5147,
+          "libertadores_base_pct": 0.0057,
+          "sul_americana_base_pct": 3.5479,
+          "rebaixamento_pct": 60.52265,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "<0,1%",
+            "g6": "<0,1%",
+            "libertadores_base": "<0,1%",
+            "sul_americana_base": "3,5%",
+            "rebaixamento": "60,5%",
+            "libertadores": "12,0%",
+            "sul_americana": "8,5%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 15,
+            "g6": 526,
+            "libertadores_base": 114,
+            "sul_americana_base": 70958,
+            "rebaixamento": 1210453,
+            "libertadores": 239983,
+            "sul_americana": 170294
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 239983,
+                "simulacoes": 2000000,
+                "percentual_estimado": 11.99915,
+                "exibicao": "12,0%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 114,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0057,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 238679,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 11.93395,
+                  "exibicao": "11,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 1190,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0595,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 94681,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 4.73405,
+                  "exibicao": "4,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 67635,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 3.38175,
+                  "exibicao": "3,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 76363,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 3.81815,
+                  "exibicao": "3,8%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 11.99915
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 170294,
+                "simulacoes": 2000000,
+                "percentual_estimado": 8.5147,
+                "exibicao": "8,5%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 61363,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 3.06815,
+                  "exibicao": "3,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 108931,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 5.44655,
+                  "exibicao": "5,4%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 8.5147
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -1.1631,
+            "ajuste_defesa_pct": -1.1892,
+            "ajuste_forca_pct": -1.1762,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 41.156
+        },
+        {
+          "clube": "Remo",
+          "posicao_atual": 19,
+          "pontos_atuais": 23,
+          "jogos_atuais": 28,
+          "rodada_referencia_clube": 28,
+          "ultimo_jogo_concluido_id": "401841244",
+          "hash_estado_clube": "1c5962aa7a20fa672568d65f38e77bb7aee87fcf30b1ff8ba96ad8b6fa2ed1eb",
+          "posicao_projetada": 19,
+          "posicao_media_estimada": 18.8586,
+          "posicao_mediana": 19,
+          "faixa_posicao_80": {
+            "melhor": 18,
+            "pior": 20,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            5e-05,
+            0.00025,
+            0.00095,
+            0.0043,
+            0.0111,
+            0.02925,
+            0.0793,
+            0.19325,
+            0.492,
+            1.26765,
+            3.65435,
+            12.33125,
+            68.87605,
+            13.06025
+          ],
+          "pontos_projetados": 34,
+          "pontos_media_estimada": 33.881,
+          "pontos_percentis": {
+            "p10": 29,
+            "p50": null,
+            "p90": 39
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 6.0521,
+          "sul_americana_pct": 0.12525,
+          "libertadores_base_pct": 0.0,
+          "sul_americana_base_pct": 0.01665,
+          "rebaixamento_pct": 97.9219,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "<0,1%",
+            "g6": "<0,1%",
+            "libertadores_base": "<0,1%",
+            "sul_americana_base": "<0,1%",
+            "rebaixamento": "97,9%",
+            "libertadores": "6,1%",
+            "sul_americana": "0,1%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 0,
+            "g6": 0,
+            "libertadores_base": 0,
+            "sul_americana_base": 333,
+            "rebaixamento": 1958438,
+            "libertadores": 121042,
+            "sul_americana": 2505
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 121042,
+                "simulacoes": 2000000,
+                "percentual_estimado": 6.0521,
+                "exibicao": "6,1%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "<0,1%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": 0.00015
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 121042,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 6.0521,
+                  "exibicao": "6,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "<0,1%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": 0.00015
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 39677,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.98385,
+                  "exibicao": "2,0%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 38982,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.9491,
+                  "exibicao": "1,9%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 42383,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 2.11915,
+                  "exibicao": "2,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 6.0521
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 2505,
+                "simulacoes": 2000000,
+                "percentual_estimado": 0.12525,
+                "exibicao": "0,1%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 316,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0158,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 2189,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.10945,
+                  "exibicao": "0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 0.12525
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": -1.0751,
+            "ajuste_defesa_pct": -0.1861,
+            "ajuste_forca_pct": -0.6316,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 33.881
+        },
+        {
+          "clube": "Chapecoense",
+          "posicao_atual": 20,
+          "pontos_atuais": 18,
+          "jogos_atuais": 27,
+          "rodada_referencia_clube": 28,
+          "ultimo_jogo_concluido_id": "401841239",
+          "hash_estado_clube": "5d856972888d73fbb76a991f1e4312ae992dfcafdadeda85740568959f4fa5e4",
+          "posicao_projetada": 20,
+          "posicao_media_estimada": 19.8488,
+          "posicao_mediana": 20,
+          "faixa_posicao_80": {
+            "melhor": 19,
+            "pior": 20,
+            "percentil_inferior": 10,
+            "percentil_superior": 90
+          },
+          "distribuicao_posicoes_pct": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            5e-05,
+            0.0002,
+            0.00055,
+            0.00235,
+            0.00965,
+            0.0337,
+            0.1534,
+            0.95195,
+            12.54955,
+            86.2986
+          ],
+          "pontos_projetados": 28,
+          "pontos_media_estimada": 27.901,
+          "pontos_percentis": {
+            "p10": 23,
+            "p50": null,
+            "p90": 33
+          },
+          "campeao_pct": 0.0,
+          "libertadores_pct": 1.98225,
+          "sul_americana_pct": 0.00075,
+          "libertadores_base_pct": 0.0,
+          "sul_americana_base_pct": 5e-05,
+          "rebaixamento_pct": 99.9535,
+          "exibicao": {
+            "campeao": "<0,1%",
+            "g4": "<0,1%",
+            "g6": "<0,1%",
+            "libertadores_base": "<0,1%",
+            "sul_americana_base": "<0,1%",
+            "rebaixamento": ">99,9%",
+            "libertadores": "2,0%",
+            "sul_americana": "<0,1%"
+          },
+          "ocorrencias": {
+            "campeao": 0,
+            "g4": 0,
+            "g6": 0,
+            "libertadores_base": 0,
+            "sul_americana_base": 1,
+            "rebaixamento": 1999070,
+            "libertadores": 39645,
+            "sul_americana": 15
+          },
+          "decomposicao_chances": {
+            "libertadores": {
+              "total": {
+                "ocorrencias": 39645,
+                "simulacoes": 2000000,
+                "percentual_estimado": 1.98225,
+                "exibicao": "2,0%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "<0,1%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": 0.00015
+                },
+                "via_copa_do_brasil": {
+                  "ocorrencias": 39645,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 1.98225,
+                  "exibicao": "2,0%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_libertadores": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Libertadores",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_titulo_sul_americana": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "0%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": false,
+                  "impossivel_estruturalmente": true,
+                  "motivo_impossibilidade": "clube não está mais ativo na Sul-Americana",
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 0,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0,
+                  "exibicao": "<0,1%",
+                  "zero_observado": true,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": 0.00015
+                }
+              },
+              "subvias_copa_do_brasil": {
+                "campeao": {
+                  "ocorrencias": 11077,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.55385,
+                  "exibicao": "0,6%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice": {
+                  "ocorrencias": 14225,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.71125,
+                  "exibicao": "0,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "vice_herda_vaga_direta": {
+                  "ocorrencias": 14343,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.71715,
+                  "exibicao": "0,7%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 1.98225
+            },
+            "sul_americana": {
+              "total": {
+                "ocorrencias": 15,
+                "simulacoes": 2000000,
+                "percentual_estimado": 0.00075,
+                "exibicao": "<0,1%",
+                "zero_observado": false,
+                "possivel_estruturalmente": true,
+                "impossivel_estruturalmente": false,
+                "motivo_impossibilidade": null,
+                "limite_superior_95_regra_dos_tres_pct": null
+              },
+              "vias": {
+                "via_brasileirao": {
+                  "ocorrencias": 1,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 5e-05,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                },
+                "via_repasse": {
+                  "ocorrencias": 14,
+                  "simulacoes": 2000000,
+                  "percentual_estimado": 0.0007,
+                  "exibicao": "<0,1%",
+                  "zero_observado": false,
+                  "possivel_estruturalmente": true,
+                  "impossivel_estruturalmente": false,
+                  "motivo_impossibilidade": null,
+                  "limite_superior_95_regra_dos_tres_pct": null
+                }
+              },
+              "soma_vias_pct": 0.00075
+            }
+          },
+          "tendencia_recente": {
+            "metodo": "EWMA sem sazonalidade",
+            "jogos_considerados": 12,
+            "ajuste_ataque_pct": 0.3041,
+            "ajuste_defesa_pct": 1.0309,
+            "ajuste_forca_pct": 0.6668,
+            "classificacao": "estável",
+            "peso_no_modelo": 0.08
+          },
+          "pontos_medios": 27.901
+        }
+      ],
+      "hash_anterior": "93b23a7f879f9b78230b82d1dacb440c3a97ce763bbcc91eba2438f503ebf252",
+      "hash_snapshot": "e03a85ac5fbc5abed9c5de483c6b0e230ddb2cc19afe29481568c8c41a799ece"
     }
   ]
 }
