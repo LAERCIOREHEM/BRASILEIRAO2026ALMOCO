@@ -1,11 +1,11 @@
 {
   "descricao": "Auditoria da consolidação de transmissões do Brasileirão.",
   "resumo": {
-    "jogos_na_janela": 41,
-    "jogos_com_transmissao": 38,
+    "jogos_na_janela": 42,
+    "jogos_com_transmissao": 39,
     "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 11,
+    "registros_preservados": 2,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,138 +15,41 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 19,
-      "duracao_ms": 8421
+      "jogos_com_canal": 37,
+      "duracao_ms": 26373
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 6,
-      "jogos_com_canal": 16,
-      "duracao_ms": 80334
+      "artigos_consultados": 0,
+      "jogos_com_canal": 0,
+      "duracao_ms": 2540
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260917-20261024&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260919-20261026&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
     }
   },
   "sem_transmissao": [],
   "preservados": [
     {
-      "event_id": "401841242",
-      "jogo": "Vitória x Cruzeiro",
-      "canais": [
-        "Premiere",
-        "Globo",
-        "GE TV"
-      ]
-    },
-    {
-      "event_id": "401841169",
-      "jogo": "São Paulo x Santos",
-      "canais": [
-        "Premiere",
-        "Prime Video",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841255",
-      "jogo": "Internacional x Corinthians",
-      "canais": [
-        "Globo",
-        "GE TV",
-        "Premiere",
-        "Disney+ / ESPN",
-        "Prime Video",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841252",
-      "jogo": "Remo x Grêmio",
+      "event_id": "401841253",
+      "jogo": "Bragantino x Mirassol",
       "canais": [
         "Globo"
       ]
     },
     {
-      "event_id": "401841249",
-      "jogo": "Cruzeiro x São Paulo",
+      "event_id": "401841266",
+      "jogo": "Bahia x Mirassol",
       "canais": [
-        "Globo",
-        "GE TV",
-        "Premiere",
-        "Prime Video",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841254",
-      "jogo": "Palmeiras x Bahia",
-      "canais": [
-        "Premiere",
-        "Globo",
-        "GE TV",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841262",
-      "jogo": "Vasco da Gama x Remo",
-      "canais": [
-        "Premiere",
-        "Prime Video",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841261",
-      "jogo": "Palmeiras x Corinthians",
-      "canais": [
-        "Globo",
-        "GE TV"
-      ]
-    },
-    {
-      "event_id": "401841270",
-      "jogo": "Atlético-MG x Coritiba",
-      "canais": [
-        "Premiere",
-        "Prime Video",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841272",
-      "jogo": "Corinthians x Vitória",
-      "canais": [
-        "Premiere",
-        "Globo",
-        "GE TV",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841271",
-      "jogo": "Athletico-PR x Palmeiras",
-      "canais": [
-        "Premiere",
-        "Globo",
-        "GE TV",
-        "SporTV"
+        "Globo"
       ]
     }
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260917-20261024&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260919-20261026&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
   ],
-  "artigos_ge_descobertos": [
-    "https://ge.globo.com/sp/campinas-e-regiao/futebol/brasileirao-serie-b/noticia/2026/09/19/ponte-preta-x-crb-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/09/19/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-28a-rodada.ghtml",
-    "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/09/19/sao-paulo-x-internacional-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/pa/futebol/brasileirao-serie-a/noticia/2026/09/19/remo-x-santos-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/sp/tem-esporte/futebol/brasileirao-serie-a/noticia/2026/09/19/mirassol-x-botafogo-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/pr/futebol/noticia/2026/09/18/athletico-x-azuriz-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
-  ],
-  "atualizado_em": "2026-09-19T18:34:56-03:00"
+  "artigos_ge_descobertos": [],
+  "atualizado_em": "2026-09-21T18:36:14-03:00"
 }
