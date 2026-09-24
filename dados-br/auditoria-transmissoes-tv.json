@@ -3,7 +3,7 @@
   "resumo": {
     "jogos_na_janela": 52,
     "jogos_com_transmissao": 46,
-    "jogos_sem_transmissao_14d": 0,
+    "jogos_sem_transmissao_14d": 1,
     "jogos_criticos_sem_transmissao_72h": 0,
     "registros_preservados": 3,
     "fontes_com_falha": 2
@@ -16,20 +16,29 @@
     "ge_agenda": {
       "ok": true,
       "jogos_com_canal": 43,
-      "duracao_ms": 10347
+      "duracao_ms": 22294
     },
     "ge_artigos": {
       "ok": true,
       "artigos_consultados": 0,
       "jogos_com_canal": 0,
-      "duracao_ms": 4693
+      "duracao_ms": 3292
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260921-20261028&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260922-20261029&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
     }
   },
-  "sem_transmissao": [],
+  "sem_transmissao": [
+    {
+      "event_id": "401841250",
+      "rodada": 29,
+      "jogo": "Vitória x Chapecoense",
+      "data_iso": "2026-10-07T20:00",
+      "faltam_horas": 313.4,
+      "nivel": "aviso"
+    }
+  ],
   "preservados": [
     {
       "event_id": "401841253",
@@ -57,8 +66,8 @@
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260921-20261028&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260922-20261029&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
   ],
   "artigos_ge_descobertos": [],
-  "atualizado_em": "2026-09-23T18:37:03-03:00"
+  "atualizado_em": "2026-09-24T18:37:22-03:00"
 }
