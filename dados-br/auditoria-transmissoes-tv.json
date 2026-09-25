@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 46,
     "jogos_sem_transmissao_14d": 1,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 3,
+    "registros_preservados": 21,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,18 +15,18 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 43,
-      "duracao_ms": 22294
+      "jogos_com_canal": 25,
+      "duracao_ms": 16620
     },
     "ge_artigos": {
       "ok": true,
       "artigos_consultados": 0,
       "jogos_com_canal": 0,
-      "duracao_ms": 3292
+      "duracao_ms": 3460
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260922-20261029&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260923-20261030&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
     }
   },
   "sem_transmissao": [
@@ -35,7 +35,7 @@
       "rodada": 29,
       "jogo": "Vitória x Chapecoense",
       "data_iso": "2026-10-07T20:00",
-      "faltam_horas": 313.4,
+      "faltam_horas": 289.4,
       "nivel": "aviso"
     }
   ],
@@ -45,6 +45,41 @@
       "jogo": "Bragantino x Mirassol",
       "canais": [
         "Globo"
+      ]
+    },
+    {
+      "event_id": "401841257",
+      "jogo": "Botafogo x Vasco da Gama",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841251",
+      "jogo": "Santos x Flamengo",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841254",
+      "jogo": "Palmeiras x Bahia",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841258",
+      "jogo": "Atlético-MG x Santos",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841261",
+      "jogo": "Palmeiras x Corinthians",
+      "canais": [
+        "SporTV"
       ]
     },
     {
@@ -62,12 +97,103 @@
         "Prime Video",
         "SporTV"
       ]
+    },
+    {
+      "event_id": "401841269",
+      "jogo": "Bahia x Flamengo",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841272",
+      "jogo": "Corinthians x Vitória",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841277",
+      "jogo": "Fluminense x Santos",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841271",
+      "jogo": "Athletico-PR x Palmeiras",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841286",
+      "jogo": "Flamengo x Atlético-MG",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841283",
+      "jogo": "Palmeiras x Bragantino",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841282",
+      "jogo": "Santos x Bahia",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841281",
+      "jogo": "Vasco da Gama x Corinthians",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841280",
+      "jogo": "Vitória x Athletico-PR",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841296",
+      "jogo": "Bahia x São Paulo",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841290",
+      "jogo": "Grêmio x Athletico-PR",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841292",
+      "jogo": "Vasco da Gama x Flamengo",
+      "canais": [
+        "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841288",
+      "jogo": "Atlético-MG x Cruzeiro",
+      "canais": [
+        "SporTV"
+      ]
     }
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260922-20261029&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260923-20261030&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
   ],
   "artigos_ge_descobertos": [],
-  "atualizado_em": "2026-09-24T18:37:22-03:00"
+  "atualizado_em": "2026-09-25T18:38:20-03:00"
 }
