@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 46,
     "jogos_sem_transmissao_14d": 1,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 29,
+    "registros_preservados": 25,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,18 +15,18 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 17,
-      "duracao_ms": 5656
+      "jogos_com_canal": 21,
+      "duracao_ms": 8687
     },
     "ge_artigos": {
       "ok": true,
       "artigos_consultados": 0,
       "jogos_com_canal": 0,
-      "duracao_ms": 3387
+      "duracao_ms": 5669
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260924-20261031&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260925-20261101&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
     }
   },
   "sem_transmissao": [
@@ -35,7 +35,7 @@
       "rodada": 29,
       "jogo": "Vitória x Chapecoense",
       "data_iso": "2026-10-07T20:00",
-      "faltam_horas": 265.4,
+      "faltam_horas": 241.3,
       "nivel": "aviso"
     }
   ],
@@ -54,13 +54,6 @@
     {
       "event_id": "401841253",
       "jogo": "Bragantino x Mirassol",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841252",
-      "jogo": "Remo x Grêmio",
       "canais": [
         "Globo"
       ]
@@ -101,38 +94,10 @@
       ]
     },
     {
-      "event_id": "401841263",
-      "jogo": "Flamengo x Fluminense",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841267",
-      "jogo": "Grêmio x Internacional",
-      "canais": [
-        "SporTV"
-      ]
-    },
-    {
       "event_id": "401841261",
       "jogo": "Palmeiras x Corinthians",
       "canais": [
         "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841266",
-      "jogo": "Bahia x Mirassol",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841264",
-      "jogo": "Coritiba x Botafogo",
-      "canais": [
-        "Globo"
       ]
     },
     {
@@ -142,6 +107,13 @@
         "Premiere",
         "Prime Video",
         "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841269",
+      "jogo": "Bahia x Flamengo",
+      "canais": [
+        "Globo"
       ]
     },
     {
@@ -159,10 +131,10 @@
       ]
     },
     {
-      "event_id": "401841276",
-      "jogo": "Grêmio x Cruzeiro",
+      "event_id": "401841275",
+      "jogo": "Mirassol x Internacional",
       "canais": [
-        "SporTV"
+        "Globo"
       ]
     },
     {
@@ -173,8 +145,8 @@
       ]
     },
     {
-      "event_id": "401841279",
-      "jogo": "Coritiba x Grêmio",
+      "event_id": "401841286",
+      "jogo": "Flamengo x Atlético-MG",
       "canais": [
         "Globo"
       ]
@@ -188,6 +160,13 @@
         "Disney+ / ESPN",
         "SporTV",
         "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841284",
+      "jogo": "Mirassol x São Paulo",
+      "canais": [
+        "Globo"
       ]
     },
     {
@@ -219,13 +198,6 @@
       ]
     },
     {
-      "event_id": "401841278",
-      "jogo": "Chapecoense x Fluminense",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
       "event_id": "401841296",
       "jogo": "Bahia x São Paulo",
       "canais": [
@@ -233,8 +205,8 @@
       ]
     },
     {
-      "event_id": "401841291",
-      "jogo": "Bragantino x Chapecoense",
+      "event_id": "401841290",
+      "jogo": "Grêmio x Athletico-PR",
       "canais": [
         "Globo"
       ]
@@ -256,8 +228,8 @@
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260924-20261031&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260925-20261101&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
   ],
   "artigos_ge_descobertos": [],
-  "atualizado_em": "2026-09-26T18:38:55-03:00"
+  "atualizado_em": "2026-09-27T18:39:57-03:00"
 }
