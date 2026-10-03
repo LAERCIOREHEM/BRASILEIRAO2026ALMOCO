@@ -9,7 +9,7 @@ Roda 1x por dia (08:00 BRT = 11:00 UTC) pelo GitHub Actions.
 Variáveis de ambiente esperadas (configuradas como secrets no GitHub):
 - RESEND_API_KEY: chave da API do Resend (re_...)
 - EMAIL_DESTINO: email pra receber o aviso
-- EMAIL_REMETENTE: opcional, default 'onboarding@resend.dev'
+- Remetente fixo do projeto: 'Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>'
 """
 
 import json
@@ -22,6 +22,7 @@ from urllib.parse import quote
 
 
 FUSO_BRASILIA = timezone(timedelta(hours=-3))
+DEFAULT_EMAIL_SENDER = "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
 
 
 def agora_brasilia():
@@ -157,7 +158,7 @@ def main():
 
     api_key = os.environ.get("RESEND_API_KEY", "").strip()
     destino = os.environ.get("EMAIL_DESTINO", "").strip()
-    remetente = os.environ.get("EMAIL_REMETENTE", "onboarding@resend.dev").strip()
+    remetente = DEFAULT_EMAIL_SENDER
 
     if not api_key:
         print("ERRO: variavel RESEND_API_KEY nao configurada.")

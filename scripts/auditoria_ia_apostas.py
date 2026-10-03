@@ -28,7 +28,7 @@ GENERAL_AUDIT = ROOT / "dados-br" / "auditoria-geral.json"
 APURACAO = ROOT / "dados-br" / "apuracao.json"
 STATUS = ROOT / "dados-br" / "status-atualizacao.json"
 DEFAULT_MODEL = "gpt-5.6-terra"
-DEFAULT_SENDER = "Auditoria IA · Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>"
+DEFAULT_SENDER = "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
 
 
 def now_brt() -> datetime:
@@ -227,7 +227,7 @@ def send_critical_email(
     if not items:
         items.append("<li>Estado crítico detectado; consulte os artefatos de auditoria para os detalhes.</li>")
     body = json.dumps({
-        "from": os.environ.get("EMAIL_REMETENTE", "").strip() or DEFAULT_SENDER,
+        "from": DEFAULT_SENDER,
         "to": [dest],
         "subject": "[BR2026 Almoço] Auditoria IA — problema crítico nas apostas",
         "html": "<h2>Auditoria IA das apostas</h2><p>Foi detectado problema que exige revisão.</p><ul>" + "".join(items) + "</ul>",
@@ -298,7 +298,9 @@ def self_test() -> None:
         assert dossier["auditoria_blocos"]["resumo"]["abertos"] == 1
         sc=schema(); assert sc["additionalProperties"] is False
         assert canonical_hash(dossier) == canonical_hash(dossier)
-    print("SELFTEST OK: dossiê agregado sem palpites individuais, coexistência de blocos e schema IA validados.")
+        assert DEFAULT_SENDER == "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
+        assert "TUPAL" not in DEFAULT_SENDER.upper()
+    print("SELFTEST OK: dossiê agregado, schema IA e identidade de e-mail validados.")
 
 
 def main() -> int:

@@ -40,7 +40,7 @@ APURACAO_PATH = ROOT / "dados-br" / "apuracao.json"
 SITE_RANKING_URL = "https://brasileirao2026almoco.com.br/apostas.html?aba=ranking"
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
-DEFAULT_SENDER = "Bolão Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>"
+DEFAULT_SENDER = "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
 BLOCOS = ((21, 23), (24, 26), (27, 29), (30, 32), (33, 35), (36, 38))
 
 
@@ -227,19 +227,22 @@ def rpc_service(name: str, payload: Mapping[str, Any]) -> Any:
 def email_opening(block: Mapping[str, Any]) -> tuple[bool, str]:
     key = os.environ.get("RESEND_API_KEY", "").strip()
     destination = os.environ.get("EMAIL_DESTINO", "").strip()
-    sender = os.environ.get("EMAIL_REMETENTE", DEFAULT_SENDER).strip() or DEFAULT_SENDER
+    sender = DEFAULT_SENDER
     if not key or not destination:
         return False, "RESEND_API_KEY/EMAIL_DESTINO não configurados"
     start = int(block.get("rodada_inicio") or 0)
     end = int(block.get("rodada_fim") or 0)
     close = parse_dt(block.get("fecha_em"))
     close_text = close.strftime("%d/%m/%Y às %H:%M") if close else "horário configurado no site"
-    subject = f"Brasileirão 2026 Almoço — Rodadas {start}–{end} abertas"
+    subject = f"Brasileirão Almoço — Rodadas {start}–{end} abertas"
     html = (
         f"<h2>Rodadas {start}–{end} estão abertas!</h2>"
-        "<p><strong>Envie mensagem no grupo para fazerem seus palpites.</strong></p>"
-        f"<p>São 30 jogos, das rodadas {start}, {start + 1} e {end}. O prazo atual termina em <strong>{close_text}</strong>.</p>"
-        "<p>Um bloco anterior ainda em apuração por causa de jogo adiado não impede este bloco de funcionar normalmente.</p>"
+        "<p>Os palpites do novo bloco já podem ser enviados.</p>"
+        f"<p>São <strong>30 jogos</strong>, correspondentes às rodadas {start}, {start + 1} e {end}.</p>"
+        f"<p><strong>Prazo para envio:</strong><br>{close_text}</p>"
+        "<p>Um bloco anterior ainda em apuração por causa de jogo adiado não interfere no funcionamento deste novo bloco.</p>"
+        "<p>Avise o grupo para que todos façam seus palpites dentro do prazo.</p>"
+        "<p style=\"color:#667085;font-size:12px\">Brasileirão 2026 Almoço</p>"
     )
     body = json.dumps({"from": sender, "to": [destination], "subject": subject, "html": html}, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
@@ -288,7 +291,7 @@ def completion_details(block: Mapping[str, Any], apuracao: Mapping[str, Any]) ->
 def email_completion(block: Mapping[str, Any], details: Mapping[str, Any]) -> tuple[bool, str]:
     key = os.environ.get("RESEND_API_KEY", "").strip()
     destination = os.environ.get("EMAIL_DESTINO", "").strip()
-    sender = os.environ.get("EMAIL_REMETENTE", DEFAULT_SENDER).strip() or DEFAULT_SENDER
+    sender = DEFAULT_SENDER
     if not key or not destination:
         return False, "RESEND_API_KEY/EMAIL_DESTINO não configurados"
     start = int(details.get("rodada_inicio") or block.get("rodada_inicio") or 0)
@@ -617,7 +620,9 @@ def self_test() -> int:
         [{"bloco_id":"x","rodada_inicio":21,"email_conclusao_pendente":True,"conclusao_email_enviado_em":None}],
     )
     assert merged_states[0]["email_conclusao_pendente"] is True
-    print("SELFTEST OK: 30 jogos/bloco, deadline congelado após primeiro palpite, não-reabertura e e-mail final validados.")
+    assert DEFAULT_SENDER == "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
+    assert "TUPAL" not in DEFAULT_SENDER.upper()
+    print("SELFTEST OK: blocos, deadline e identidade de e-mail do Brasileirão validados.")
     return 0
 
 

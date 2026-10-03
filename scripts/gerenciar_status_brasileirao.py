@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "dados-br" / "status-atualizacao.json"
 TZ = timezone(timedelta(hours=-3))
 FAILURE_ALERT_COOLDOWN = timedelta(hours=6)
-DEFAULT_EMAIL_SENDER = "Avisos · Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>"
+DEFAULT_EMAIL_SENDER = "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
 FAILURE_STATUSES = frozenset({"preservado", "erro"})
 STATUS_REFRESH_INTERVAL = timedelta(hours=1)
 SNAPSHOT_FILES = (
@@ -262,7 +262,7 @@ def email_html(payload: dict[str, Any]) -> str:
 def send_resend(payload: dict[str, Any]) -> tuple[bool, str]:
     key = os.environ.get("RESEND_API_KEY", "").strip()
     destination = os.environ.get("EMAIL_DESTINO", "").strip()
-    sender = os.environ.get("EMAIL_REMETENTE", DEFAULT_EMAIL_SENDER).strip() or DEFAULT_EMAIL_SENDER
+    sender = DEFAULT_EMAIL_SENDER
     if not key or not destination:
         return False, "secrets RESEND_API_KEY/EMAIL_DESTINO não configurados"
     status_label = failure_label(payload)
@@ -393,7 +393,8 @@ def selftest() -> None:
         recovered = status_from_env(error)
         assert recovered["status_anterior"] == "erro"
         assert not should_notify(recovered), "recuperação não deve enviar e-mail"
-        assert DEFAULT_EMAIL_SENDER == "Avisos · Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>"
+        assert DEFAULT_EMAIL_SENDER == "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
+        assert "TUPAL" not in DEFAULT_EMAIL_SENDER.upper()
 
     OUTPUT = original_output
     SNAPSHOT_FILES = original_files

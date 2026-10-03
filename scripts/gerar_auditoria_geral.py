@@ -24,7 +24,7 @@ from typing import Any, Mapping
 ROOT = Path(__file__).resolve().parents[1]
 TZ = timezone(timedelta(hours=-3))
 OUT = ROOT / "dados-br" / "auditoria-geral.json"
-DEFAULT_EMAIL_SENDER = "Auditoria · Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>"
+DEFAULT_EMAIL_SENDER = "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
 
 FILES = {
     "calendario": ROOT / "dados-br" / "calendario-completo.json",
@@ -408,7 +408,7 @@ def maybe_notify(payload: dict[str, Any], previous: Mapping[str, Any]) -> tuple[
     if not key or not destination:
         return False, "secrets RESEND_API_KEY/EMAIL_DESTINO não configurados"
     body = json.dumps({
-        "from": os.environ.get("EMAIL_REMETENTE", DEFAULT_EMAIL_SENDER).strip() or DEFAULT_EMAIL_SENDER,
+        "from": DEFAULT_EMAIL_SENDER,
         "to": [destination],
         "subject": f"[BR2026 Almoço] Auditoria CRÍTICA — {len(payload.get('criticos') or [])} problema(s)",
         "html": email_html(payload),

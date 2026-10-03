@@ -21,6 +21,7 @@ from typing import Any
 
 FUSO_BRASILIA = timezone(timedelta(hours=-3))
 SITE_URL = "https://brasileirao2026almoco.com.br/desafios-mesa.html"
+DEFAULT_EMAIL_SENDER = "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
 
 
 def agora_brasilia() -> datetime:
@@ -132,7 +133,9 @@ def self_test() -> None:
     assert "06/12/2026" in body
     assert SITE_URL in body
     assert formatar_data("valor-invalido") == "—"
-    print("OK: montagem, escape de HTML, datas e link validados.")
+    assert DEFAULT_EMAIL_SENDER == "Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>"
+    assert "TUPAL" not in DEFAULT_EMAIL_SENDER.upper()
+    print("OK: montagem, datas, link e identidade de e-mail validados.")
 
 
 def main() -> int:
@@ -154,7 +157,7 @@ def main() -> int:
         print("ERRO: secrets ausentes: " + ", ".join(missing))
         return 1
 
-    remetente = os.getenv("EMAIL_REMETENTE", "onboarding@resend.dev").strip()
+    remetente = DEFAULT_EMAIL_SENDER
     instante = agora_brasilia()
     try:
         alertas = consultar_alertas(required["SUPABASE_URL"], required["SUPABASE_SERVICE_ROLE_KEY"], instante)
