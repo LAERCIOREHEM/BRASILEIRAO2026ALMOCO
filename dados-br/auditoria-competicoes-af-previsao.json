@@ -2,7 +2,7 @@
   "schema_version": 1,
   "projeto": "AF-Previsão Continental",
   "etapa": "Execução 2.5 — coleta das competições que alteram vagas",
-  "gerado_em": "2026-10-03T14:20:03-03:00",
+  "gerado_em": "2026-10-03T14:24:49-03:00",
   "status": "parcial_com_snapshot_preservado",
   "fonte": "ESPN",
   "temporada": 2026,
@@ -26,13 +26,13 @@
       "status": "preservado_apos_falha",
       "arquivo": "dados-br/competicoes-af-previsao/sul-americana.json",
       "gerado_em": "2026-08-04T02:26:18-03:00",
-      "erro": "sul_americana: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.sudamericana/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 400: Bad Request"
+      "erro": "sul_americana: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.sudamericana/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: <urlopen error [SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1010)>"
     }
   ],
   "falhas": [
     "copa_do_brasil: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.copa_do_brazil/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 400: Bad Request",
     "libertadores: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.libertadores/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 400: Bad Request",
-    "sul_americana: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.sudamericana/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: HTTP Error 400: Bad Request"
+    "sul_americana: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/conmebol.sudamericana/scoreboard?dates=20260101-20260211&limit=250&lang=pt&region=br: <urlopen error [SSL: TLSV1_ALERT_INTERNAL_ERROR] tlsv1 alert internal error (_ssl.c:1010)>"
   ],
   "regras_operacionais": {
     "cache_minutos": 45,
