@@ -1,34 +1,34 @@
 {
   "schema_version": 1,
-  "gerado_em": "2026-10-03T18:36:56-03:00",
-  "status": "warning",
-  "fingerprint_critico": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "gerado_em": "2026-10-03T20:39:10-03:00",
+  "status": "critical",
+  "fingerprint_critico": "3ea4c5a14d35a7b79d89e3524d87a845a729e1fdd3bee50f74b473a59a500d60",
   "resumo": {
-    "criticos": 0,
-    "avisos": 1,
+    "criticos": 1,
+    "avisos": 0,
     "informativos": 0,
     "calendario_partidas": 380,
-    "resultados_registros": 278,
-    "resultados_fisicos": 278,
-    "tabela_partidas": 278,
-    "jogos_finais_bolao_desde_r20": 88,
-    "jogos_apurados_bolao": 88,
+    "resultados_registros": 279,
+    "resultados_fisicos": 279,
+    "tabela_partidas": 279,
+    "jogos_finais_bolao_desde_r20": 89,
+    "jogos_apurados_bolao": 89,
     "blocos_apostas_abertos": 1,
     "blocos_apostas_em_apuracao": 2,
     "blocos_apostas_concluidos": 1,
     "jogos_sem_estatisticas": 0,
-    "auditoria_tv_idade_horas": 71.9
+    "auditoria_tv_idade_horas": 73.9
   },
-  "criticos": [],
-  "avisos": [
+  "criticos": [
     {
-      "codigo": "AUDITORIA_TV_ANTIGA",
-      "mensagem": "A grade de transmissões está sem auditoria há mais de 36h.",
+      "codigo": "AUDITORIA_TV_MUITO_ANTIGA",
+      "mensagem": "A grade de transmissões está sem auditoria há mais de 72h.",
       "detalhes": {
-        "horas": 71.9
+        "horas": 73.9
       }
     }
   ],
+  "avisos": [],
   "informativos": [],
   "rodadas_divergentes_por_artefato": {
     "eventos": [],
@@ -40,5 +40,6 @@
     "fontes": "Auditoria local; nenhum dado esportivo é inventado ou recalculado pela auditoria.",
     "blocos": "Blocos independentes: um bloco anterior parcial pode coexistir normalmente com o seguinte aberto."
   },
-  "alerta_email": "dispensado: sem problema crítico"
+  "alerta_email": "enviado",
+  "alerta_email_em": "2026-10-03T20:39:10-03:00"
 }
