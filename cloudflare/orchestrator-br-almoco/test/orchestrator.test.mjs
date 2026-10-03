@@ -145,16 +145,16 @@ test("circuit breaker bloqueia repetição imediata do mesmo workflow", () => {
   assert.match(guard.reason, /circuit breaker/);
 });
 
-test("FINAL usa guard curto de convergência, não os 15 min genéricos", () => {
-  const run2m = [{
+test("FINAL respeita guard de 15 min e não cria tempestade de reexecução", () => {
+  const run4m = [{
     name: "Atualizar Brasileirao (ESPN)",
     status: "completed",
     conclusion: "success",
-    created_at: new Date(NOW - 2 * 60_000).toISOString(),
+    created_at: new Date(NOW - 4 * 60_000).toISOString(),
   }];
-  assert.equal(recentActionRunGuard(run2m, ACTIONS.FINAL, NOW, DEFAULTS)?.blocked, true);
-  const run4m = [{ ...run2m[0], created_at: new Date(NOW - 4 * 60_000).toISOString() }];
-  assert.equal(recentActionRunGuard(run4m, ACTIONS.FINAL, NOW, DEFAULTS), null);
+  assert.equal(recentActionRunGuard(run4m, ACTIONS.FINAL, NOW, DEFAULTS)?.blocked, true);
+  const run16m = [{ ...run4m[0], created_at: new Date(NOW - 16 * 60_000).toISOString() }];
+  assert.equal(recentActionRunGuard(run16m, ACTIONS.FINAL, NOW, DEFAULTS), null);
 });
 
 test("falha de blocos mantém backoff externo por 6h", () => {
@@ -367,7 +367,7 @@ test("safety trigger temporal chama Atualizar Brasileirão a partir de T+110 sem
   assert.match(dec.reason, /Safety trigger/);
 });
 
-test("safety trigger não dispara antes de T+110 e respeita retry de 5 minutos", () => {
+test("safety trigger não dispara antes de T+110 e respeita retry de 15 minutos", () => {
   const f = baseFiles();
   f.calendar.jogos[0].data_iso = "2026-09-03T15:41"; // T+109
   let snap = buildRepositorySnapshot(f, NOW);
@@ -377,7 +377,7 @@ test("safety trigger não dispara antes de T+110 e respeita retry de 5 minutos",
   snap = buildRepositorySnapshot(f, NOW);
   const recent = { finalSafetyLastAttempt: { g1: new Date(NOW - 4 * 60_000).toISOString() } };
   assert.equal(chooseSafetyFinalCandidate(snap, recent, NOW, DEFAULTS), null);
-  const old = { finalSafetyLastAttempt: { g1: new Date(NOW - 6 * 60_000).toISOString() } };
+  const old = { finalSafetyLastAttempt: { g1: new Date(NOW - 16 * 60_000).toISOString() } };
   assert.equal(chooseSafetyFinalCandidate(snap, old, NOW, DEFAULTS).action, ACTIONS.FINAL);
 });
 
@@ -409,9 +409,9 @@ test("FINAL já presente em resultados é deduplicado na memória", () => {
   assert.equal(pending.g1, undefined);
 });
 
-test("writer ativo bloqueável é reconhecido", () => {
+test("writer/publicador ativo bloqueável é reconhecido", () => {
   assert.ok(findActiveWriter([{ name: "Atualizar Brasileirao (ESPN)", status: "in_progress" }]));
-  assert.equal(findActiveWriter([{ name: "Deploy site", status: "in_progress" }]), null);
+  assert.ok(findActiveWriter([{ name: "Deploy site (GitHub Pages)", status: "in_progress" }]));
 });
 
 test("integração: safety trigger dispara workflow robusto mesmo quando ESPN devolve 403", async () => {

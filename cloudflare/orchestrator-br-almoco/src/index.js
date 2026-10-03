@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "2.0.0";
+export const VERSION = "2.0.1";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -52,6 +52,9 @@ export const WRITER_WORKFLOW_NAMES = new Set([
   "Auditar modelos AF-Previsão",
   "Buscar transmissões ao vivo do Brasileirão",
   "Sincronizar blocos de apostas",
+  // Publicação também ocupa a esteira operacional. Enquanto o Pages estiver
+  // publicando (ou preso), não iniciar outro writer que possa gerar novo deploy.
+  "Deploy site (GitHub Pages)",
 ]);
 
 const REPO_FILES = Object.freeze({
@@ -94,9 +97,9 @@ export const DEFAULTS = Object.freeze({
   finalRecoveryEndMinutes: 720,
   finalRecoveryIntervalMinutes: 5,
   finalDebounceSeconds: 0,
-  finalRetryMinutes: 3,
+  finalRetryMinutes: 15,
   finalSafetyStartMinutes: 110,
-  finalSafetyRetryMinutes: 5,
+  finalSafetyRetryMinutes: 15,
   fastCooldownMinutes: 3,
   mainCooldownMinutes: 30,
   apuracaoCooldownMinutes: 10,
@@ -742,6 +745,7 @@ function defaultState() {
     recentDecisions: [],
     afLastAttempt: null,
     finalSafetyLastAttempt: {},
+    githubBackoffUntil: null,
   };
 }
 
@@ -1119,10 +1123,10 @@ export function recentActionRunGuard(runs, action, nowMs, cfg = DEFAULTS) {
 
   // Defesa externa ao Durable Object: mesmo que o estado local seja perdido,
   // o histórico do GitHub impede re-dispatch imediato da mesma ação.
-  // FINAL é exceção deliberada: se o run terminou verde mas a ESPN não
-  // convergiu, a recuperação não pode ficar presa no guard genérico de 15 min.
+  // FINAL NÃO fura mais o guard genérico: o antigo retry de 3 min permitia
+  // tempestade de Atualizar Brasileirão quando o Pages ainda estava preso.
   const guardMinutes = action === ACTIONS.FINAL
-    ? Math.min(cfg.duplicateRunGuardMinutes, cfg.finalRetryMinutes)
+    ? Math.max(cfg.duplicateRunGuardMinutes, cfg.finalRetryMinutes)
     : cfg.duplicateRunGuardMinutes;
   if (ageMin >= 0 && ageMin < guardMinutes) {
     return {
@@ -1503,8 +1507,20 @@ export class BrAlmocoOrchestratorStateV1 {
     }
 
     // ACTIVE: só agora consulta Actions, evitando GitHub API a cada minuto.
+    // Se o GitHub responder rate limit/403/429, o Durable Object entra em
+    // quarentena de 60 min. Isso impede o cron de 1 min de prolongar o bloqueio.
+    const githubBackoffMs = parseDate(state.githubBackoffUntil);
+    if (Number.isFinite(githubBackoffMs) && nowMs < githubBackoffMs) {
+      state.result = "none";
+      state.resultReason = `GitHub API em backoff até ${state.githubBackoffUntil}; nenhum workflow será disparado`;
+      recordDecision(state, nowMs, { action: ACTIONS.NONE, reason: state.resultReason, result: "github_backoff" }, cfg);
+      await this.writeState(state);
+      return jsonResponse({ ok: true, action: ACTIONS.NONE, reason: state.resultReason });
+    }
+
     try {
       const runs = await listRuns(this.env, cfg.githubRunsLimit);
+      state.githubBackoffUntil = null;
       const writer = findActiveWriter(runs);
       if (writer) {
         state.result = "none";
@@ -1558,7 +1574,17 @@ export class BrAlmocoOrchestratorStateV1 {
       await this.writeState(state);
       return jsonResponse({ ok: true, action: selected.action, result: "dispatched", workflow, reason: selected.reason });
     } catch (error) {
-      state.errors.push(error?.message || String(error));
+      const message = error?.message || String(error);
+      state.errors.push(message);
+      const rateLimited = /rate limit|HTTP\s+(?:403|429)\b/i.test(message);
+      if (rateLimited) {
+        state.githubBackoffUntil = iso(nowMs + 60 * 60_000);
+        state.result = "none";
+        state.resultReason = `GitHub API limitou o orquestrador; backoff fail-closed de 60 min até ${state.githubBackoffUntil}`;
+        recordDecision(state, nowMs, { action: ACTIONS.NONE, reason: state.resultReason, result: "github_backoff" }, cfg);
+        await this.writeState(state);
+        return jsonResponse({ ok: true, action: ACTIONS.NONE, reason: state.resultReason });
+      }
       state.result = "degraded";
       state.resultReason = "dispatch/preflight GitHub falhou; nenhum estado foi assumido como publicado";
       recordDecision(state, nowMs, { action: selected.action, reason: state.errors.at(-1), result: "degraded" }, cfg);

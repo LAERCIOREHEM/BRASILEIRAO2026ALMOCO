@@ -1,8 +1,16 @@
-# Orchestrator BR Almoço 2.0.0 — Agenda/Event Driven
+# Orchestrator BR Almoço 2.0.1 — Agenda/Event Driven + Anti-storm
 
 O Cloudflare continua com Cron a cada minuto, mas o **GitHub não é mais um cron**.
 O Worker decide por evidência esportiva e mantém o sistema em `SLEEP` quando nada
 pode ter mudado.
+
+
+## Anti-storm 2.0.1
+
+- `Deploy site (GitHub Pages)` passa a ocupar a esteira operacional: enquanto a publicação estiver ativa, o Worker não abre outro writer.
+- FINAL deixa de repetir `Atualizar Brasileirão` a cada 3 minutos; o guard mínimo passa a 15 minutos.
+- HTTP 403/429/rate-limit da API do GitHub coloca o Worker em backoff fail-closed de 60 minutos.
+- O deploy normal do Pages não varre nem cancela deployments via REST; limpeza é exclusivamente manual e limitada.
 
 ## Objetivo da 2.0
 
