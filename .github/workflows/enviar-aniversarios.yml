@@ -8,12 +8,6 @@ on:
   # Permite rodar manualmente pra testar
   workflow_dispatch:
 
-  # Roda tambem quando o script ou workflow forem alterados
-  push:
-    paths:
-      - 'verificar_aniversarios.py'
-      - '.github/workflows/enviar-aniversarios.yml'
-
 permissions:
   contents: read
 

@@ -39,7 +39,6 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
-          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
           BRASILEIRAO_TEMPORADA: '2026'
         run: python scripts/sincronizar_blocos_apostas.py
 
@@ -95,14 +94,13 @@ jobs:
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
-          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
         shell: bash
         run: |
           python - <<'PY'
           import json, os, urllib.request
           key=os.getenv('RESEND_API_KEY','').strip(); dest=os.getenv('EMAIL_DESTINO','').strip()
           if not key or not dest: raise SystemExit(0)
-          sender=os.getenv('EMAIL_REMETENTE','').strip() or 'Apostas · Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>'
+          sender='Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>'
           body=json.dumps({'from':sender,'to':[dest],'subject':'[BR2026 Almoço] Falha na automação dos blocos','html':'<h2>Falha na automação dos blocos de apostas</h2><p>O workflow <b>Sincronizar blocos de apostas</b> falhou. Verifique o GitHub Actions antes do próximo prazo.</p>'}).encode()
           req=urllib.request.Request('https://api.resend.com/emails',data=body,headers={'Authorization':f'Bearer {key}','Content-Type':'application/json'},method='POST')
           urllib.request.urlopen(req,timeout=20).read()

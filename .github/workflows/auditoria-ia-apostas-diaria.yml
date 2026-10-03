@@ -90,7 +90,6 @@ jobs:
           OPENAI_AUDIT_MODEL: ${{ vars.OPENAI_AUDIT_MODEL || 'gpt-5.6-terra' }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
-          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
         run: python scripts/auditoria_ia_apostas.py
 
       - name: Validar artefato IA
@@ -138,7 +137,6 @@ jobs:
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
-          EMAIL_REMETENTE: ${{ secrets.EMAIL_REMETENTE }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
@@ -146,7 +144,7 @@ jobs:
           import json, os, urllib.request
           key=os.getenv('RESEND_API_KEY','').strip(); dest=os.getenv('EMAIL_DESTINO','').strip()
           if not key or not dest: raise SystemExit(0)
-          sender=os.getenv('EMAIL_REMETENTE','').strip() or 'Auditoria IA · Brasileirão 2026 <avisos@brasileirao2026almoco.com.br>'
+          sender='Brasileirão 2026 Almoço <avisos@brasileirao2026almoco.com.br>'
           url=os.getenv('RUN_URL','')
           body=json.dumps({'from':sender,'to':[dest],'subject':'[BR2026 Almoço] Falha na auditoria IA das apostas','html':f'<h2>Falha operacional na auditoria IA</h2><p>A camada de IA falhou. A automação determinística das apostas continua independente.</p><p><a href="{url}">Abrir GitHub Actions</a></p>'}).encode()
           req=urllib.request.Request('https://api.resend.com/emails',data=body,headers={'Authorization':f'Bearer {key}','Content-Type':'application/json'},method='POST')
