@@ -51,6 +51,7 @@ jobs:
           echo "Secrets exclusivos do BR Almoço presentes. Nenhum secret do Fórmula do Gol é referenciado por este workflow."
 
       - name: Testar PAT exclusivo do GitHub em leitura
+        if: ${{ inputs.mode == 'active' }}
         env:
           ORQ_GH_TOKEN: ${{ secrets.BR_ALMOCO_ORCHESTRATOR_GITHUB_TOKEN }}
         shell: bash
@@ -115,6 +116,7 @@ jobs:
           fi
 
       - name: Gravar PAT exclusivo como secret do Worker
+        if: ${{ inputs.mode == 'active' }}
         working-directory: cloudflare/orchestrator-br-almoco
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.BR_ALMOCO_CF_API_TOKEN }}
@@ -136,7 +138,7 @@ jobs:
           sleep 5
           BODY="$(curl -fsS --retry 6 --retry-delay 2 "$URL/health")"
           echo "$BODY"
-          printf '%s' "$BODY" | python -c 'import json,sys,os; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="2.0.0"; assert d.get("mode")==os.environ["MODE"]; assert d.get("liveIgnored") is True; assert d.get("orchestration",{}).get("strategy")=="agenda_event_driven_v2"; assert d.get("orchestration",{}).get("ageOnlyMainDispatchDisabled") is True; print("health 2.0 validado")'
+          printf '%s' "$BODY" | python -c 'import json,sys,os; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="2.0.1"; assert d.get("mode")==os.environ["MODE"]; assert d.get("liveIgnored") is True; assert d.get("orchestration",{}).get("strategy")=="agenda_event_driven_v2"; assert d.get("orchestration",{}).get("ageOnlyMainDispatchDisabled") is True; print("health 2.0 validado")'
 
       - name: Resumo operacional
         env:
@@ -145,7 +147,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Orchestrator BR Almoço 2.0.0 · Agenda/Event Driven"
+            echo "## Orchestrator BR Almoço 2.0.1 · Anti-storm"
             echo ""
             echo "- **Modo:** \`${MODE}\`"
             echo "- **Worker:** \`brasileirao-almoco-orchestrator\`"

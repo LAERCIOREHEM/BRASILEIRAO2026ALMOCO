@@ -345,109 +345,10 @@ jobs:
             echo "Publicando: o pacote mudou desde a ultima implantacao."
           fi
 
-      - name: Validar origem do Pages em GitHub Actions
-        if: steps.decisao.outputs.publicar == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "--- Configuracao atual do Pages ---"
-          gh api "repos/${GITHUB_REPOSITORY}/pages" \
-            --jq '{build_type, status, html_url, source}'
-
-          atual=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "desconhecido"')
-          echo "build_type atual: ${atual}"
-
-          if [[ "$atual" != "workflow" ]]; then
-            echo "ERRO: GitHub Pages nao esta com Source = GitHub Actions."
-            echo "A API para alterar build_type exige permissao administrativa que o GITHUB_TOKEN deste workflow nao possui."
-            echo "Corrija em Settings > Pages > Build and deployment > Source = GitHub Actions."
-            exit 1
-          fi
-
-          echo "OK: origem do Pages = GitHub Actions."
-
-      - name: Destravar fila do Pages antes de publicar
-        if: steps.decisao.outputs.publicar == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          # Este passo roda ANTES de actions/deploy-pages criar a implantacao deste run.
-          # Portanto, qualquer deployment do ambiente github-pages ainda em estado ativo
-          # pertence a uma execucao anterior e pode ser cancelado com seguranca.
-          #
-          # IMPORTANTE: nao ignorar o mesmo SHA. Reexecucoes do mesmo commit eram
-          # justamente a causa da fila infinita: o hotfix antigo pulava esses registros.
-          cancelar_ativos() {
-            local cancelados=0
-
-            gh api --paginate "repos/${GITHUB_REPOSITORY}/deployments?environment=github-pages&per_page=100" \
-              --jq '.[] | [.id, .sha, .created_at] | @tsv' > /tmp/deployments.tsv
-
-            while IFS=$'\t' read -r id sha criado; do
-              [[ -z "${id:-}" ]] && continue
-
-              estado=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" \
-                --jq '.[0].state // "sem_status"' 2>/dev/null || echo "sem_status")
-
-              case "$estado" in
-                queued|in_progress|pending|waiting)
-                  echo "Cancelando deployment anterior: id=${id} sha=${sha} estado=${estado} criada_em=${criado}"
-                  # O endpoint aceita ID ou SHA; usar o ID e mais preciso quando existem
-                  # varias implantacoes do mesmo commit. SHA fica apenas como fallback.
-                  if gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${id}/cancel" >/dev/null 2>&1; then
-                    cancelados=$((cancelados + 1))
-                  elif gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${sha}/cancel" >/dev/null 2>&1; then
-                    cancelados=$((cancelados + 1))
-                  else
-                    echo "ERRO: nao foi possivel cancelar deployment id=${id} sha=${sha}."
-                    return 1
-                  fi
-                  ;;
-              esac
-            done < /tmp/deployments.tsv
-
-            echo "Deployments anteriores cancelados: ${cancelados}."
-          }
-
-          cancelar_ativos
-
-          # Aguarda a fila serial do Pages confirmar que ficou limpa. Se continuar
-          # ocupada, falha RAPIDO e nao cria mais uma implantacao condenada a timeout.
-          for tentativa in {1..12}; do
-            ativos=0
-            gh api --paginate "repos/${GITHUB_REPOSITORY}/deployments?environment=github-pages&per_page=100" \
-              --jq '.[] | [.id, .sha] | @tsv' > /tmp/deployments-check.tsv
-
-            while IFS=$'\t' read -r id sha; do
-              [[ -z "${id:-}" ]] && continue
-              estado=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" \
-                --jq '.[0].state // "sem_status"' 2>/dev/null || echo "sem_status")
-              case "$estado" in
-                queued|in_progress|pending|waiting)
-                  echo "Ainda ativo: id=${id} sha=${sha} estado=${estado}"
-                  ativos=$((ativos + 1))
-                  ;;
-              esac
-            done < /tmp/deployments-check.tsv
-
-            if (( ativos == 0 )); then
-              echo "OK: fila do GitHub Pages esta limpa."
-              exit 0
-            fi
-
-            echo "Fila ainda ocupada (${ativos}); aguardando 5s - tentativa ${tentativa}/12."
-            sleep 5
-          done
-
-          echo "ERRO: a fila do GitHub Pages continuou ocupada apos 60 segundos."
-          echo "Use o workflow manual 'Recuperar fila GitHub Pages' para limpeza completa."
-          exit 1
+      # Não varrer/cancelar deployments via API no fluxo normal.
+      # O hotfix anterior fazia N+1 chamadas para até 100 deployments e repetia
+      # a consulta em loop, esgotando o rate limit da instalação. A serialização
+      # oficial fica por conta do concurrency + actions/deploy-pages.
 
       - name: Configure Pages
         if: steps.decisao.outputs.publicar == 'true'
@@ -481,13 +382,44 @@ jobs:
           path: .hash-publicado
           key: pages-publicado-${{ steps.guarda.outputs.hash }}
 
-      - name: Alertar falha de deploy por e-mail
+      # Alerta com trava persistente por janela de 6 horas. O status local do
+      # checkout não serve como dedupe entre runs; por isso o hotfix anterior
+      # enviava um e-mail em CADA falha. O cache do Actions é compartilhado
+      # entre execuções e não consome o rate limit REST usado pelo gh api.
+      - name: Preparar janela de alerta de deploy
         if: failure()
+        id: alerta_janela
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .deploy-alert-lock
+          BUCKET=$(( $(date -u +%s) / 21600 ))
+          echo "key=br-pages-alert-${BUCKET}" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "${GITHUB_RUN_ID}" > .deploy-alert-lock/run.txt
+
+      - name: Consultar trava de alerta de 6h
+        if: failure()
+        id: alerta_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .deploy-alert-lock
+          key: ${{ steps.alerta_janela.outputs.key }}
+
+      - name: Alertar falha de deploy por e-mail
+        if: failure() && steps.alerta_cache.outputs.cache-hit != 'true'
         continue-on-error: true
         env:
-          BR_MOTIVO: Falha única no deploy do GitHub Pages. Os dados já gravados no main permanecem preservados; não repita Atualizar Brasileirão apenas por causa desta falha de publicação.
+          BR_MOTIVO: Falha no deploy do GitHub Pages. Os dados já gravados no main permanecem preservados; não repita Atualizar Brasileirão apenas por causa desta falha de publicação. Novo alerta idêntico fica bloqueado por 6 horas.
           BR_WORKFLOW: Deploy GitHub Pages
           BR_SITE: Brasileirão 2026 Almoço
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           EMAIL_DESTINO: ${{ secrets.EMAIL_DESTINO }}
         run: python scripts/gerenciar_status_brasileirao.py --error --notify
+
+      - name: Registrar trava de alerta de 6h
+        if: failure() && steps.alerta_cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .deploy-alert-lock
+          key: ${{ steps.alerta_janela.outputs.key }}
