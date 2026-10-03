@@ -1,0 +1,184 @@
+name: Recuperar fila GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      apagar_historico_falhas:
+        description: 'Apagar runs antigos do Deploy site que terminaram sem sucesso'
+        type: boolean
+        default: true
+      disparar_deploy_limpo:
+        description: 'Depois da limpeza, disparar um único deploy forçado'
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+  contents: read
+  pages: write
+  deployments: read
+
+concurrency:
+  group: pages-recovery
+  cancel-in-progress: false
+
+jobs:
+  recuperar:
+    name: Limpar fila e recuperar publicação
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Validar configuração do Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_type=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq '.build_type // "desconhecido"')
+          echo "build_type=${build_type}"
+          if [[ "$build_type" != "workflow" ]]; then
+            echo "ERRO: Settings > Pages > Build and deployment > Source precisa ser GitHub Actions."
+            exit 1
+          fi
+          echo "OK: GitHub Pages usa GitHub Actions."
+
+      - name: Forçar cancelamento dos runs ativos do Deploy site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          workflow_id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml" --jq '.id')
+          echo "deploy.yml workflow_id=${workflow_id}"
+
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_id}/runs?per_page=100" \
+            --jq '.workflow_runs[] | select(.status != "completed") | .id' > /tmp/deploy-runs-ativos.txt
+
+          total=0
+          while IFS= read -r run_id; do
+            [[ -z "${run_id:-}" ]] && continue
+            echo "Force-cancel Deploy site run ${run_id}"
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/force-cancel" >/dev/null 2>&1 \
+              || gh api --method POST "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" >/dev/null 2>&1 \
+              || true
+            total=$((total + 1))
+          done < /tmp/deploy-runs-ativos.txt
+
+          echo "Runs ativos/pending encontrados: ${total}."
+
+          # Espera os cancelamentos aparecerem no estado dos runs antes de apagar histórico.
+          for tentativa in {1..20}; do
+            restantes=$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_id}/runs?per_page=100" \
+              --jq '[.workflow_runs[] | select(.status != "completed")] | length' | awk '{s+=$1} END{print s+0}')
+            if [[ "$restantes" == "0" ]]; then
+              echo "OK: nenhum run ativo do Deploy site."
+              exit 0
+            fi
+            echo "Ainda existem ${restantes} run(s) ativos; aguardando 3s - tentativa ${tentativa}/20."
+            sleep 3
+          done
+
+          echo "ERRO: ainda existem runs ativos do Deploy site apos 60 segundos."
+          echo "A recuperacao foi interrompida para nao criar mais uma entrada na fila."
+          exit 1
+
+      - name: Cancelar todos os deployments ativos do GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/deployments?environment=github-pages&per_page=100" \
+            --jq '.[] | [.id, .sha, .created_at] | @tsv' > /tmp/pages-deployments.tsv
+
+          total=0
+          while IFS=$'\t' read -r id sha criado; do
+            [[ -z "${id:-}" ]] && continue
+
+            estado=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" \
+              --jq '.[0].state // "sem_status"' 2>/dev/null || echo "sem_status")
+
+            case "$estado" in
+              queued|in_progress|pending|waiting)
+                echo "Cancelando Pages deployment id=${id} sha=${sha} estado=${estado} criada_em=${criado}"
+                if gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${id}/cancel" >/dev/null 2>&1; then
+                  :
+                elif gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${sha}/cancel" >/dev/null 2>&1; then
+                  :
+                else
+                  echo "ERRO: falhou cancelamento do deployment id=${id} sha=${sha}."
+                  exit 1
+                fi
+                total=$((total + 1))
+                ;;
+            esac
+          done < /tmp/pages-deployments.tsv
+
+          echo "Deployments Pages cancelados: ${total}."
+
+          for tentativa in {1..12}; do
+            ativos=0
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/deployments?environment=github-pages&per_page=100" \
+              --jq '.[] | [.id, .sha] | @tsv' > /tmp/pages-check.tsv
+
+            while IFS=$'\t' read -r id sha; do
+              [[ -z "${id:-}" ]] && continue
+              estado=$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${id}/statuses?per_page=1" \
+                --jq '.[0].state // "sem_status"' 2>/dev/null || echo "sem_status")
+              case "$estado" in
+                queued|in_progress|pending|waiting)
+                  echo "Ainda ativo: id=${id} sha=${sha} estado=${estado}"
+                  ativos=$((ativos + 1))
+                  ;;
+              esac
+            done < /tmp/pages-check.tsv
+
+            if (( ativos == 0 )); then
+              echo "OK: fila serial do GitHub Pages está limpa."
+              exit 0
+            fi
+
+            echo "Fila ainda possui ${ativos} deployment(s); aguardando 5s - tentativa ${tentativa}/12."
+            sleep 5
+          done
+
+          echo "ERRO: fila do Pages nao esvaziou apos a limpeza."
+          exit 1
+
+      - name: Apagar histórico de runs sem sucesso do Deploy site
+        if: inputs.apagar_historico_falhas == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          workflow_id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml" --jq '.id')
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_id}/runs?per_page=100" \
+            --jq '.workflow_runs[] | select(.status == "completed" and .conclusion != "success") | .id' > /tmp/deploy-runs-ruins.txt
+
+          apagados=0
+          while IFS= read -r run_id; do
+            [[ -z "${run_id:-}" ]] && continue
+            echo "Apagando run sem sucesso ${run_id}"
+            if gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" >/dev/null 2>&1; then
+              apagados=$((apagados + 1))
+            else
+              echo "AVISO: nao foi possivel apagar run ${run_id}; seguindo."
+            fi
+          done < /tmp/deploy-runs-ruins.txt
+
+          echo "Runs sem sucesso apagados: ${apagados}. Runs verdes foram preservados."
+
+      - name: Disparar um único deploy forçado após a limpeza
+        if: inputs.disparar_deploy_limpo == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run deploy.yml --ref main -f forcar=true
+          echo "OK: um único Deploy site (GitHub Pages) foi disparado com forcar=true."
