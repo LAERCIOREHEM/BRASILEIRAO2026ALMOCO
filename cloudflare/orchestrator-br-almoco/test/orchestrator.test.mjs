@@ -20,6 +20,7 @@ import {
   chooseSlowCandidate,
   chooseFinalCandidate,
   chooseSafetyFinalCandidate,
+  filterFinalCandidateByEvidenceLedger,
   collectNewFinals,
   collectRepositoryFinals,
   computeNextSlowAt,
@@ -145,7 +146,7 @@ test("circuit breaker bloqueia repetição imediata do mesmo workflow", () => {
   assert.match(guard.reason, /circuit breaker/);
 });
 
-test("FINAL respeita guard de 15 min e não cria tempestade de reexecução", () => {
+test("guard externo de FINAL cobre os primeiros 15 min; ledger event-level cobre o período posterior", () => {
   const run4m = [{
     name: "Atualizar Brasileirao (ESPN)",
     status: "completed",
@@ -155,6 +156,38 @@ test("FINAL respeita guard de 15 min e não cria tempestade de reexecução", ()
   assert.equal(recentActionRunGuard(run4m, ACTIONS.FINAL, NOW, DEFAULTS)?.blocked, true);
   const run16m = [{ ...run4m[0], created_at: new Date(NOW - 16 * 60_000).toISOString() }];
   assert.equal(recentActionRunGuard(run16m, ACTIONS.FINAL, NOW, DEFAULTS), null);
+});
+
+test("2.0.2: mesma evidência FINAL fica bloqueada mesmo depois de 15 min", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-03T16:00";
+  const snap = buildRepositorySnapshot(f, NOW);
+  const pending = { g1: new Date(NOW - 20 * 60_000).toISOString() };
+  const selected = chooseFinalCandidate(snap, pending, NOW, DEFAULTS);
+  const first = filterFinalCandidateByEvidenceLedger(snap, { finalEvidenceLedger: {} }, selected);
+  assert.equal(first.selected.action, ACTIONS.FINAL);
+  const signature = first.selected.finalEvidenceSignatures.g1;
+  const second = filterFinalCandidateByEvidenceLedger(snap, {
+    finalEvidenceLedger: { g1: { signature, trigger: "confirmed", dispatchedAt: new Date(NOW - 16 * 60_000).toISOString() } },
+  }, selected);
+  assert.equal(second.selected, null);
+  assert.deepEqual(second.blockedIds, ["g1"]);
+});
+
+test("2.0.2: safety anterior não bloqueia FINAL posteriormente confirmado", () => {
+  const f = baseFiles();
+  f.calendar.jogos[0].data_iso = "2026-09-03T15:00";
+  const snap = buildRepositorySnapshot(f, NOW);
+  const safety = chooseSafetyFinalCandidate(snap, { finalSafetyLastAttempt: {} }, NOW, DEFAULTS);
+  const s1 = filterFinalCandidateByEvidenceLedger(snap, { finalEvidenceLedger: {} }, safety);
+  const safetySignature = s1.selected.finalEvidenceSignatures.g1;
+  const pending = { g1: new Date(NOW - 1_000).toISOString() };
+  const confirmed = chooseFinalCandidate(snap, pending, NOW, DEFAULTS);
+  const s2 = filterFinalCandidateByEvidenceLedger(snap, {
+    finalEvidenceLedger: { g1: { signature: safetySignature, trigger: "safety", dispatchedAt: new Date(NOW - 20 * 60_000).toISOString() } },
+  }, confirmed);
+  assert.equal(s2.selected.action, ACTIONS.FINAL);
+  assert.equal(s2.blockedIds.length, 0);
 });
 
 test("falha de blocos mantém backoff externo por 6h", () => {
@@ -672,9 +705,19 @@ test("integração: ACTIVE despacha Atualizar Brasileirão no mesmo tick e envia
     assert.deepEqual(dispatches[0].body, { ref: "main", inputs: { coleta_completa: "false", forcar_af: "false", event_ids: "g1" } });
     const persisted = storageMap.get("state");
     assert.ok(persisted.pendingFinals.g1); // dispatch != publicação
+    assert.ok(persisted.finalEvidenceLedger.g1);
+    assert.equal(persisted.finalEvidenceLedger.g1.trigger, "confirmed");
     const lastDecision = persisted.recentDecisions.at(-1);
     assert.equal(lastDecision.workflow.httpStatus, 200);
     assert.equal(lastDecision.workflow.workflowRunId, 34054483168);
+
+    // Regressão real de 06/10: depois de 15 min a mesma pendência não pode
+    // reabrir Atualizar Brasileirão indefinidamente.
+    clock += 16 * 60_000;
+    const second = await durable.tick();
+    const secondBody = await second.json();
+    assert.equal(secondBody.action, ACTIONS.NONE);
+    assert.equal(dispatches.length, 1, "mesmo event_id + mesma evidência deve ser one-shot");
   } finally {
     globalThis.fetch = originalFetch;
     Date.now = originalNow;

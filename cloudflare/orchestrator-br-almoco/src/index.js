@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "2.0.1";
+export const VERSION = "2.0.2";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -683,6 +683,60 @@ export function collectNewFinals(snapshot, espnStates, pendingFinals, nowMs) {
   return next;
 }
 
+function finalEvidenceSignature(snapshot, id, trigger = "confirmed") {
+  const game = (snapshot?.games || []).find((g) => String(g?.id || "") === String(id || ""));
+  const payload = {
+    trigger: String(trigger || "confirmed"),
+    id: String(id || ""),
+    round: safeInt(game?.round),
+    kickoff: Number.isFinite(game?.kickoffMs) ? iso(game.kickoffMs) : null,
+    concluded: game?.concluded === true,
+    postponed: game?.postponed === true,
+    tba: game?.tba === true,
+  };
+  return stableHash(JSON.stringify(payload));
+}
+
+export function filterFinalCandidateByEvidenceLedger(snapshot, state, selected) {
+  if (selected?.action !== ACTIONS.FINAL || !Array.isArray(selected?.eventIds) || !selected.eventIds.length) {
+    return { selected, blockedIds: [] };
+  }
+  const ledger = state?.finalEvidenceLedger || {};
+  const trigger = selected.safetyTrigger === true ? "safety" : "confirmed";
+  const eligible = [];
+  const blockedIds = [];
+  const signatures = {};
+  for (const id of uniqueStrings(selected.eventIds)) {
+    const signature = finalEvidenceSignature(snapshot, id, trigger);
+    signatures[id] = signature;
+    const previous = ledger?.[id];
+    if (previous && String(previous.signature || "") === signature) {
+      blockedIds.push(id);
+      continue;
+    }
+    eligible.push(id);
+  }
+  if (!eligible.length) return { selected: null, blockedIds };
+  return {
+    selected: {
+      ...selected,
+      eventIds: eligible,
+      finalEvidenceSignatures: Object.fromEntries(eligible.map((id) => [id, signatures[id]])),
+    },
+    blockedIds,
+  };
+}
+
+function pruneFinalEvidenceLedger(snapshot, state) {
+  const ledger = { ...(state?.finalEvidenceLedger || {}) };
+  const results = resultIdSet(snapshot);
+  const gameIds = new Set((snapshot?.games || []).map((g) => String(g?.id || "")).filter(Boolean));
+  for (const id of Object.keys(ledger)) {
+    if (results.has(id) || !gameIds.has(id)) delete ledger[id];
+  }
+  state.finalEvidenceLedger = ledger;
+}
+
 export function chooseFinalCandidate(snapshot, pendingFinals, nowMs, cfg = DEFAULTS) {
   const ready = [];
   const byId = new Map((snapshot?.games || []).map((g) => [g.id, g]));
@@ -745,6 +799,10 @@ function defaultState() {
     recentDecisions: [],
     afLastAttempt: null,
     finalSafetyLastAttempt: {},
+    // 2.0.2: um mesmo event_id + mesma evidência esportiva só pode gerar
+    // um dispatch automático. A entrada some quando o resultado é incorporado
+    // ou muda de assinatura (ex.: safety -> FINAL confirmado / reagendamento).
+    finalEvidenceLedger: {},
     githubBackoffUntil: null,
   };
 }
@@ -1235,6 +1293,8 @@ export class BrAlmocoOrchestratorStateV1 {
         finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
         safetyTriggerMinutes: runtimeConfig(this.env).finalSafetyStartMinutes,
         safetyRetryMinutes: runtimeConfig(this.env).finalSafetyRetryMinutes,
+        finalOneShotPerEvidence: true,
+        finalEvidenceLedger: true,
       },
       orchestration: {
         strategy: "agenda_event_driven_v2",
@@ -1282,6 +1342,8 @@ export class BrAlmocoOrchestratorStateV1 {
         finalRetryMinutes: runtimeConfig(this.env).finalRetryMinutes,
         safetyTriggerMinutes: runtimeConfig(this.env).finalSafetyStartMinutes,
         safetyRetryMinutes: runtimeConfig(this.env).finalSafetyRetryMinutes,
+        finalOneShotPerEvidence: true,
+        finalEvidenceLedger: true,
       },
       hints: snap ? {
         nextGameAt: snap.nextGameAt,
@@ -1403,6 +1465,7 @@ export class BrAlmocoOrchestratorStateV1 {
     // FAST PATH: apenas detectar FINAL. Não há AO VIVO, gols, placar ou eventos no escopo.
     // FINAL já conhecido no calendário mas ainda ausente em resultados também entra
     // na fila de convergência, sem depender de uma nova resposta da ESPN.
+    pruneFinalEvidenceLedger(state.snapshot, state);
     state.pendingFinals = collectRepositoryFinals(state.snapshot, state.pendingFinals, nowMs);
 
     // Janela normal: +88..+300 min. Recovery: até +12h, a cada 5 min.
@@ -1424,7 +1487,30 @@ export class BrAlmocoOrchestratorStateV1 {
     }
     let selected = chooseFinalCandidate(state.snapshot, state.pendingFinals, nowMs, cfg);
     if (!selected) selected = chooseSafetyFinalCandidate(state.snapshot, state, nowMs, cfg);
-    const hasPendingFinalDebounce = Object.keys(state.pendingFinals || {}).length > 0;
+
+    // 2.0.2: trava event-level persistente. O antigo guard de 15 min só
+    // retardava a tempestade; depois de 15 min o mesmo FINAL era liberado de novo.
+    // Agora a mesma evidência para o mesmo event_id é one-shot até o estado mudar.
+    let finalEvidenceBlockedIds = [];
+    if (selected?.action === ACTIONS.FINAL) {
+      const filtered = filterFinalCandidateByEvidenceLedger(state.snapshot, state, selected);
+      selected = filtered.selected;
+      finalEvidenceBlockedIds = filtered.blockedIds;
+    }
+
+    // Só considera "debounce" o período realmente anterior ao debounce.
+    // Um FINAL já maduro, porém bloqueado pelo ledger, não pode impedir o slow path.
+    const hasPendingFinalDebounce = Object.entries(state.pendingFinals || {}).some(([id, firstSeen]) => {
+      const seenMs = parseDate(firstSeen);
+      if (!Number.isFinite(seenMs) || nowMs - seenMs >= cfg.finalDebounceSeconds * 1000) return false;
+      const signature = finalEvidenceSignature(state.snapshot, id, "confirmed");
+      const previous = state?.finalEvidenceLedger?.[id];
+      return !(previous && String(previous.signature || "") === signature);
+    });
+    if (!selected && finalEvidenceBlockedIds.length) {
+      state.resultReason = `FINAL já despachado para a mesma evidência (${finalEvidenceBlockedIds.join(",")}); aguardando mudança real de estado em vez de repetir Action`;
+    }
+
     // 1.1.0: recovery de FINAL NÃO bloqueia mais o slow path. Só preservamos a
     // prioridade por poucos segundos enquanto um FINAL confirmado está no debounce.
     if (!selected && !hasPendingFinalDebounce && agendaSelected) {
@@ -1551,6 +1637,19 @@ export class BrAlmocoOrchestratorStateV1 {
           retryAfter: iso(nowMs + Number(selected.signalBackoffMinutes || cfg.mainSignalBackoffMinutes) * 60_000),
         };
       }
+      if (selected.action === ACTIONS.FINAL) {
+        const ledger = { ...(state.finalEvidenceLedger || {}) };
+        const trigger = selected.safetyTrigger === true ? "safety" : "confirmed";
+        for (const id of uniqueStrings(selected.eventIds || [])) {
+          ledger[id] = {
+            signature: String(selected?.finalEvidenceSignatures?.[id] || finalEvidenceSignature(state.snapshot, id, trigger)),
+            trigger,
+            dispatchedAt: iso(nowMs),
+            workflowRunId: workflow?.workflowRunId ?? null,
+          };
+        }
+        state.finalEvidenceLedger = ledger;
+      }
       if (selected.action === ACTIONS.FINAL && selected.safetyTrigger === true) {
         const map = { ...(state.finalSafetyLastAttempt || {}) };
         for (const id of uniqueStrings(selected.eventIds || [])) map[id] = iso(nowMs);
@@ -1567,8 +1666,9 @@ export class BrAlmocoOrchestratorStateV1 {
       state.resultReason = selected.reason;
       recordDecision(state, nowMs, { action: selected.action, reason: selected.reason, result: "dispatched", workflow, checkpoint: selected.checkpoint || null }, cfg);
 
-      // 1.1.0: dispatch não significa publicação. pendingFinals permanece até
-      // resultados.json realmente conter o event_id; então a revalidação o remove.
+      // 2.0.2: dispatch não significa publicação; pendingFinals pode permanecer para
+      // diagnóstico, mas finalEvidenceLedger impede novo dispatch da MESMA evidência.
+      // Quando resultados.json incorporar o event_id, ambos são limpos no refresh.
       // Após qualquer writer, refresca o repositório cedo para observar o novo estado.
       state.nextSlowAt = iso(nowMs + (selected.action === ACTIONS.FINAL ? 2 : 5) * 60_000);
       await this.writeState(state);

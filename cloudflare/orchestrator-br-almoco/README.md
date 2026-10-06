@@ -100,3 +100,9 @@ T+110 sem convergência
 
 AO VIVO, públicos, melhores momentos, elencos e fair play continuam fora do
 escopo do orquestrador.
+
+## 2.0.2 — FINAL one-shot por evidência
+
+Correção do incidente de 06/10/2026: um mesmo `event_id` que permanecia marcado como FINAL e ausente em `resultados.json` podia reabrir `Atualizar Brasileirao (ESPN)` a cada 15 minutos.
+
+A partir da 2.0.2, cada `event_id` recebe uma assinatura de evidência persistida no Durable Object. A mesma evidência só pode produzir um dispatch automático. Uma nova ação só é liberada quando há mudança esportiva objetiva (por exemplo, safety -> FINAL confirmado, alteração real de agenda) ou quando o resultado é incorporado e o ledger é limpo. O `pendingFinals` pode continuar existindo para diagnóstico sem gerar tempestade de Actions.
