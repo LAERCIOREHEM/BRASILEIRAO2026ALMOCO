@@ -135,10 +135,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sleep 5
-          BODY="$(curl -fsS --retry 6 --retry-delay 2 "$URL/health")"
-          echo "$BODY"
-          printf '%s' "$BODY" | python -c 'import json,sys,os; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="2.0.1"; assert d.get("mode")==os.environ["MODE"]; assert d.get("liveIgnored") is True; assert d.get("orchestration",{}).get("strategy")=="agenda_event_driven_v2"; assert d.get("orchestration",{}).get("ageOnlyMainDispatchDisabled") is True; print("health 2.0 validado")'
+          # Workers.dev pode servir a versão anterior por alguns segundos após o deploy.
+          # HTTP 200 não basta: aguarda a versão + modo solicitados realmente propagarem.
+          for tentativa in {1..12}; do
+            BODY="$(curl -fsS --retry 2 --retry-delay 1 "$URL/health")"
+            echo "$BODY"
+            if printf '%s' "$BODY" | python -c 'import json,sys,os; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="2.0.2"; assert d.get("mode")==os.environ["MODE"]; assert d.get("liveIgnored") is True; assert d.get("orchestration",{}).get("strategy")=="agenda_event_driven_v2"; assert d.get("orchestration",{}).get("ageOnlyMainDispatchDisabled") is True; assert d.get("fastPath",{}).get("finalOneShotPerEvidence") is True; print("health 2.0.2 validado")'; then
+              exit 0
+            fi
+            echo "Propagação ainda pendente (${tentativa}/12); aguardando 5s..."
+            sleep 5
+          done
+          echo "ERRO: Worker não convergiu para versão/modo esperados em 60s." >&2
+          exit 1
 
       - name: Resumo operacional
         env:
@@ -147,7 +156,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Orchestrator BR Almoço 2.0.1 · Anti-storm"
+            echo "## Orchestrator BR Almoço 2.0.2 · FINAL one-shot"
             echo ""
             echo "- **Modo:** \`${MODE}\`"
             echo "- **Worker:** \`brasileirao-almoco-orchestrator\`"
