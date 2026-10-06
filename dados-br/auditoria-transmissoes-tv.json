@@ -1,11 +1,11 @@
 {
   "descricao": "Auditoria da consolidação de transmissões do Brasileirão.",
   "resumo": {
-    "jogos_na_janela": 52,
-    "jogos_com_transmissao": 46,
-    "jogos_sem_transmissao_14d": 1,
+    "jogos_na_janela": 55,
+    "jogos_com_transmissao": 54,
+    "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 3,
+    "registros_preservados": 2,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,38 +15,22 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 43,
-      "duracao_ms": 16058
+      "jogos_com_canal": 52,
+      "duracao_ms": 18893
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 0,
-      "jogos_com_canal": 0,
-      "duracao_ms": 3777
+      "artigos_consultados": 2,
+      "jogos_com_canal": 2,
+      "duracao_ms": 39875
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260928-20261104&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261004-20261110&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
     }
   },
-  "sem_transmissao": [
-    {
-      "event_id": "401841250",
-      "rodada": 29,
-      "jogo": "Vitória x Chapecoense",
-      "data_iso": "2026-10-07T20:00",
-      "faltam_horas": 169.3,
-      "nivel": "aviso"
-    }
-  ],
+  "sem_transmissao": [],
   "preservados": [
-    {
-      "event_id": "401841253",
-      "jogo": "Bragantino x Mirassol",
-      "canais": [
-        "Globo"
-      ]
-    },
     {
       "event_id": "401841266",
       "jogo": "Bahia x Mirassol",
@@ -55,19 +39,20 @@
       ]
     },
     {
-      "event_id": "401841270",
-      "jogo": "Atlético-MG x Coritiba",
+      "event_id": "401841280",
+      "jogo": "Vitória x Athletico-PR",
       "canais": [
-        "Premiere",
-        "Prime Video",
         "SporTV"
       ]
     }
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20260928-20261104&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 403: Forbidden"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261004-20261110&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
   ],
-  "artigos_ge_descobertos": [],
-  "atualizado_em": "2026-09-30T18:42:59-03:00"
+  "artigos_ge_descobertos": [
+    "https://ge.globo.com/sp/campinas-e-regiao/futebol/brasileirao-serie-b/noticia/2026/10/06/ponte-preta-x-juventude-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/mg/futebol/brasileirao-serie-a/noticia/2026/10/03/atletico-mg-x-bragantino-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
+  ],
+  "atualizado_em": "2026-10-06T12:52:43-03:00"
 }
