@@ -1,11 +1,11 @@
 {
   "descricao": "Auditoria da consolidação de transmissões do Brasileirão.",
   "resumo": {
-    "jogos_na_janela": 35,
-    "jogos_com_transmissao": 34,
+    "jogos_na_janela": 31,
+    "jogos_com_transmissao": 30,
     "jogos_sem_transmissao_14d": 1,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 21,
+    "registros_preservados": 19,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,18 +15,18 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 11,
-      "duracao_ms": 5213
+      "jogos_com_canal": 10,
+      "duracao_ms": 5540
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 6,
-      "jogos_com_canal": 5,
-      "duracao_ms": 42299
+      "artigos_consultados": 3,
+      "jogos_com_canal": 1,
+      "duracao_ms": 34049
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261016-20261122&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261017-20261123&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
     }
   },
   "sem_transmissao": [
@@ -35,20 +35,11 @@
       "rodada": 33,
       "jogo": "Coritiba x Vitória",
       "data_iso": "2026-10-31T16:00",
-      "faltam_horas": 311.9,
+      "faltam_horas": 287.8,
       "nivel": "aviso"
     }
   ],
   "preservados": [
-    {
-      "event_id": "401841274",
-      "jogo": "Remo x Bragantino",
-      "canais": [
-        "Premiere",
-        "Prime Video",
-        "SporTV"
-      ]
-    },
     {
       "event_id": "401841287",
       "jogo": "Cruzeiro x Remo",
@@ -94,15 +85,8 @@
       ]
     },
     {
-      "event_id": "401841278",
-      "jogo": "Chapecoense x Fluminense",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841279",
-      "jogo": "Coritiba x Grêmio",
+      "event_id": "401841282",
+      "jogo": "Santos x Bahia",
       "canais": [
         "Globo"
       ]
@@ -112,20 +96,6 @@
       "jogo": "Flamengo x Atlético-MG",
       "canais": [
         "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841289",
-      "jogo": "Fluminense x Internacional",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841293",
-      "jogo": "Santos x Palmeiras",
-      "canais": [
-        "Globo"
       ]
     },
     {
@@ -148,8 +118,22 @@
       ]
     },
     {
+      "event_id": "401841288",
+      "jogo": "Atlético-MG x Cruzeiro",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
       "event_id": "401841292",
       "jogo": "Vasco da Gama x Flamengo",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
+      "event_id": "401841290",
+      "jogo": "Grêmio x Athletico-PR",
       "canais": [
         "Globo"
       ]
@@ -186,19 +170,19 @@
       ]
     },
     {
-      "event_id": "401841307",
-      "jogo": "Flamengo x Grêmio",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
       "event_id": "401841298",
       "jogo": "São Paulo x Corinthians",
       "canais": [
         "Premiere",
         "Prime Video",
         "SporTV"
+      ]
+    },
+    {
+      "event_id": "401841303",
+      "jogo": "Cruzeiro x Bahia",
+      "canais": [
+        "Globo"
       ]
     },
     {
@@ -211,15 +195,12 @@
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261016-20261122&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261017-20261123&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
   ],
   "artigos_ge_descobertos": [
+    "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/10/19/corinthians-x-vitoria-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/10/18/bahia-x-flamengo-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/pa/futebol/brasileirao-serie-a/noticia/2026/10/18/remo-x-bragantino-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/rj/futebol/brasileirao-serie-a/noticia/2026/10/18/fluminense-x-santos-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/pr/futebol/brasileirao-serie-a/noticia/2026/10/17/athletico-x-palmeiras-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/mg/futebol/brasileirao-serie-a/noticia/2026/10/17/atletico-mg-x-coritiba-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
-    "https://ge.globo.com/sp/futebol/brasileirao-serie-a/noticia/2026/10/17/sao-paulo-x-vasco-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
+    "https://ge.globo.com/pa/futebol/brasileirao-serie-a/noticia/2026/10/18/remo-x-bragantino-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
   ],
-  "atualizado_em": "2026-10-18T16:08:09-03:00"
+  "atualizado_em": "2026-10-19T16:09:14-03:00"
 }
