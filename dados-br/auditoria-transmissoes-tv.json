@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 30,
     "jogos_sem_transmissao_14d": 1,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 17,
+    "registros_preservados": 22,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,18 +15,18 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 13,
-      "duracao_ms": 4918
+      "jogos_com_canal": 8,
+      "duracao_ms": 4557
     },
     "ge_artigos": {
       "ok": true,
       "artigos_consultados": 1,
-      "jogos_com_canal": 1,
-      "duracao_ms": 10879
+      "jogos_com_canal": 0,
+      "duracao_ms": 11293
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261019-20261125&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261020-20261126&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
     }
   },
   "sem_transmissao": [
@@ -35,7 +35,7 @@
       "rodada": 33,
       "jogo": "Coritiba x Vitória",
       "data_iso": "2026-10-31T16:00",
-      "faltam_horas": 239.8,
+      "faltam_horas": 215.8,
       "nivel": "aviso"
     }
   ],
@@ -58,13 +58,6 @@
         "GE TV",
         "Disney+ / ESPN",
         "Prime Video",
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841284",
-      "jogo": "Mirassol x São Paulo",
-      "canais": [
         "Globo"
       ]
     },
@@ -106,6 +99,20 @@
       ]
     },
     {
+      "event_id": "401841293",
+      "jogo": "Santos x Palmeiras",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
+      "event_id": "401841296",
+      "jogo": "Bahia x São Paulo",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
       "event_id": "401841297",
       "jogo": "Remo x Botafogo",
       "canais": [
@@ -114,6 +121,13 @@
         "GE TV",
         "Disney+ / ESPN",
         "Prime Video",
+        "Globo"
+      ]
+    },
+    {
+      "event_id": "401841288",
+      "jogo": "Atlético-MG x Cruzeiro",
+      "canais": [
         "Globo"
       ]
     },
@@ -172,8 +186,29 @@
       ]
     },
     {
+      "event_id": "401841300",
+      "jogo": "Palmeiras x Remo",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
+      "event_id": "401841303",
+      "jogo": "Cruzeiro x Bahia",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
       "event_id": "401841302",
       "jogo": "Vitória x Fluminense",
+      "canais": [
+        "Globo"
+      ]
+    },
+    {
+      "event_id": "401841316",
+      "jogo": "Corinthians x Botafogo",
       "canais": [
         "Globo"
       ]
@@ -181,10 +216,10 @@
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261019-20261125&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261020-20261126&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
   ],
   "artigos_ge_descobertos": [
     "https://ge.globo.com/sp/futebol/libertadores/noticia/2026/10/21/palmeiras-x-fluminense-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
   ],
-  "atualizado_em": "2026-10-21T16:11:01-03:00"
+  "atualizado_em": "2026-10-22T16:11:42-03:00"
 }
