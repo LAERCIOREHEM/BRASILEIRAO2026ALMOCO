@@ -2,10 +2,10 @@
   "descricao": "Auditoria da consolidação de transmissões do Brasileirão.",
   "resumo": {
     "jogos_na_janela": 40,
-    "jogos_com_transmissao": 30,
+    "jogos_com_transmissao": 31,
     "jogos_sem_transmissao_14d": 1,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 22,
+    "registros_preservados": 15,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,18 +15,18 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 8,
-      "duracao_ms": 4557
+      "jogos_com_canal": 11,
+      "duracao_ms": 4693
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 1,
-      "jogos_com_canal": 0,
-      "duracao_ms": 11293
+      "artigos_consultados": 2,
+      "jogos_com_canal": 8,
+      "duracao_ms": 19498
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261020-20261126&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261021-20261127&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
     }
   },
   "sem_transmissao": [
@@ -35,32 +35,11 @@
       "rodada": 33,
       "jogo": "Coritiba x Vitória",
       "data_iso": "2026-10-31T16:00",
-      "faltam_horas": 215.8,
+      "faltam_horas": 191.8,
       "nivel": "aviso"
     }
   ],
   "preservados": [
-    {
-      "event_id": "401841287",
-      "jogo": "Cruzeiro x Remo",
-      "canais": [
-        "Premiere",
-        "Prime Video",
-        "SporTV"
-      ]
-    },
-    {
-      "event_id": "401841285",
-      "jogo": "Internacional x Botafogo",
-      "canais": [
-        "Premiere",
-        "SporTV",
-        "GE TV",
-        "Disney+ / ESPN",
-        "Prime Video",
-        "Globo"
-      ]
-    },
     {
       "event_id": "401841280",
       "jogo": "Vitória x Athletico-PR",
@@ -99,28 +78,9 @@
       ]
     },
     {
-      "event_id": "401841293",
-      "jogo": "Santos x Palmeiras",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
       "event_id": "401841296",
       "jogo": "Bahia x São Paulo",
       "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841297",
-      "jogo": "Remo x Botafogo",
-      "canais": [
-        "Premiere",
-        "SporTV",
-        "GE TV",
-        "Disney+ / ESPN",
-        "Prime Video",
         "Globo"
       ]
     },
@@ -163,13 +123,6 @@
       ]
     },
     {
-      "event_id": "401841304",
-      "jogo": "Chapecoense x Mirassol",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
       "event_id": "401841306",
       "jogo": "Athletico-PR x Vasco da Gama",
       "canais": [
@@ -186,13 +139,6 @@
       ]
     },
     {
-      "event_id": "401841300",
-      "jogo": "Palmeiras x Remo",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
       "event_id": "401841303",
       "jogo": "Cruzeiro x Bahia",
       "canais": [
@@ -205,21 +151,15 @@
       "canais": [
         "Globo"
       ]
-    },
-    {
-      "event_id": "401841316",
-      "jogo": "Corinthians x Botafogo",
-      "canais": [
-        "Globo"
-      ]
     }
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261020-20261126&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261021-20261127&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
   ],
   "artigos_ge_descobertos": [
-    "https://ge.globo.com/sp/futebol/libertadores/noticia/2026/10/21/palmeiras-x-fluminense-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
+    "https://ge.globo.com/mg/futebol/brasileirao-serie-a/noticia/2026/10/23/cruzeiro-x-remo-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
+    "https://ge.globo.com/ba/futebol/brasileirao-serie-a/noticia/2026/10/23/brasileirao-2026-veja-onde-assistir-ao-vivo-aos-jogos-da-32a-rodada.ghtml"
   ],
-  "atualizado_em": "2026-10-22T16:11:42-03:00"
+  "atualizado_em": "2026-10-23T16:11:59-03:00"
 }
