@@ -2157,9 +2157,17 @@ def evento_realmente_finalizado(e: dict[str, Any], agora: datetime) -> bool:
     # mas completed=false e displayClock="0'". O relógio zerado só é suspeito
     # enquanto a fonte ainda não declarou o estado pós-jogo. A data mínima de
     # 90 minutos acima continua impedindo que um 0 x 0 futuro vire resultado.
-    if estado != "post" and status in {"0'", "0", "0:00"}:
+    concluido = e.get("concluido") is True or e.get("completed") is True
+    if estado != "post" and status in {"0'", "0", "0:00"} and not concluido:
         return False
-    return bool(e.get("concluido") is True or estado == "post" or dt < agora - timedelta(hours=2))
+
+    # Nunca promova FINAL apenas pela idade do jogo. Em 24/10/2026 a ESPN
+    # manteve Mirassol x São Paulo (401841284) e Vitória x Athletico-PR
+    # (401841280) como jogo em andamento por alguns minutos após +2h de kickoff.
+    # A heurística antiga `dt < agora - 2h` publicou ambos em resultados.json,
+    # enquanto o apurador (corretamente) os rejeitou, gerando uma falsa falha
+    # 2/4 na Rodada 32. Só aceitamos FINAL com sinal explícito da fonte.
+    return bool(concluido or estado == "post")
 
 def gerar_jogos_resultados_eventos(eventos_brutos: list[dict[str, Any]],
                                      anteriores: dict[str, dict[str, Any]] | None = None,
@@ -2789,6 +2797,18 @@ def selftest_execucao_6() -> None:
     assert payload_jogo(empate_post)["status"] == "Encerrado"
     empate_pre = dict(empate_post, estado="pre")
     assert not evento_realmente_finalizado(empate_pre, agora_teste)
+
+    # Regressão 24/10/2026: um jogo ainda "in" não pode virar FINAL só porque
+    # passou de duas horas desde o kickoff. O summary/scoreboard deve confirmar
+    # completed=true ou state=post antes de entrar em resultados.json.
+    em_andamento_tardio = dict(
+        empate_post,
+        estado="in",
+        concluido=False,
+        status="90'+10'",
+        data_dt=agora_teste - timedelta(hours=2, minutes=5),
+    )
+    assert not evento_realmente_finalizado(em_andamento_tardio, agora_teste)
     assert _estado_scoreboard_seguro(
         "post",
         False,
