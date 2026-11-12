@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 40,
     "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 17,
+    "registros_preservados": 18,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -16,31 +16,24 @@
     "ge_agenda": {
       "ok": true,
       "jogos_com_canal": 22,
-      "duracao_ms": 11305
+      "duracao_ms": 9441
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 1,
-      "jogos_com_canal": 3,
-      "duracao_ms": 15098
+      "artigos_consultados": 0,
+      "jogos_com_canal": 0,
+      "duracao_ms": 3855
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261108-20261215&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261110-20261217&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
     }
   },
   "sem_transmissao": [],
   "preservados": [
     {
-      "event_id": "401841311",
-      "jogo": "Mirassol x Atlético-MG",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841175",
-      "jogo": "Chapecoense x Vasco da Gama",
+      "event_id": "401841315",
+      "jogo": "Coritiba x Santos",
       "canais": [
         "Globo"
       ]
@@ -107,6 +100,18 @@
       ]
     },
     {
+      "event_id": "401841321",
+      "jogo": "Bragantino x Vasco da Gama",
+      "canais": [
+        "SporTV",
+        "Premiere",
+        "Globo",
+        "Prime Video",
+        "GE TV",
+        "Disney+ / ESPN"
+      ]
+    },
+    {
       "event_id": "401841323",
       "jogo": "Internacional x Vitória",
       "canais": [
@@ -125,19 +130,17 @@
       ]
     },
     {
-      "event_id": "401841328",
-      "jogo": "Atlético-MG x Vasco da Gama",
-      "canais": [
-        "Globo",
-        "Premiere",
-        "GE TV"
-      ]
-    },
-    {
       "event_id": "401841335",
       "jogo": "Chapecoense x Palmeiras",
       "canais": [
         "Globo"
+      ]
+    },
+    {
+      "event_id": "401841331",
+      "jogo": "Internacional x Bragantino",
+      "canais": [
+        "SporTV"
       ]
     },
     {
@@ -164,6 +167,18 @@
       ]
     },
     {
+      "event_id": "401841344",
+      "jogo": "Bragantino x Fluminense",
+      "canais": [
+        "Globo",
+        "SporTV",
+        "Premiere",
+        "Prime Video",
+        "GE TV",
+        "Disney+ / ESPN"
+      ]
+    },
+    {
       "event_id": "401841346",
       "jogo": "Santos x Botafogo",
       "canais": [
@@ -174,10 +189,8 @@
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261108-20261215&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261110-20261217&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
   ],
-  "artigos_ge_descobertos": [
-    "https://ge.globo.com/pr/futebol/noticia/2026/11/08/paranavai-x-athletico-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
-  ],
-  "atualizado_em": "2026-11-10T04:14:06-03:00"
+  "artigos_ge_descobertos": [],
+  "atualizado_em": "2026-11-12T04:15:01-03:00"
 }
