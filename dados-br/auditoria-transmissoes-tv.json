@@ -5,7 +5,7 @@
     "jogos_com_transmissao": 40,
     "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 18,
+    "registros_preservados": 22,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,22 +15,36 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 22,
-      "duracao_ms": 9441
+      "jogos_com_canal": 18,
+      "duracao_ms": 7971
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 0,
+      "artigos_consultados": 1,
       "jogos_com_canal": 0,
-      "duracao_ms": 3855
+      "duracao_ms": 14764
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261110-20261217&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261112-20261219&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
     }
   },
   "sem_transmissao": [],
   "preservados": [
+    {
+      "event_id": "401841311",
+      "jogo": "Mirassol x Atlético-MG",
+      "canais": [
+        "Prime Video"
+      ]
+    },
+    {
+      "event_id": "401841175",
+      "jogo": "Chapecoense x Vasco da Gama",
+      "canais": [
+        "Premiere"
+      ]
+    },
     {
       "event_id": "401841315",
       "jogo": "Coritiba x Santos",
@@ -71,6 +85,18 @@
         "Prime Video",
         "Disney+ / ESPN",
         "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841308",
+      "jogo": "Vasco da Gama x Internacional",
+      "canais": [
+        "Prime Video",
+        "Premiere",
+        "SporTV",
+        "Globo",
+        "GE TV",
+        "Disney+ / ESPN"
       ]
     },
     {
@@ -127,6 +153,14 @@
         "Globo",
         "Premiere",
         "GE TV"
+      ]
+    },
+    {
+      "event_id": "401841328",
+      "jogo": "Atlético-MG x Vasco da Gama",
+      "canais": [
+        "Prime Video",
+        "Premiere"
       ]
     },
     {
@@ -189,8 +223,10 @@
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261110-20261217&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261112-20261219&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
   ],
-  "artigos_ge_descobertos": [],
-  "atualizado_em": "2026-11-12T04:15:01-03:00"
+  "artigos_ge_descobertos": [
+    "https://ge.globo.com/sp/tem-esporte/futebol/brasileirao-serie-a/noticia/2026/11/14/mirassol-x-atletico-mg-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
+  ],
+  "atualizado_em": "2026-11-14T04:16:04-03:00"
 }
