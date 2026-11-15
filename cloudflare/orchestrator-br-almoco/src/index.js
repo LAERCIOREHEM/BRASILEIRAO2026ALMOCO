@@ -12,7 +12,7 @@
  * Só dispara workflows existentes quando o estado objetivo exige trabalho.
  */
 
-export const VERSION = "2.0.2";
+export const VERSION = "2.0.3";
 export const ENGINE = "br-almoco-cloudflare-orchestrator";
 export const TIMEZONE = "America/Sao_Paulo";
 
@@ -971,11 +971,15 @@ export async function probeEspn(games, nowMs = Date.now()) {
     }
   }));
 
-  // Fallback/segunda opinião: summary individual somente para eventos que o
-  // scoreboard não resolveu. Falha aqui também não impede o safety trigger temporal.
-  const unresolvedAfterScoreboard = wantedGames.filter((g) => !states[String(g.id)]?.state);
+  // 2.0.3: o scoreboard agregado pode permanecer "in" depois do apito final.
+  // Como probeEspn só recebe jogos já na janela de provável encerramento (T+88
+  // em diante), o summary individual passa a confirmar TODO estado ainda não
+  // pós-jogo. Assim um scoreboard congelado em "in" não impede a captura do FINAL.
+  // O summary nunca rebaixa um "post" já confirmado pelo scoreboard.
+  const summaryCandidates = wantedGames.filter((g) => states[String(g.id)]?.state !== "post");
   const summaryHits = new Set();
-  await Promise.all(unresolvedAfterScoreboard.map(async (game) => {
+  const summaryOverrides = new Set();
+  await Promise.all(summaryCandidates.map(async (game) => {
     const id = String(game.id);
     const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=${encodeURIComponent(id)}&orch=${Math.floor(nowMs / 60_000)}`;
     try {
@@ -983,9 +987,12 @@ export async function probeEspn(games, nowMs = Date.now()) {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       const state = espnStateFromPayload(data);
-      if (state) {
+      if (!state) return;
+      summaryHits.add(id);
+      const anterior = states[id]?.state || "";
+      if (state === "post" || !anterior) {
         states[id] = { state, source: "summary" };
-        summaryHits.add(id);
+        if (anterior && anterior !== state) summaryOverrides.add(id);
       }
     } catch (error) {
       notes.push(`summary ${id}: ${error?.name || "Error"}: ${error?.message || error}`);
@@ -1001,11 +1008,12 @@ export async function probeEspn(games, nowMs = Date.now()) {
     states,
     errors,
     diagnostics: {
-      strategy: "scoreboard_primary_browser_ua+summary_fallback+safety_clock",
+      strategy: "scoreboard_primary_browser_ua+summary_confirmation_non_post+safety_clock",
       wanted: [...wanted],
       scoreboardDays: days,
       scoreboardHits: [...scoreboardHits],
-      summaryFallbackRequested: unresolvedAfterScoreboard.map((g) => String(g.id)),
+      summaryFallbackRequested: summaryCandidates.map((g) => String(g.id)),
+      summaryOverrides: [...summaryOverrides],
       summaryHits: [...summaryHits],
       unresolved,
       notes,
@@ -1295,6 +1303,7 @@ export class BrAlmocoOrchestratorStateV1 {
         safetyRetryMinutes: runtimeConfig(this.env).finalSafetyRetryMinutes,
         finalOneShotPerEvidence: true,
         finalEvidenceLedger: true,
+        summaryConfirmsNonPost: true,
       },
       orchestration: {
         strategy: "agenda_event_driven_v2",
