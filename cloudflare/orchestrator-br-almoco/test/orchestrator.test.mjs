@@ -324,7 +324,7 @@ test("probe ESPN usa SCOREBOARD como fonte primária com User-Agent browser-like
     assert.equal(out.states.g1.state, "post");
     assert.match(out.states.g1.source, /^scoreboard:/);
     assert.equal(out.errors.length, 0);
-    assert.equal(out.diagnostics.strategy, "scoreboard_primary_browser_ua+summary_fallback+safety_clock");
+    assert.equal(out.diagnostics.strategy, "scoreboard_primary_browser_ua+summary_confirmation_non_post+safety_clock");
     assert.ok(seen.some((x) => x.url.includes('/scoreboard?')));
     assert.equal(seen.some((x) => x.url.includes('/summary?')), false);
     const call = seen.find((x) => x.url.includes('/scoreboard?'));
@@ -350,6 +350,34 @@ test("regressão 1.1.6: fetch ESPN não combina cache no-store com cf.cacheTtl",
     assert.equal(captured.cache, "no-store");
     assert.equal(captured.cf, undefined);
     assert.equal(captured.headers["cache-control"], "no-cache");
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("2.0.3: summary individual corrige scoreboard congelado em in após provável FINAL", async () => {
+  const originalFetch = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    seen.push(url);
+    if (url.includes('/scoreboard?')) {
+      return new Response(JSON.stringify({
+        events: [{ id: "g1", status: { type: { state: "in", completed: false } } }]
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.includes('/summary?event=g1')) {
+      return new Response(JSON.stringify({
+        header: { competitions: [{ status: { type: { state: "post", completed: true } } }] }
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    throw new Error(`fetch mock não previsto: ${url}`);
+  };
+  try {
+    const out = await probeEspn([{ id: "g1", kickoffMs: parseDate("2026-09-03T16:00") }], NOW);
+    assert.equal(out.states.g1.state, "post");
+    assert.equal(out.states.g1.source, "summary");
+    assert.deepEqual(out.diagnostics.summaryOverrides, ["g1"]);
+    assert.ok(seen.some((u) => u.includes('/scoreboard?')));
+    assert.ok(seen.some((u) => u.includes('/summary?event=g1')));
   } finally { globalThis.fetch = originalFetch; }
 });
 
