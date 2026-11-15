@@ -1,6 +1,13 @@
 name: Atualizar Brasileirao (ESPN)
 
 on:
+  # Mudanças explícitas na agenda oficial precisam recalcular imediatamente o
+  # snapshot; o próprio workflow só grava arquivos gerados, portanto não há loop.
+  push:
+    branches: [main]
+    paths:
+      - 'dados-br/ajustes-calendario.json'
+
   # Execução operacional por workflow_dispatch. O orquestrador inteligente é o
   # único gatilho automático; o botão "Run workflow" continua disponível.
   # Não há schedule interno nem cron externo direto neste workflow.
