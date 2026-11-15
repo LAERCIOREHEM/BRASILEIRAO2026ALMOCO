@@ -1,7 +1,15 @@
 name: Deploy Orchestrator BR Almoço
-run-name: Orchestrator BR Almoço · ${{ inputs.mode }}
+run-name: Orchestrator BR Almoço · ${{ github.event_name == 'push' && 'active(auto)' || inputs.mode }}
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-orchestrator-br-almoco.yml'
+      - 'cloudflare/orchestrator-br-almoco/src/**'
+      - 'cloudflare/orchestrator-br-almoco/test/**'
+      - 'cloudflare/orchestrator-br-almoco/package.json'
+      - 'cloudflare/orchestrator-br-almoco/wrangler.toml'
   workflow_dispatch:
     inputs:
       mode:
@@ -51,7 +59,7 @@ jobs:
           echo "Secrets exclusivos do BR Almoço presentes. Nenhum secret do Fórmula do Gol é referenciado por este workflow."
 
       - name: Testar PAT exclusivo do GitHub em leitura
-        if: ${{ inputs.mode == 'active' }}
+        if: ${{ github.event_name == 'push' || inputs.mode == 'active' }}
         env:
           ORQ_GH_TOKEN: ${{ secrets.BR_ALMOCO_ORCHESTRATOR_GITHUB_TOKEN }}
         shell: bash
@@ -83,7 +91,7 @@ jobs:
       - name: Preparar modo solicitado sem alterar o repositório
         working-directory: cloudflare/orchestrator-br-almoco
         env:
-          MODE: ${{ inputs.mode }}
+          MODE: ${{ github.event_name == 'push' && 'active' || inputs.mode }}
         run: |
           python - <<'PY'
           import os, pathlib, re
@@ -116,7 +124,7 @@ jobs:
           fi
 
       - name: Gravar PAT exclusivo como secret do Worker
-        if: ${{ inputs.mode == 'active' }}
+        if: ${{ github.event_name == 'push' || inputs.mode == 'active' }}
         working-directory: cloudflare/orchestrator-br-almoco
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.BR_ALMOCO_CF_API_TOKEN }}
@@ -131,7 +139,7 @@ jobs:
         if: ${{ steps.deploy.outputs.worker_url != '' }}
         env:
           URL: ${{ steps.deploy.outputs.worker_url }}
-          MODE: ${{ inputs.mode }}
+          MODE: ${{ github.event_name == 'push' && 'active' || inputs.mode }}
         shell: bash
         run: |
           set -euo pipefail
@@ -140,7 +148,7 @@ jobs:
           for tentativa in {1..12}; do
             BODY="$(curl -fsS --retry 2 --retry-delay 1 "$URL/health")"
             echo "$BODY"
-            if printf '%s' "$BODY" | python -c 'import json,sys,os; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="2.0.2"; assert d.get("mode")==os.environ["MODE"]; assert d.get("liveIgnored") is True; assert d.get("orchestration",{}).get("strategy")=="agenda_event_driven_v2"; assert d.get("orchestration",{}).get("ageOnlyMainDispatchDisabled") is True; assert d.get("fastPath",{}).get("finalOneShotPerEvidence") is True; print("health 2.0.2 validado")'; then
+            if printf '%s' "$BODY" | python -c 'import json,sys,os; d=json.load(sys.stdin); assert d.get("ok") is True; assert d.get("version")=="2.0.3"; assert d.get("mode")==os.environ["MODE"]; assert d.get("liveIgnored") is True; assert d.get("orchestration",{}).get("strategy")=="agenda_event_driven_v2"; assert d.get("orchestration",{}).get("ageOnlyMainDispatchDisabled") is True; assert d.get("fastPath",{}).get("finalOneShotPerEvidence") is True; assert d.get("fastPath",{}).get("summaryConfirmsNonPost") is True; print("health 2.0.3 validado")'; then
               exit 0
             fi
             echo "Propagação ainda pendente (${tentativa}/12); aguardando 5s..."
@@ -152,11 +160,11 @@ jobs:
       - name: Resumo operacional
         env:
           URL: ${{ steps.deploy.outputs.worker_url }}
-          MODE: ${{ inputs.mode }}
+          MODE: ${{ github.event_name == 'push' && 'active' || inputs.mode }}
         shell: bash
         run: |
           {
-            echo "## Orchestrator BR Almoço 2.0.2 · FINAL one-shot"
+            echo "## Orchestrator BR Almoço 2.0.3 · FINAL one-shot + summary confirmation"
             echo ""
             echo "- **Modo:** \`${MODE}\`"
             echo "- **Worker:** \`brasileirao-almoco-orchestrator\`"
