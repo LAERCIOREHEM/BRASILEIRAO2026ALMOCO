@@ -1,11 +1,11 @@
 {
   "descricao": "Auditoria da consolidação de transmissões do Brasileirão.",
   "resumo": {
-    "jogos_na_janela": 41,
-    "jogos_com_transmissao": 40,
+    "jogos_na_janela": 39,
+    "jogos_com_transmissao": 39,
     "jogos_sem_transmissao_14d": 0,
     "jogos_criticos_sem_transmissao_72h": 0,
-    "registros_preservados": 22,
+    "registros_preservados": 10,
     "fontes_com_falha": 2
   },
   "fontes": {
@@ -15,78 +15,22 @@
     },
     "ge_agenda": {
       "ok": true,
-      "jogos_com_canal": 18,
-      "duracao_ms": 7971
+      "jogos_com_canal": 29,
+      "duracao_ms": 8874
     },
     "ge_artigos": {
       "ok": true,
-      "artigos_consultados": 1,
-      "jogos_com_canal": 0,
-      "duracao_ms": 14764
+      "artigos_consultados": 2,
+      "jogos_com_canal": 2,
+      "duracao_ms": 19314
     },
     "espn": {
       "ok": false,
-      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261112-20261219&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+      "erro": "RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261114-20261221&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
     }
   },
   "sem_transmissao": [],
   "preservados": [
-    {
-      "event_id": "401841311",
-      "jogo": "Mirassol x Atlético-MG",
-      "canais": [
-        "Prime Video"
-      ]
-    },
-    {
-      "event_id": "401841175",
-      "jogo": "Chapecoense x Vasco da Gama",
-      "canais": [
-        "Premiere"
-      ]
-    },
-    {
-      "event_id": "401841315",
-      "jogo": "Coritiba x Santos",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841310",
-      "jogo": "Remo x Chapecoense",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841314",
-      "jogo": "Cruzeiro x Palmeiras",
-      "canais": [
-        "Premiere",
-        "Prime Video"
-      ]
-    },
-    {
-      "event_id": "401841313",
-      "jogo": "Flamengo x Athletico-PR",
-      "canais": [
-        "Premiere",
-        "Globo",
-        "GE TV"
-      ]
-    },
-    {
-      "event_id": "401841312",
-      "jogo": "Grêmio x Bahia",
-      "canais": [
-        "SporTV",
-        "Premiere",
-        "Prime Video",
-        "Disney+ / ESPN",
-        "GE TV"
-      ]
-    },
     {
       "event_id": "401841308",
       "jogo": "Vasco da Gama x Internacional",
@@ -114,13 +58,6 @@
     {
       "event_id": "401841309",
       "jogo": "São Paulo x Fluminense",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
-      "event_id": "401841318",
-      "jogo": "Athletico-PR x Remo",
       "canais": [
         "Globo"
       ]
@@ -156,21 +93,6 @@
       ]
     },
     {
-      "event_id": "401841328",
-      "jogo": "Atlético-MG x Vasco da Gama",
-      "canais": [
-        "Prime Video",
-        "Premiere"
-      ]
-    },
-    {
-      "event_id": "401841335",
-      "jogo": "Chapecoense x Palmeiras",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
       "event_id": "401841331",
       "jogo": "Internacional x Bragantino",
       "canais": [
@@ -194,13 +116,6 @@
       ]
     },
     {
-      "event_id": "401841343",
-      "jogo": "Palmeiras x Coritiba",
-      "canais": [
-        "Globo"
-      ]
-    },
-    {
       "event_id": "401841344",
       "jogo": "Bragantino x Fluminense",
       "canais": [
@@ -211,22 +126,15 @@
         "GE TV",
         "Disney+ / ESPN"
       ]
-    },
-    {
-      "event_id": "401841346",
-      "jogo": "Santos x Botafogo",
-      "canais": [
-        "Premiere",
-        "Globo"
-      ]
     }
   ],
   "erros": [
     "CBF: RuntimeError: nenhuma tabela detalhada oficial da CBF pôde ser lida :: https://www.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis | https://cbf-hml.cbf.com.br/futebol-brasileiro/tabelas/campeonato-brasileiro/serie-a/2026?documento=Tabela+Detalhada: página carregada sem partidas reconhecíveis",
-    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261112-20261219&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
+    "ESPN: RuntimeError: falha ao buscar https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/scoreboard?dates=20261114-20261221&limit=300: tentativa 1: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 2: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request | tentativa 3: curl_cffi=HTTPError: HTTP Error 400:  | urllib=HTTPError: HTTP Error 400: Bad Request"
   ],
   "artigos_ge_descobertos": [
+    "https://ge.globo.com/pr/futebol/noticia/2026/11/16/athletico-x-parana-clube-pela-final-da-copa-parana-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml",
     "https://ge.globo.com/sp/tem-esporte/futebol/brasileirao-serie-a/noticia/2026/11/14/mirassol-x-atletico-mg-onde-assistir-ao-vivo-horario-e-escalacoes.ghtml"
   ],
-  "atualizado_em": "2026-11-14T04:16:04-03:00"
+  "atualizado_em": "2026-11-16T04:17:09-03:00"
 }
