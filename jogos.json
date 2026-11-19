@@ -1,9 +1,21 @@
 {
-  "atualizado_em": "2026-11-18T22:42:27.876732-03:00",
-  "atualizado_em_br": "18/11/2026 22:42 BRT",
+  "atualizado_em": "2026-11-18T23:26:17.241129-03:00",
+  "atualizado_em_br": "18/11/2026 23:26 BRT",
   "fonte": "ESPN",
-  "fontes_complementares": [],
-  "fallbacks_resultado": [],
+  "fontes_complementares": [
+    "ESPN summary"
+  ],
+  "fallbacks_resultado": [
+    {
+      "event_id": "401841316",
+      "rodada": 35,
+      "jogo": "Corinthians x Botafogo",
+      "placar": "4 x 0",
+      "fonte": "ESPN summary",
+      "origem": "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841316",
+      "motivo": "FINAL confirmado proativamente no summary individual da ESPN; não depende da atualização do scoreboard agregado."
+    }
+  ],
   "rodada_atual": 35,
   "rodadas_consultadas": [
     35,
@@ -11,31 +23,8 @@
     37,
     38
   ],
-  "total_jogos": 35,
+  "total_jogos": 34,
   "jogos": [
-    {
-      "event_id": "401841316",
-      "rodada": 35,
-      "data_iso": "2026-11-18T21:30",
-      "mandante": {
-        "nome": "Corinthians",
-        "escudo": "https://s.sde.globo.com/media/organizations/2024/10/09/Corinthians_2024_Q4ahot4.svg",
-        "sigla": "COR"
-      },
-      "visitante": {
-        "nome": "Botafogo",
-        "escudo": "https://s.sde.globo.com/media/organizations/2019/02/04/botafogo-svg.svg",
-        "sigla": "BOT"
-      },
-      "estadio": "Neo Química Arena",
-      "transmissao": "",
-      "status": "47'",
-      "estado": "in",
-      "adiado": false,
-      "data_definir": false,
-      "placar_mandante": 2,
-      "placar_visitante": 0
-    },
     {
       "event_id": "401841312",
       "rodada": 35,
@@ -52,7 +41,7 @@
       },
       "estadio": "Arena do Grêmio",
       "transmissao": "",
-      "status": "47'",
+      "status": "90'+1'",
       "estado": "in",
       "adiado": false,
       "data_definir": false,
