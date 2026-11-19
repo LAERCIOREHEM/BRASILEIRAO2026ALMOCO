@@ -3,25 +3,37 @@
   "site": "Brasileirão 2026 Almoço",
   "workflow": "Atualizar Brasileirao (ESPN)",
   "status": "aviso",
-  "status_anterior": "ok",
+  "status_anterior": "aviso",
   "nivel": "aviso",
-  "ultima_tentativa": "2026-11-18T21:43:19-03:00",
-  "ultimo_sucesso": "2026-11-18T21:43:19-03:00",
-  "ultimo_snapshot_valido": "2026-11-18T21:43:19-03:00",
-  "snapshot_hash": "e4e134a025d02595bfb53692552dfcb351bf925bd9bd085fa3a0984f76004294",
+  "ultima_tentativa": "2026-11-18T21:59:08-03:00",
+  "ultimo_sucesso": "2026-11-18T21:59:08-03:00",
+  "ultimo_snapshot_valido": "2026-11-18T21:59:08-03:00",
+  "snapshot_hash": "eac642a7f6ff25eab95ad19aed11163c44943d0d8b1d43773969546dc1166a29",
   "fonte_principal": "ESPN",
-  "fontes_complementares": [],
-  "fallbacks": [],
+  "fontes_complementares": [
+    "ESPN summary"
+  ],
+  "fallbacks": [
+    {
+      "event_id": "401841310",
+      "rodada": 35,
+      "jogo": "Remo x Chapecoense",
+      "placar": "2 x 0",
+      "fonte": "ESPN summary",
+      "origem": "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841310",
+      "motivo": "FINAL confirmado proativamente no summary individual da ESPN; não depende da atualização do scoreboard agregado."
+    }
+  ],
   "tentativas": 1,
   "sincronizado": true,
-  "mensagem_admin": "snapshot auditado e publicado; ESPN permaneceu principal; classificação avançada com 1 resultado(s) final(is) ESPN, sem incorporar jogos ao vivo",
+  "mensagem_admin": "snapshot auditado e publicado; ESPN permaneceu principal; fontes complementares: ESPN summary; classificação avançada com 1 resultado(s) final(is) ESPN, sem incorporar jogos ao vivo",
   "mensagem_publica": "Dados atualizados e conferidos com fonte oficial complementar.",
   "mostrar_publico": false,
-  "run_url": "https://github.com/LAERCIOREHEM/BRASILEIRAO2026ALMOCO/actions/runs/44430529430",
-  "run_id": "44430529430",
+  "run_url": "https://github.com/LAERCIOREHEM/BRASILEIRAO2026ALMOCO/actions/runs/44432671729",
+  "run_id": "44432671729",
   "run_attempt": "1",
   "branch": "main",
-  "fingerprint": "c3084d9d5635d6394b3544bc0eae5a750ebaadbf15ae75df1e3f9f48c795875d",
+  "fingerprint": "8efa15be8d5aea96e9c0e5067b353339d66440221ed8e0e1a12f0df7f587a641",
   "ultimo_alerta_em": "2026-10-24T18:32:33-03:00",
   "ultimo_alerta_fingerprint": "19e51e04b284952b106f319a1341d78dcf52dfb4d8764b6a69f9aaf9f325e292"
 }
