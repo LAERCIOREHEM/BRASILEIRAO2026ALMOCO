@@ -40,6 +40,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
   deployments: read
@@ -361,6 +362,39 @@ jobs:
           path: _site
           retention-days: 1
 
+      # O upload de artefatos do Actions é eventualmente consistente. Em 21/11/2026
+      # houve duas falhas em que upload-pages-artifact finalizou e retornou um
+      # Artifact ID válido, mas deploy-pages consultou imediatamente a API e
+      # recebeu "Found 0 artifact(s)". Esta barreira só libera o deploy depois
+      # que o próprio endpoint REST do run já enxerga github-pages.
+      - name: Aguardar artefato do Pages ficar visível
+        if: steps.decisao.outputs.publicar == 'true'
+        id: artifact_ready
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          API="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100"
+          MAX=20
+          for tentativa in $(seq 1 "$MAX"); do
+            BODY="$(curl -fsSL \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$API")"
+            ID="$(printf '%s' "$BODY" | python -c 'import json,sys; d=json.load(sys.stdin); xs=[x for x in d.get("artifacts",[]) if x.get("name")=="github-pages" and not x.get("expired")]; print(xs[-1].get("id","") if xs else "")')"
+            if [[ -n "$ID" ]]; then
+              echo "artifact_id=$ID" >> "$GITHUB_OUTPUT"
+              echo "Artefato github-pages visível na API: ID $ID (tentativa $tentativa/$MAX)."
+              exit 0
+            fi
+            echo "Artefato ainda não propagou na API (tentativa $tentativa/$MAX)."
+            sleep 5
+          done
+          echo "::error::O upload terminou, mas o artefato github-pages não ficou visível na API após $((MAX*5))s."
+          exit 1
+
       - name: Deploy to GitHub Pages
         if: steps.decisao.outputs.publicar == 'true'
         id: deployment
@@ -406,7 +440,7 @@ jobs:
           key: ${{ steps.alerta_janela.outputs.key }}
 
       - name: Alertar falha de deploy por e-mail
-        if: failure() && steps.alerta_cache.outputs.cache-hit != 'true'
+        if: failure() && steps.alerta_cache.outputs.cache-hit != 'true' && steps.artifact_ready.outcome != 'failure'
         continue-on-error: true
         env:
           BR_MOTIVO: Falha no deploy do GitHub Pages. Os dados já gravados no main permanecem preservados; não repita Atualizar Brasileirão apenas por causa desta falha de publicação. Novo alerta idêntico fica bloqueado por 6 horas.
@@ -417,7 +451,7 @@ jobs:
         run: python scripts/gerenciar_status_brasileirao.py --error --notify
 
       - name: Registrar trava de alerta de 6h
-        if: failure() && steps.alerta_cache.outputs.cache-hit != 'true'
+        if: failure() && steps.alerta_cache.outputs.cache-hit != 'true' && steps.artifact_ready.outcome != 'failure'
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
