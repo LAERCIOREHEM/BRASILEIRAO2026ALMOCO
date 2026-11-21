@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "gerado_em": "2026-11-21T18:28:32-03:00",
+  "gerado_em": "2026-11-21T18:58:25-03:00",
   "status": "critical",
-  "fingerprint_critico": "f72b8b6bd4026c808c43ebb009f47ac6084822fb112ed05b6b03503a4c525a3a",
+  "fingerprint_critico": "3ea4c5a14d35a7b79d89e3524d87a845a729e1fdd3bee50f74b473a59a500d60",
   "resumo": {
-    "criticos": 3,
+    "criticos": 1,
     "avisos": 0,
     "informativos": 0,
     "calendario_partidas": 380,
@@ -12,42 +12,19 @@
     "resultados_fisicos": 351,
     "tabela_partidas": 351,
     "jogos_finais_bolao_desde_r20": 161,
-    "jogos_apurados_bolao": 160,
+    "jogos_apurados_bolao": 161,
     "blocos_apostas_abertos": 0,
-    "blocos_apostas_em_apuracao": 0,
+    "blocos_apostas_em_apuracao": 1,
     "blocos_apostas_concluidos": 5,
     "jogos_sem_estatisticas": 0,
-    "auditoria_tv_idade_horas": 134.2
+    "auditoria_tv_idade_horas": 134.7
   },
   "criticos": [
-    {
-      "codigo": "APURACAO_RESULTADOS_DIVERGENTES",
-      "mensagem": "A pontuação do bolão não acompanha exatamente os resultados finais publicados desde a R20.",
-      "detalhes": {
-        "total_resultados_finais": 161,
-        "total_apurado_declarado": 160,
-        "rodadas": [
-          {
-            "rodada": 36,
-            "resultados_finais": 1,
-            "jogos_apurados": 0
-          }
-        ]
-      }
-    },
-    {
-      "codigo": "RANKING_APOSTAS_DEFASADO",
-      "mensagem": "O ranking geral do bolão declara quantidade de jogos diferente dos resultados finais publicados.",
-      "detalhes": {
-        "resultados_finais": 161,
-        "ranking_jogos": 160
-      }
-    },
     {
       "codigo": "AUDITORIA_TV_MUITO_ANTIGA",
       "mensagem": "A grade de transmissões está sem auditoria há mais de 72h.",
       "detalhes": {
-        "horas": 134.2
+        "horas": 134.7
       }
     }
   ],
@@ -64,5 +41,5 @@
     "blocos": "Blocos independentes: um bloco anterior parcial pode coexistir normalmente com o seguinte aberto."
   },
   "alerta_email": "enviado",
-  "alerta_email_em": "2026-11-21T18:28:32-03:00"
+  "alerta_email_em": "2026-11-21T18:58:26-03:00"
 }
