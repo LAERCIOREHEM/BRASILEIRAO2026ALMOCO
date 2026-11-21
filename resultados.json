@@ -1,10 +1,22 @@
 {
-  "atualizado_em": "2026-11-21T12:35:07.612524-03:00",
-  "atualizado_em_br": "21/11/2026 12:35 BRT",
+  "atualizado_em": "2026-11-21T18:26:21.429501-03:00",
+  "atualizado_em_br": "21/11/2026 18:26 BRT",
   "fonte": "ESPN",
-  "fontes_complementares": [],
-  "fallbacks_resultado": [],
-  "ultima_rodada_disputada": 35,
+  "fontes_complementares": [
+    "ESPN summary"
+  ],
+  "fallbacks_resultado": [
+    {
+      "event_id": "401841322",
+      "rodada": 36,
+      "jogo": "Palmeiras x Flamengo",
+      "placar": "1 x 1",
+      "fonte": "ESPN summary",
+      "origem": "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841322",
+      "motivo": "FINAL confirmado proativamente no summary individual da ESPN; não depende da atualização do scoreboard agregado."
+    }
+  ],
+  "ultima_rodada_disputada": 36,
   "rodadas_consultadas": [
     1,
     2,
@@ -40,9 +52,10 @@
     32,
     33,
     34,
-    35
+    35,
+    36
   ],
-  "total_resultados": 350,
+  "total_resultados": 351,
   "times": [
     "Athletico-PR",
     "Atlético-MG",
@@ -66,6 +79,30 @@
     "Vitória"
   ],
   "resultados": [
+    {
+      "event_id": "401841322",
+      "rodada": 36,
+      "data_iso": "2026-11-21T16:30",
+      "mandante": {
+        "nome": "Palmeiras",
+        "escudo": "https://s.sde.globo.com/media/organizations/2019/07/06/Palmeiras.svg",
+        "sigla": "PAL"
+      },
+      "visitante": {
+        "nome": "Flamengo",
+        "escudo": "https://s.sde.globo.com/media/organizations/2018/04/10/Flamengo-2018.svg",
+        "sigla": "FLA"
+      },
+      "estadio": "Nubank Parque",
+      "transmissao": "",
+      "status": "FT",
+      "estado": "post",
+      "adiado": false,
+      "data_definir": false,
+      "finalizado_em": "2026-11-21T18:25:00-03:00",
+      "placar_mandante": 1,
+      "placar_visitante": 1
+    },
     {
       "event_id": "401841309",
       "rodada": 35,
