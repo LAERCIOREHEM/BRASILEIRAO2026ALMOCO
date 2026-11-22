@@ -1,8 +1,20 @@
 {
-  "atualizado_em": "2026-11-21T20:12:08.821809-03:00",
+  "atualizado_em": "2026-11-21T22:56:01.872228-03:00",
   "fonte": "ESPN",
-  "fontes_complementares": [],
-  "fallbacks_resultado": [],
+  "fontes_complementares": [
+    "ESPN summary"
+  ],
+  "fallbacks_resultado": [
+    {
+      "event_id": "401841325",
+      "rodada": 36,
+      "jogo": "Chapecoense x Cruzeiro",
+      "placar": "1 x 2",
+      "fonte": "ESPN summary",
+      "origem": "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841325",
+      "motivo": "FINAL confirmado proativamente no summary individual da ESPN; não depende da atualização do scoreboard agregado."
+    }
+  ],
   "total": 380,
   "eventos": [
     {
@@ -10573,14 +10585,14 @@
       "visitante": "Cruzeiro",
       "estadio": "Arena Condá",
       "transmissao": "",
-      "status": "0'",
-      "estado": "pre",
-      "concluido": false,
-      "placar_mandante": 0,
-      "placar_visitante": 0,
+      "status": "FT",
+      "estado": "post",
+      "concluido": true,
+      "placar_mandante": 1,
+      "placar_visitante": 2,
       "adiado": false,
       "data_definir": false,
-      "finalizado_em": "",
+      "finalizado_em": "2026-11-21T22:55:00-03:00",
       "rodada_corrigida_de": null,
       "motivo_ajuste": "Tabela detalhada oficial CBF — Rodadas 35–36 (29/10/2026)",
       "fonte_calendario": "",
@@ -10590,9 +10602,9 @@
       "fonte_evento": "",
       "resultado_manual": false,
       "resultado_fallback": false,
-      "fonte_resultado": "ESPN",
-      "origem_resultado": "",
-      "motivo_fallback": "",
+      "fonte_resultado": "ESPN summary",
+      "origem_resultado": "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841325",
+      "motivo_fallback": "FINAL confirmado proativamente no summary individual da ESPN; não depende da atualização do scoreboard agregado.",
       "motivo_resultado_manual": ""
     },
     {
@@ -11408,16 +11420,16 @@
   ],
   "coleta": {
     "modo": "incremental",
-    "janela_inicio": "2026-10-07",
+    "janela_inicio": "2026-10-08",
     "janela_fim": "2026-12-31",
-    "eventos_recebidos": 101,
+    "eventos_recebidos": 95,
     "ultima_varredura_completa_em": "2026-10-02T03:02:38-03:00",
     "eventos_historicos": 380,
-    "eventos_atualizados": 101,
+    "eventos_atualizados": 95,
     "eventos_consolidados": 380,
     "horarios_reconciliados_cbf": 0,
     "jogos_restaurados_cbf": 0,
     "kickoffs_provisorios_suprimidos": 0,
-    "resultados_summary_proativos": 0
+    "resultados_summary_proativos": 1
   }
 }
