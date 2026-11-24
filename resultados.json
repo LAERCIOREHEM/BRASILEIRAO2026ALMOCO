@@ -1,10 +1,22 @@
 {
-  "atualizado_em": "2026-11-24T17:43:10.537745-03:00",
-  "atualizado_em_br": "24/11/2026 17:43 BRT",
+  "atualizado_em": "2026-11-24T19:56:06.575498-03:00",
+  "atualizado_em_br": "24/11/2026 19:56 BRT",
   "fonte": "ESPN",
-  "fontes_complementares": [],
-  "fallbacks_resultado": [],
-  "ultima_rodada_disputada": 36,
+  "fontes_complementares": [
+    "ESPN summary"
+  ],
+  "fallbacks_resultado": [
+    {
+      "event_id": "401841335",
+      "rodada": 37,
+      "jogo": "Chapecoense x Palmeiras",
+      "placar": "3 x 0",
+      "fonte": "ESPN summary",
+      "origem": "https://site.api.espn.com/apis/site/v2/sports/soccer/bra.1/summary?event=401841335",
+      "motivo": "FINAL confirmado proativamente no summary individual da ESPN; não depende da atualização do scoreboard agregado."
+    }
+  ],
+  "ultima_rodada_disputada": 37,
   "rodadas_consultadas": [
     1,
     2,
@@ -41,9 +53,10 @@
     33,
     34,
     35,
-    36
+    36,
+    37
   ],
-  "total_resultados": 359,
+  "total_resultados": 360,
   "times": [
     "Athletico-PR",
     "Atlético-MG",
@@ -67,6 +80,30 @@
     "Vitória"
   ],
   "resultados": [
+    {
+      "event_id": "401841335",
+      "rodada": 37,
+      "data_iso": "2026-11-24T18:00",
+      "mandante": {
+        "nome": "Chapecoense",
+        "escudo": "https://s.sde.globo.com/media/organizations/2021/06/21/CHAPECOENSE-2018.svg",
+        "sigla": "CHA"
+      },
+      "visitante": {
+        "nome": "Palmeiras",
+        "escudo": "https://s.sde.globo.com/media/organizations/2019/07/06/Palmeiras.svg",
+        "sigla": "PAL"
+      },
+      "estadio": "Arena Condá",
+      "transmissao": "",
+      "status": "FT",
+      "estado": "post",
+      "adiado": false,
+      "data_definir": false,
+      "finalizado_em": "2026-11-24T19:55:00-03:00",
+      "placar_mandante": 3,
+      "placar_visitante": 0
+    },
     {
       "event_id": "401841320",
       "rodada": 36,
