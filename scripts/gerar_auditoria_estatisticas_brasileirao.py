@@ -86,6 +86,23 @@ def tipo_pendencia_eventos_segura(game: dict[str, Any]) -> str:
         return ""
 
     pending_type = str(validation.get("tipo_pendencia") or "")
+    categories = validation.get("categorias_em_quarentena")
+    if categories is not None:
+        # Aceitar apenas a ficha sanitizada, nunca os eventos contraditórios.
+        if (not isinstance(categories, list) or not categories
+                or any(k not in {"gols", "cartoes"} for k in categories)
+                or any(game.get(k) for k in categories)):
+            return ""
+        original = validation.get("validacao_original") or {}
+        if any(original.get({"gols": "gols_compativeis", "cartoes": "cartoes_compativeis"}[k]) is not False
+               for k in categories):
+            return ""
+        try:
+            expires = datetime.fromisoformat(str(validation.get("quarentena_ate") or ""))
+            if expires.tzinfo is None or datetime.now(FUSO_BRASILIA) >= expires:
+                return ""
+        except (ValueError, TypeError):
+            return ""
     if (
         game.get("resultado_manual") is True
         and validation.get("resultado_confirmado") is True
@@ -322,6 +339,18 @@ def self_test() -> None:
         },
     }
     assert tipo_pendencia_eventos_segura(unsafe_pending) == ""
+    from datetime import timedelta
+    quarantined = {
+        **safe_espn, "cartoes": [],
+        "validacao_eventos": {**safe_espn["validacao_eventos"],
+            "categorias_em_quarentena": ["cartoes"],
+            "validacao_original": {"cartoes_compativeis": False},
+            "quarentena_ate": (datetime.now(FUSO_BRASILIA) + timedelta(hours=1)).isoformat()},
+    }
+    assert tipo_pendencia_eventos_segura(quarantined) == "ficha_espn_incompleta"
+    assert tipo_pendencia_eventos_segura({**quarantined, "cartoes": [{"tipo": "amarelo"}]}) == ""
+    assert tipo_pendencia_eventos_segura({**quarantined, "validacao_eventos": {
+        **quarantined["validacao_eventos"], "quarentena_ate": "2000-01-01T00:00:00-03:00"}}) == ""
     print("SELF-TEST OK: pendências ESPN/manuais seguras; excesso e cartões inválidos bloqueados.")
 
 
@@ -493,6 +522,8 @@ def main() -> None:
     write(OUT, payload)
     print(json.dumps(payload["resumo"], ensure_ascii=False, indent=2))
     if critical:
+        for detail in event_errors + duplicate_events + narrative_false_positives:
+            print(f"::error::{detail}")
         raise RuntimeError("Auditoria de estatísticas falhou: " + " | ".join(critical))
     print(f"OK: auditoria em {OUT.relative_to(ROOT)}")
 

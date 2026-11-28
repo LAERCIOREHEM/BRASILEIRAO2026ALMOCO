@@ -1062,6 +1062,7 @@ def _limit_cards(cartoes: list[dict[str, Any]], jogo: dict[str, Any] | None, sta
         pending = [
             (idx, item) for idx, item in enumerate(cartoes)
             if idx not in accounted and item.get("tipo") == tipo
+            and _canonical_team(item.get("time"), jogo) not in (home, away)
         ]
         pending.sort(key=lambda pair: (-_event_quality(pair[1]), _minute_sort(pair[1].get("minuto"))))
         expected_values = expected_by_type[tipo]
@@ -1486,6 +1487,38 @@ def _data_jogo(jogo: dict[str, Any]) -> datetime | None:
     return value.replace(tzinfo=FUSO_BRASILIA) if value.tzinfo is None else value.astimezone(FUSO_BRASILIA)
 
 
+def quarentena_eventos_recentes(jogo, stats, gols, cartoes, validacao, *, agora=None):
+    """Isola apenas eventos nominais contraditórios de um FINAL recente.
+
+    Não altera placar, boxscore ou eventos da outra categoria. Não aceita
+    contradição como validada: marca pendência explícita, reconsulta no próximo
+    ciclo e volta a bloquear após oito horas do kickoff.
+    """
+    inicio = _data_jogo(jogo)
+    agora = agora or agora_brt()
+    if (jogo.get("resultado_manual") is True or str(jogo.get("estado") or "").lower() != "post"
+            or inicio is None or not timedelta(0) <= agora - inicio < timedelta(hours=8)
+            or validacao.get("ok") is True):
+        return gols, cartoes, validacao
+    categorias = []
+    if validacao.get("gols_compativeis") is False:
+        categorias.append("gols")
+    if validacao.get("cartoes_compativeis") is False:
+        categorias.append("cartoes")
+    if not categorias:
+        return gols, cartoes, validacao
+    gols_seguros = [] if "gols" in categorias else gols
+    cartoes_seguros = [] if "cartoes" in categorias else cartoes
+    v = validar_eventos(jogo, stats, gols_seguros, cartoes_seguros)
+    if not (v.get("gols_compativeis") is True and v.get("cartoes_compativeis") is True):
+        return gols, cartoes, validacao
+    v.update(ok=False, pendente_detalhes=True, tipo_pendencia="ficha_espn_incompleta",
+             motivo="Ficha FINAL recente contraditória; eventos nominais isolados: " + ", ".join(categorias),
+             categorias_em_quarentena=categorias, validacao_original=validacao,
+             quarentena_ate=(inicio + timedelta(hours=8)).isoformat())
+    return gols_seguros, cartoes_seguros, v
+
+
 def registro_pode_usar_cache(
     jogo: dict[str, Any],
     antigo: dict[str, Any] | None,
@@ -1713,6 +1746,24 @@ def self_test() -> None:
     assert not registro_pode_usar_cache({**cache_game, "placar_mandante": 2}, cache_record, "123", 48, agora=test_now)
     assert not registro_pode_usar_cache(cache_game, cache_record, "999", 48, agora=test_now)
     assert not registro_pode_usar_cache(cache_game, {**cache_record, "stats": []}, "123", 48, agora=test_now)
+    # Regressão: a sobra de um clube não pode preencher a lacuna do adversário.
+    cards = [{"tipo": "amarelo", "time": "Flamengo", "jogador": n, "minuto": m}
+             for n, m in (("A", "10'"), ("B", "20'"))]
+    card_stats = [{"nome": "Amarelos", "home": "1", "away": "2"}]
+    limited = _limit_cards(cards, cache_game, card_stats)
+    assert len(limited) == 1, limited
+    # Um FINAL recente com cartões contraditórios isola apenas cartões.
+    fresh = {**cache_game, "estado": "post", "data_iso": "2026-07-04T18:00:00-03:00"}
+    good_goals = [{"time": "Flamengo", "jogador": "A", "minuto": "5'"}]
+    invalid = validar_eventos(fresh, card_stats, good_goals, cards)
+    assert invalid["cartoes_compativeis"] is False
+    g, cs, v = quarentena_eventos_recentes(fresh, card_stats, good_goals, cards, invalid, agora=test_now)
+    assert g == good_goals and cs == [] and v["pendente_detalhes"] and not v["ok"], v
+    assert v["categorias_em_quarentena"] == ["cartoes"]
+    assert quarentena_eventos_recentes(fresh, card_stats, good_goals, cards, invalid,
+        agora=test_now + timedelta(hours=9))[2] == invalid
+    assert quarentena_eventos_recentes({**fresh, "estado": "in"}, card_stats, good_goals, cards, invalid,
+        agora=test_now)[2] == invalid
     mapa_ids = carregar_event_ids_detalhes()
     if RESULTADOS_MANUAIS.exists():
         assert mapa_ids.get("401840998") == "401879459", mapa_ids
@@ -2023,6 +2074,21 @@ def main() -> None:
                 "recuperado_por_scoreboard": recuperou_metricas,
             })
 
+        if validacao.get("ok") is not True and validacao.get("pendente_detalhes") is not True:
+            print(f"::warning::{label}: validação original={json.dumps(validacao, ensure_ascii=False)}")
+            # Um refresh pior não substitui uma ficha anterior íntegra do mesmo placar/ID.
+            if registro_pode_usar_cache(jogo, antigo, event_id_fonte, 0):
+                anterior_validado = validar_eventos(jogo, list(antigo.get("stats") or antigo.get("estatisticas") or []),
+                                                    list(antigo.get("gols") or []), list(antigo.get("cartoes") or []))
+                if anterior_validado.get("ok") is True:
+                    jogos_saida[event_id] = {**antigo, "preservado_de_execucao_anterior": True}
+                    preservados += 1
+                    falhas_refresh_preservadas.append({"event_id": event_id, "jogo": label,
+                        "erro": "Refresh contraditório; ficha anterior íntegra preservada."})
+                    continue
+            gols, cartoes, validacao = quarentena_eventos_recentes(jogo, stats, gols, cartoes, validacao)
+            if validacao.get("categorias_em_quarentena"):
+                print(f"::warning::{label}: {validacao['motivo']}; reconsulta obrigatória.")
         if not stats:
             sem_estatisticas.append({"event_id": event_id, "jogo": label})
         jogos_saida[event_id] = montar_registro(

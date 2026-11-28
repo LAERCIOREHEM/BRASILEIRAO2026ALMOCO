@@ -7,6 +7,9 @@ on:
     branches: [main]
     paths:
       - 'dados-br/ajustes-calendario.json'
+      - '.github/workflows/atualizar-brasileirao.yml'
+      - 'scripts/buscar_detalhes_jogos_brasileirao.py'
+      - 'scripts/gerar_auditoria_estatisticas_brasileirao.py'
 
   # Execução operacional por workflow_dispatch. O orquestrador inteligente é o
   # único gatilho automático; o botão "Run workflow" continua disponível.
@@ -44,6 +47,9 @@ jobs:
     name: Buscar dados ESPN e publicar JSONs
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      stats_audit_outcome: ${{ steps.stats_audit.outcome }}
+      essential_outcome: ${{ steps.publish_essential.outcome }}
 
     steps:
       - name: Baixar repositorio
@@ -518,7 +524,13 @@ jobs:
           ]
           faltando = any(not item.exists() for item in obrigatorios)
           forcar = str(os.environ.get('FORCAR_AF', '')).lower() == 'true'
-          executar = forcar or faltando or antes != depois
+          # O snapshot essencial pode ter sido publicado por um run cujo bloco
+          # derivado falhou depois. Comparar apenas antes/depois esconderia essa dívida.
+          publicados = carregar('resultados.json') or []
+          previsao = json.loads(obrigatorios[0].read_text(encoding='utf-8')) if not faltando else {}
+          base_af = previsao.get('base_corrente') or {}
+          af_defasado = int(base_af.get('partidas_concluidas', -1)) != len(publicados)
+          executar = forcar or faltando or antes != depois or af_defasado
 
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
               output.write(f'run_af={str(executar).lower()}\n')
@@ -529,6 +541,8 @@ jobs:
               motivo = 'execução manual com forcar_af=true'
           elif faltando:
               motivo = 'artefato obrigatório ausente'
+          elif af_defasado:
+              motivo = 'recuperação de AF-Previsão defasado após publicação essencial'
           elif antes != depois:
               motivo = 'resultado, tabela, calendário, competição continental ou configuração mudou'
           else:
@@ -561,6 +575,7 @@ jobs:
         run: python scripts/gerar_estatisticas_competicao_brasileirao.py
 
       - name: Auditar estatísticas do Brasileirão
+        id: stats_audit
         if: steps.espn.outputs.sincronizado == 'true'
         run: python scripts/gerar_auditoria_estatisticas_brasileirao.py
 
@@ -1020,6 +1035,7 @@ jobs:
       - name: Checkout mínimo
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 1
 
       - name: Configurar Python
@@ -1030,7 +1046,7 @@ jobs:
       - name: Enviar alerta de falha
         env:
           BR_STATUS: erro
-          BR_MOTIVO: "O workflow Atualizar Brasileirão terminou com falha. O último snapshot íntegro permanece publicado."
+          BR_MOTIVO: "${{ needs.atualizar.outputs.stats_audit_outcome == 'failure' && 'Auditoria de estatísticas reprovada; detalhes contraditórios não foram publicados. Consulte os eventos identificados no log.' || 'O workflow Atualizar Brasileirão terminou com falha. Consulte a etapa reprovada; o último snapshot íntegro permanece preservado.' }}"
           BR_FALLBACKS: '[]'
           BR_TENTATIVAS: '0'
           BR_SINCRONIZADO: 'false'
